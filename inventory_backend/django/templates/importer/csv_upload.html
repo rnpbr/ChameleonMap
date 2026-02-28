@@ -1,0 +1,384 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block title %}{% trans "Import from CSV" %} | {{ site_title|default:"Site Admin" }}{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="/admin/">{% trans "Home" %}</a>
+    &rsaquo; {% trans "Import from CSV" %}
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="flex flex-col lg:flex-row lg:gap-8">
+    <div class="grow">
+
+        {# ── Validation / detection errors ─────────────────────────────────── #}
+        {% if errors %}
+        <div class="bg-red-50 border border-red-200 rounded-default p-4 mb-6 dark:bg-red-950/20 dark:border-red-900/40">
+            <p class="font-semibold text-red-700 dark:text-red-400 mb-3 flex items-center gap-2">
+                <span class="material-symbols-outlined text-[1.1rem]">error</span>
+                {% trans "Please fix the following issues before importing" %}
+            </p>
+            <ul class="space-y-1">
+                {% if is_validation %}
+                    {% for err in errors %}
+                    <li class="flex items-start gap-2 text-sm text-red-700 dark:text-red-400">
+                        <span class="inline-flex items-center rounded bg-red-100 dark:bg-red-900/40 px-2 py-0.5 text-xs font-medium whitespace-nowrap shrink-0">
+                            {{ err.file }} &middot; {% trans "row" %} {{ err.row }}
+                        </span>
+                        <span><strong>{{ err.field }}</strong>: {{ err.message }}</span>
+                    </li>
+                    {% endfor %}
+                {% else %}
+                    {% for err in errors %}
+                    <li class="flex items-start gap-2 text-sm text-red-700 dark:text-red-400">
+                        <span class="material-symbols-outlined text-[0.9rem] mt-0.5 shrink-0">warning</span>
+                        <span>{{ err }}</span>
+                    </li>
+                    {% endfor %}
+                {% endif %}
+            </ul>
+        </div>
+        {% endif %}
+
+        {# ── Upload form ────────────────────────────────────────────────────── #}
+        <form method="post" enctype="multipart/form-data" id="csv-upload-form">
+            {% csrf_token %}
+
+            {# Option A — multiple CSV files #}
+            <div class="bg-base-50 mb-6 rounded-default p-4 dark:bg-base-800">
+                <table class="border border-base-400/10 border-spacing-none border-separate rounded-default overflow-hidden shadow-xs w-full dark:border-base-800">
+                    <caption class="font-semibold mb-3 text-base-900 text-left dark:text-base-100">
+                        {% trans "Option A — Upload CSV files" %}
+                    </caption>
+                    <tbody>
+                        <tr class="bg-white dark:bg-base-900">
+                            <td class="p-3">
+                                <p class="text-sm text-base-500 dark:text-base-400 mb-3">
+                                    {% trans "Select one, two, or all three CSV files at once. The system detects which file is for locations, tags, or links automatically (by filename or column headers)." %}
+                                </p>
+                                <input
+                                    type="file"
+                                    id="csv_files"
+                                    name="csv_files"
+                                    accept=".csv"
+                                    multiple
+                                    onchange="csvShowFileList(this, 'csv-file-list')"
+                                    class="block w-full text-sm text-base-700 dark:text-base-300
+                                           file:mr-3 file:py-1.5 file:px-3
+                                           file:rounded file:border-0
+                                           file:text-sm file:font-medium
+                                           file:bg-base-100 file:text-base-700
+                                           dark:file:bg-base-700 dark:file:text-base-200
+                                           hover:file:bg-base-200 dark:hover:file:bg-base-600
+                                           cursor-pointer"
+                                >
+                                <div id="csv-file-list" class="hidden mt-3 space-y-1.5"></div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            {# Divider #}
+            <div class="flex items-center gap-4 mb-6">
+                <div class="flex-1 h-px bg-base-200 dark:bg-base-700"></div>
+                <span class="text-sm text-base-400 dark:text-base-500 font-medium">{% trans "or" %}</span>
+                <div class="flex-1 h-px bg-base-200 dark:bg-base-700"></div>
+            </div>
+
+            {# Option B — ZIP archive #}
+            <div class="bg-base-50 mb-6 rounded-default p-4 dark:bg-base-800">
+                <table class="border border-base-400/10 border-spacing-none border-separate rounded-default overflow-hidden shadow-xs w-full dark:border-base-800">
+                    <caption class="font-semibold mb-3 text-base-900 text-left dark:text-base-100">
+                        {% trans "Option B — Upload a ZIP archive" %}
+                    </caption>
+                    <tbody>
+                        <tr class="bg-white dark:bg-base-900">
+                            <td class="p-3">
+                                <p class="text-sm text-base-500 dark:text-base-400 mb-3">
+                                    {% trans "Pack your CSV files into a single .zip archive containing locations, tags, and links CSV filesand upload it here." %}
+                                </p>
+                                <input
+                                    type="file"
+                                    id="zip_file"
+                                    name="zip_file"
+                                    accept=".zip"
+                                    onchange="csvShowFileList(this, 'zip-file-list')"
+                                    class="block w-full text-sm text-base-700 dark:text-base-300
+                                           file:mr-3 file:py-1.5 file:px-3
+                                           file:rounded file:border-0
+                                           file:text-sm file:font-medium
+                                           file:bg-base-100 file:text-base-700
+                                           dark:file:bg-base-700 dark:file:text-base-200
+                                           hover:file:bg-base-200 dark:hover:file:bg-base-600
+                                           cursor-pointer"
+                                >
+                                <div id="zip-file-list" class="hidden mt-3 space-y-1.5"></div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            {# Expected file formats reference #}
+            <div class="bg-base-50 mb-6 rounded-default p-4 dark:bg-base-800">
+                <table class="border border-base-400/10 border-spacing-none border-separate rounded-default overflow-hidden shadow-xs w-full dark:border-base-800">
+                    <caption class="font-semibold mb-3 text-base-900 text-left dark:text-base-100">
+                        {% trans "Expected file formats" %}
+                    </caption>
+                    <tbody>
+                        {# locations.csv #}
+                        <tr class="bg-white dark:bg-base-900">
+                            <td class="p-3">
+                                <details class="group">
+                                    <summary class="cursor-pointer select-none flex items-center gap-2 text-sm font-medium text-base-700 dark:text-base-300 hover:text-primary-600 dark:hover:text-primary-400 list-none">
+                                        <span class="material-symbols-outlined text-[1rem] transition-transform group-open:rotate-90">chevron_right</span>
+                                        <code class="text-primary-600 dark:text-primary-400">locations.csv</code>
+                                        <span class="text-base-400 dark:text-base-500 font-normal">
+                                            — {% trans "required" %}: <code>name</code>, <code>latitude</code>, <code>longitude</code>
+                                        </span>
+                                    </summary>
+                                    <div class="mt-3 ml-6 overflow-x-auto">
+                                        <table class="w-full text-xs border-collapse">
+                                            <thead>
+                                                <tr class="bg-base-100 dark:bg-base-700 text-left">
+                                                    <th class="p-2 font-semibold text-base-600 dark:text-base-300 border-b border-base-200 dark:border-base-600">{% trans "Column" %}</th>
+                                                    <th class="p-2 font-semibold text-base-600 dark:text-base-300 border-b border-base-200 dark:border-base-600">{% trans "Required" %}</th>
+                                                    <th class="p-2 font-semibold text-base-600 dark:text-base-300 border-b border-base-200 dark:border-base-600">{% trans "Default" %}</th>
+                                                    <th class="p-2 font-semibold text-base-600 dark:text-base-300 border-b border-base-200 dark:border-base-600">{% trans "Notes" %}</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="text-base-700 dark:text-base-300">
+                                                <tr class="border-b border-base-100 dark:border-base-700"><td class="p-2"><code>name</code></td><td class="p-2 text-red-600 font-medium">{% trans "yes" %}</td><td class="p-2">—</td><td class="p-2">{% trans "Unique location name" %}</td></tr>
+                                                <tr class="border-b border-base-100 dark:border-base-700"><td class="p-2"><code>latitude</code></td><td class="p-2 text-red-600 font-medium">{% trans "yes" %}</td><td class="p-2">—</td><td class="p-2">{% trans "-90 to 90" %}</td></tr>
+                                                <tr class="border-b border-base-100 dark:border-base-700"><td class="p-2"><code>longitude</code></td><td class="p-2 text-red-600 font-medium">{% trans "yes" %}</td><td class="p-2">—</td><td class="p-2">{% trans "-180 to 180" %}</td></tr>
+                                                <tr class="border-b border-base-100 dark:border-base-700"><td class="p-2"><code>description</code></td><td class="p-2 text-base-400">{% trans "no" %}</td><td class="p-2"><em>{% trans "empty" %}</em></td><td class="p-2">{% trans "Plain text" %}</td></tr>
+                                                <tr><td class="p-2"><code>active</code></td><td class="p-2 text-base-400">{% trans "no" %}</td><td class="p-2"><code>True</code></td><td class="p-2"><code>True</code> {% trans "or" %} <code>False</code></td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </details>
+                            </td>
+                        </tr>
+
+                        {# tags.csv #}
+                        <tr class="bg-white dark:bg-base-900 border-t border-base-100 dark:border-base-700">
+                            <td class="p-3">
+                                <details class="group">
+                                    <summary class="cursor-pointer select-none flex items-center gap-2 text-sm font-medium text-base-700 dark:text-base-300 hover:text-primary-600 dark:hover:text-primary-400 list-none">
+                                        <span class="material-symbols-outlined text-[1rem] transition-transform group-open:rotate-90">chevron_right</span>
+                                        <code class="text-primary-600 dark:text-primary-400">tags.csv</code>
+                                        <span class="text-base-400 dark:text-base-500 font-normal">
+                                            — {% trans "required" %}: <code>name</code>, <code>menu_name</code>
+                                            &nbsp;·&nbsp; {% trans "Menus &amp; Menu Groups are inferred" %}
+                                        </span>
+                                    </summary>
+                                    <div class="mt-3 ml-6 overflow-x-auto">
+                                        <table class="w-full text-xs border-collapse">
+                                            <thead>
+                                                <tr class="bg-base-100 dark:bg-base-700 text-left">
+                                                    <th class="p-2 font-semibold text-base-600 dark:text-base-300 border-b border-base-200 dark:border-base-600">{% trans "Column" %}</th>
+                                                    <th class="p-2 font-semibold text-base-600 dark:text-base-300 border-b border-base-200 dark:border-base-600">{% trans "Required" %}</th>
+                                                    <th class="p-2 font-semibold text-base-600 dark:text-base-300 border-b border-base-200 dark:border-base-600">{% trans "Default" %}</th>
+                                                    <th class="p-2 font-semibold text-base-600 dark:text-base-300 border-b border-base-200 dark:border-base-600">{% trans "Notes" %}</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="text-base-700 dark:text-base-300">
+                                                <tr class="border-b border-base-100 dark:border-base-700"><td class="p-2"><code>name</code></td><td class="p-2 text-red-600 font-medium">{% trans "yes" %}</td><td class="p-2">—</td><td class="p-2">{% trans "Tag name" %}</td></tr>
+                                                <tr class="border-b border-base-100 dark:border-base-700"><td class="p-2"><code>menu_name</code></td><td class="p-2 text-red-600 font-medium">{% trans "yes" %}</td><td class="p-2">—</td><td class="p-2">{% trans "Creates or references a Menu" %}</td></tr>
+                                                <tr class="border-b border-base-100 dark:border-base-700"><td class="p-2"><code>menu_group_name</code></td><td class="p-2 text-base-400">{% trans "no" %}</td><td class="p-2"><code>Default</code></td><td class="p-2">{% trans "Creates or references a Menu Group" %}</td></tr>
+                                                <tr class="border-b border-base-100 dark:border-base-700"><td class="p-2"><code>menu_hierarchy_level</code></td><td class="p-2 text-base-400">{% trans "no" %}</td><td class="p-2"><code>0</code></td><td class="p-2">{% trans "Integer" %}</td></tr>
+                                                <tr class="border-b border-base-100 dark:border-base-700"><td class="p-2"><code>color</code></td><td class="p-2 text-base-400">{% trans "no" %}</td><td class="p-2"><code>#FF0000</code></td><td class="p-2">{% trans "Hex color #RRGGBB" %}</td></tr>
+                                                <tr class="border-b border-base-100 dark:border-base-700"><td class="p-2"><code>description</code></td><td class="p-2 text-base-400">{% trans "no" %}</td><td class="p-2"><em>{% trans "empty" %}</em></td><td class="p-2">{% trans "Popup text content" %}</td></tr>
+                                                <tr class="border-b border-base-100 dark:border-base-700"><td class="p-2"><code>related_locations</code></td><td class="p-2 text-base-400">{% trans "no" %}</td><td class="p-2"><em>{% trans "empty" %}</em></td><td class="p-2">{% trans "Location names separated by" %} <code>;</code></td></tr>
+                                                <tr><td class="p-2"><code>active</code></td><td class="p-2 text-base-400">{% trans "no" %}</td><td class="p-2"><code>True</code></td><td class="p-2"><code>True</code> {% trans "or" %} <code>False</code></td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </details>
+                            </td>
+                        </tr>
+
+                        {# links.csv #}
+                        <tr class="bg-white dark:bg-base-900 border-t border-base-100 dark:border-base-700">
+                            <td class="p-3">
+                                <details class="group">
+                                    <summary class="cursor-pointer select-none flex items-center gap-2 text-sm font-medium text-base-700 dark:text-base-300 hover:text-primary-600 dark:hover:text-primary-400 list-none">
+                                        <span class="material-symbols-outlined text-[1rem] transition-transform group-open:rotate-90">chevron_right</span>
+                                        <code class="text-primary-600 dark:text-primary-400">links.csv</code>
+                                        <span class="text-base-400 dark:text-base-500 font-normal">
+                                            — {% trans "required" %}: <code>name</code>, <code>location_1</code>, <code>location_2</code>
+                                            &nbsp;·&nbsp; {% trans "Links Groups are inferred" %}
+                                        </span>
+                                    </summary>
+                                    <div class="mt-3 ml-6 overflow-x-auto">
+                                        <table class="w-full text-xs border-collapse">
+                                            <thead>
+                                                <tr class="bg-base-100 dark:bg-base-700 text-left">
+                                                    <th class="p-2 font-semibold text-base-600 dark:text-base-300 border-b border-base-200 dark:border-base-600">{% trans "Column" %}</th>
+                                                    <th class="p-2 font-semibold text-base-600 dark:text-base-300 border-b border-base-200 dark:border-base-600">{% trans "Required" %}</th>
+                                                    <th class="p-2 font-semibold text-base-600 dark:text-base-300 border-b border-base-200 dark:border-base-600">{% trans "Default" %}</th>
+                                                    <th class="p-2 font-semibold text-base-600 dark:text-base-300 border-b border-base-200 dark:border-base-600">{% trans "Notes" %}</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="text-base-700 dark:text-base-300">
+                                                <tr class="border-b border-base-100 dark:border-base-700"><td class="p-2"><code>name</code></td><td class="p-2 text-red-600 font-medium">{% trans "yes" %}</td><td class="p-2">—</td><td class="p-2">{% trans "Link display name" %}</td></tr>
+                                                <tr class="border-b border-base-100 dark:border-base-700"><td class="p-2"><code>location_1</code></td><td class="p-2 text-red-600 font-medium">{% trans "yes" %}</td><td class="p-2">—</td><td class="p-2">{% trans "Location name (must exist in CSV or DB)" %}</td></tr>
+                                                <tr class="border-b border-base-100 dark:border-base-700"><td class="p-2"><code>location_2</code></td><td class="p-2 text-red-600 font-medium">{% trans "yes" %}</td><td class="p-2">—</td><td class="p-2">{% trans "Location name (must exist in CSV or DB)" %}</td></tr>
+                                                <tr class="border-b border-base-100 dark:border-base-700"><td class="p-2"><code>link_group_name</code></td><td class="p-2 text-base-400">{% trans "no" %}</td><td class="p-2"><code>Default Links</code></td><td class="p-2">{% trans "Creates or references a Links Group" %}</td></tr>
+                                                <tr class="border-b border-base-100 dark:border-base-700"><td class="p-2"><code>link_group_menu</code></td><td class="p-2 text-base-400">{% trans "no" %}</td><td class="p-2"><em>{% trans "none" %}</em></td><td class="p-2">{% trans "Menu name for the Links Group" %}</td></tr>
+                                                <tr class="border-b border-base-100 dark:border-base-700"><td class="p-2"><code>link_group_color</code></td><td class="p-2 text-base-400">{% trans "no" %}</td><td class="p-2"><code>#FF0000</code></td><td class="p-2">{% trans "Hex color #RRGGBB" %}</td></tr>
+                                                <tr class="border-b border-base-100 dark:border-base-700"><td class="p-2"><code>link_group_opacity</code></td><td class="p-2 text-base-400">{% trans "no" %}</td><td class="p-2"><code>0.6</code></td><td class="p-2">{% trans "0.0 to 1.0" %}</td></tr>
+                                                <tr class="border-b border-base-100 dark:border-base-700"><td class="p-2"><code>curvature</code></td><td class="p-2 text-base-400">{% trans "no" %}</td><td class="p-2"><code>2.0</code></td><td class="p-2">{% trans "1.0 to 4.0" %}</td></tr>
+                                                <tr class="border-b border-base-100 dark:border-base-700"><td class="p-2"><code>weight</code></td><td class="p-2 text-base-400">{% trans "no" %}</td><td class="p-2"><code>3</code></td><td class="p-2">{% trans "Integer, line thickness" %}</td></tr>
+                                                <tr class="border-b border-base-100 dark:border-base-700"><td class="p-2"><code>dashed</code></td><td class="p-2 text-base-400">{% trans "no" %}</td><td class="p-2"><code>False</code></td><td class="p-2"><code>True</code> {% trans "or" %} <code>False</code></td></tr>
+                                                <tr class="border-b border-base-100 dark:border-base-700"><td class="p-2"><code>straight_link</code></td><td class="p-2 text-base-400">{% trans "no" %}</td><td class="p-2"><code>False</code></td><td class="p-2"><code>True</code> {% trans "or" %} <code>False</code></td></tr>
+                                                <tr class="border-b border-base-100 dark:border-base-700"><td class="p-2"><code>invert_link</code></td><td class="p-2 text-base-400">{% trans "no" %}</td><td class="p-2"><code>False</code></td><td class="p-2"><code>True</code> {% trans "or" %} <code>False</code></td></tr>
+                                                <tr><td class="p-2"><code>popup_description</code></td><td class="p-2 text-base-400">{% trans "no" %}</td><td class="p-2"><em>{% trans "empty" %}</em></td><td class="p-2">{% trans "Plain text" %}</td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </details>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            {# Submit row #}
+            <div class="flex items-center gap-4 mt-2">
+                <button
+                    type="submit"
+                    id="csv-submit-btn"
+                    onclick="csvShowSpinner()"
+                    class="inline-flex items-center gap-1.5 rounded-default px-5 py-2.5 text-sm font-semibold
+                           bg-primary-600 text-white shadow-sm
+                           hover:bg-primary-700 dark:hover:bg-primary-500 transition-colors
+                           focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">
+                    <span class="material-symbols-outlined text-[1rem]">search</span>
+                    {% trans "Analyse & Preview Changes" %}
+                </button>
+                <a href="/admin/"
+                   class="inline-flex items-center gap-1 text-sm font-medium text-base-500 dark:text-base-400
+                          hover:text-base-700 dark:hover:text-base-200 transition-colors">
+                    <span class="material-symbols-outlined text-[1rem]">close</span>
+                    {% trans "Cancel" %}
+                </a>
+            </div>
+        </form>
+
+    </div>
+    <div class="lg:w-96"></div>
+</div>
+
+{# Loading overlay — same pattern as admin/index.html #}
+<div class="background-no-go" id="csv-loading-bg"></div>
+<div class="spinner" id="csv-spinner"></div>
+<div class="spinner-text" id="csv-loading-text">{% trans "Analysing files, please wait…" %}</div>
+
+<script>
+function csvShowSpinner() {
+    var csvFiles = document.getElementById('csv_files').files;
+    var zipFile  = document.getElementById('zip_file').files;
+    if (csvFiles.length === 0 && zipFile.length === 0) {
+        return;
+    }
+    document.getElementById('csv-loading-text').style.display = 'block';
+    document.getElementById('csv-loading-bg').style.display  = 'block';
+    document.getElementById('csv-spinner').style.display     = 'block';
+}
+
+function csvShowFileList(input, containerId) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = '';
+    if (!input.files || input.files.length === 0) {
+        container.classList.add('hidden');
+        return;
+    }
+
+    const typeMap = {
+        location: { label: 'Locations', icon: 'location_on', color: 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800' },
+        tag:      { label: 'Tags',      icon: 'label',       color: 'text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-950/30 border-violet-200 dark:border-violet-800' },
+        link:     { label: 'Links',     icon: 'cable',       color: 'text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-950/30 border-teal-200 dark:border-teal-800' },
+        zip:      { label: 'Archive',   icon: 'folder_zip',  color: 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800' },
+    };
+
+    Array.from(input.files).forEach(function(file) {
+        const nameLower = file.name.toLowerCase();
+        let typeInfo;
+        if (nameLower.endsWith('.zip')) {
+            typeInfo = typeMap.zip;
+        } else if (nameLower.includes('location')) {
+            typeInfo = typeMap.location;
+        } else if (nameLower.includes('tag') || nameLower.includes('menu')) {
+            typeInfo = typeMap.tag;
+        } else if (nameLower.includes('link')) {
+            typeInfo = typeMap.link;
+        } else {
+            typeInfo = { label: 'CSV', icon: 'description', color: 'text-base-600 dark:text-base-400 bg-base-50 dark:bg-base-800 border-base-200 dark:border-base-700' };
+        }
+
+        const sizeKB = file.size < 1024
+            ? file.size + ' B'
+            : file.size < 1024 * 1024
+                ? (file.size / 1024).toFixed(1) + ' KB'
+                : (file.size / (1024 * 1024)).toFixed(2) + ' MB';
+
+        const row = document.createElement('div');
+        row.className = 'flex items-center gap-2.5 px-3 py-2 rounded border text-sm ' + typeInfo.color;
+        row.innerHTML =
+            '<span class="material-symbols-outlined text-[1rem] shrink-0">' + typeInfo.icon + '</span>' +
+            '<span class="font-medium truncate grow">' + file.name + '</span>' +
+            '<span class="shrink-0 text-xs opacity-70">' + sizeKB + '</span>' +
+            '<span class="shrink-0 text-xs font-semibold opacity-80">' + typeInfo.label + '</span>';
+        container.appendChild(row);
+    });
+
+    container.classList.remove('hidden');
+}
+</script>
+
+<style>
+    .spinner {
+        display: none;
+        position: fixed;
+        left: 50%;
+        top: 50%;
+        z-index: 9999;
+        width: 56px;
+        height: 56px;
+        margin: -28px 0 0 -28px;
+        border: 7px solid rgba(0,0,0,0.08);
+        border-radius: 50%;
+        border-top-color: #3b82f6;
+        animation: csv-spin 0.8s linear infinite;
+    }
+    .spinner-text {
+        display: none;
+        position: fixed;
+        top: calc(50% + 48px);
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 9999;
+        font-size: 0.95rem;
+        color: #374151;
+        white-space: nowrap;
+    }
+    .background-no-go {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 9998;
+        background: rgba(0, 0, 0, 0.35);
+    }
+    @keyframes csv-spin {
+        to { transform: rotate(360deg); }
+    }
+    /* collapse marker already handled by group-open:rotate-90 above */
+    details > summary { list-style: none; }
+    details > summary::-webkit-details-marker { display: none; }
+</style>
+{% endblock %}

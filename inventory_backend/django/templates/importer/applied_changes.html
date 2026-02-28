@@ -1,84 +1,101 @@
-{% load static %}
+{% extends "admin/base_site.html" %}
+{% load i18n %}
 
-<head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" type="text/css" href="{% static 'import/css/logs.css' %}" media="screen" />
-    <script src="https://use.fontawesome.com/195a536412.js"></script>
-    <title>Import logs</title>
-</head>
+{% block title %}{% trans "Import Results" %} | {{ site_title|default:"Site Admin" }}{% endblock %}
 
-<body>
-    <header>
-        <div id="page-info">
-            <a href="/admin/" style="color: white; text-decoration: none;">Map Administration</a>
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="/admin/">{% trans "Home" %}</a>
+    &rsaquo; {% trans "Import Results" %}
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="flex flex-col lg:flex-row lg:gap-8">
+    <div class="grow">
+
+        {# ── Status banner ─────────────────────────────────────────────────────── #}
+        <div class="bg-base-50 mb-6 rounded-default p-4 dark:bg-base-800 border border-base-200/60 dark:border-base-700/60 flex items-start gap-3">
+            <span class="material-symbols-outlined text-[1.3rem] text-base-400 dark:text-base-500 mt-0.5 shrink-0">info</span>
+            <p class="text-base-800 dark:text-base-200 font-medium">{{ status.status }}</p>
         </div>
-        <div id="system-info">
-            Import logs
-        </div>
-    </header>
 
-    <div id="form-frame">
-        <div id="status-msg">{{status.status}}</div>
+        {# ── Log sections ──────────────────────────────────────────────────────── #}
         {% for logTypeName, logValues in status.logs.items %}
-            <div class="model-frame">
+        {% if logValues|length > 0 %}
+        <div class="bg-base-50 mb-4 rounded-default dark:bg-base-800 overflow-hidden border border-base-200/60 dark:border-base-700/60">
 
-                <div class="model-header" onclick="hide('{{logTypeName}}')">
-                    {{logTypeName|capfirst}} ({{logValues|length }})
-                    {% if logValues|length > 0 %}
-                        <i id="{{logTypeName}}-icon" class="fa fa-chevron-down" ></i>
-                    {% endif %}
-                </div>
-
-                <div class="collapsed" id={{logTypeName}}>
-                    {% for logText in logValues %}
-                        {% if logValues|length > 0 %}
-                            <div class="log-text">
-                                {% if logTypeName == "success" %}
-                                <div id=bullet-point style="background-color: green;"></div> 
-                                {% elif logTypeName == "warnings" %}
-                                <div id=bullet-point style="background-color: orange;"></div> 
-                                {% else %}
-                                <div id=bullet-point style="background-color: red;"></div> 
-                                {% endif %}
-                                {{logText}}
-                            </div>
-                        {% endif %}
-                    {% endfor %}
-                </div>
-
+            <div class="flex items-center justify-between px-4 py-3 cursor-pointer select-none
+                        border-b border-base-200 dark:border-base-700
+                        hover:bg-base-100 dark:hover:bg-base-700/50 transition-colors"
+                 onclick="logToggle('log-{{ logTypeName }}')"
+                 role="button">
+                <span class="flex items-center gap-2 text-sm font-semibold
+                    {% if logTypeName == 'success' %}text-green-700 dark:text-green-400
+                    {% elif logTypeName == 'warnings' %}text-amber-700 dark:text-amber-400
+                    {% else %}text-red-700 dark:text-red-400{% endif %}">
+                    <span class="material-symbols-outlined text-[1.1rem]">
+                        {% if logTypeName == 'success' %}check_circle
+                        {% elif logTypeName == 'warnings' %}warning
+                        {% else %}error{% endif %}
+                    </span>
+                    {{ logTypeName|capfirst }} ({{ logValues|length }})
+                </span>
+                <span id="log-{{ logTypeName }}-chevron"
+                      class="material-symbols-outlined text-base-400 text-[1.1rem] transition-transform duration-150 rotate-180">
+                    expand_less
+                </span>
             </div>
+
+            <div id="log-{{ logTypeName }}" class="divide-y divide-base-100 dark:divide-base-700/40">
+                {% for logText in logValues %}
+                <div class="flex items-start gap-2.5 px-4 py-2.5 text-sm text-base-700 dark:text-base-300 bg-white dark:bg-base-900">
+                    <span class="material-symbols-outlined text-[0.95rem] mt-0.5 shrink-0
+                        {% if logTypeName == 'success' %}text-green-500
+                        {% elif logTypeName == 'warnings' %}text-amber-500
+                        {% else %}text-red-500{% endif %}">
+                        {% if logTypeName == 'success' %}check_circle
+                        {% elif logTypeName == 'warnings' %}warning
+                        {% else %}error{% endif %}
+                    </span>
+                    <span>{{ logText }}</span>
+                </div>
+                {% endfor %}
+            </div>
+
+        </div>
+        {% endif %}
         {% endfor %}
 
-        <div class="submit-frame">
-            <a href="/admin">
-                <input type="button" value="Go home" id="submit-btn">
+        {# ── Return button ─────────────────────────────────────────────────────── #}
+        <div class="mt-6 flex items-center gap-4">
+            <a href="/admin/"
+               class="inline-flex items-center gap-1.5 rounded-default px-5 py-2.5 text-sm font-semibold
+                      bg-primary-600 text-white shadow-sm
+                      hover:bg-primary-700 dark:hover:bg-primary-500 transition-colors
+                      focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">
+                <span class="material-symbols-outlined text-[1rem]">home</span>
+                {% trans "Return to Administration" %}
             </a>
         </div>
-        
-    </div>
-</body>
 
+    </div>
+    <div class="lg:w-96 shrink-0"></div>
+</div>
 
 <script>
-    function hide(id) {
-        let div = document.getElementById(id)
-        let icon = document.getElementById(id + '-icon')
-        if (isNotCollapsed(div)) {
-            /* Collapse */
-            div.classList.add('collapsed')
-            icon.classList.add('fa-chevron-down')
-            icon.classList.remove('fa-chevron-up')
+    function logToggle(id) {
+        const content = document.getElementById(id);
+        const chevron = document.getElementById(id + '-chevron');
+        if (!content) return;
+        const isVisible = !content.classList.contains('hidden');
+        if (isVisible) {
+            content.classList.add('hidden');
+            chevron.classList.remove('rotate-180');
         } else {
-            /* Expand */
-            div.classList.remove('collapsed')
-            icon.classList.add('fa-chevron-up')
-            icon.classList.remove('fa-chevron-down')
+            content.classList.remove('hidden');
+            chevron.classList.add('rotate-180');
         }
     }
-
-    function isNotCollapsed(div) {
-        return !div.classList.contains('collapsed')
-    }
 </script>
+{% endblock %}
