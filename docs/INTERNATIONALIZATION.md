@@ -50,7 +50,7 @@ from django.utils.translation import gettext_lazy as _
 # Idiomas disponíveis
 LANGUAGES = [
     ('en', _('English')),
-    ('pt', _('Portuguese')),
+    ('pt-br', _('Portuguese')),
     ('es', _('Spanish')),
 ]
 
@@ -202,7 +202,7 @@ Dependendo de onde a string será usada:
 ### Passo 2: Adicionar a tradução nos arquivos `.po`
 
 Edite os dois arquivos:
-- `locale/pt/LC_MESSAGES/django.po` (Português)
+- `locale/pt_BR/LC_MESSAGES/django.po` (Português do Brasil)
 - `locale/es/LC_MESSAGES/django.po` (Espanhol)
 
 Adicione ao final do arquivo (antes de qualquer linha em branco final):
@@ -219,14 +219,14 @@ msgstr "Minha nova string"
 Execute no diretório `inventory_backend/django/`:
 
 ```bash
-msgfmt -o locale/pt/LC_MESSAGES/django.mo locale/pt/LC_MESSAGES/django.po
+msgfmt -o locale/pt_BR/LC_MESSAGES/django.mo locale/pt_BR/LC_MESSAGES/django.po
 msgfmt -o locale/es/LC_MESSAGES/django.mo locale/es/LC_MESSAGES/django.po
 ```
 
 Ou, se estiver usando Docker:
 
 ```bash
-docker compose exec backend bash -c "cd /app && msgfmt -o locale/pt/LC_MESSAGES/django.mo locale/pt/LC_MESSAGES/django.po && msgfmt -o locale/es/LC_MESSAGES/django.mo locale/es/LC_MESSAGES/django.po"
+docker compose exec backend bash -c "cd /app && msgfmt -o locale/pt_BR/LC_MESSAGES/django.mo locale/pt_BR/LC_MESSAGES/django.po && msgfmt -o locale/es/LC_MESSAGES/django.mo locale/es/LC_MESSAGES/django.po"
 ```
 
 > **Nota:** O pacote `gettext` precisa estar instalado. No Dockerfile, adicione `apt-get install -y gettext` se necessário.
@@ -277,7 +277,7 @@ Quando o usuário seleciona um idioma no seletor, a view `set_language` salva a 
 | `templates/registration/*.html` | Todas as strings com `{% trans %}` |
 | `templates/importer/*.html` | Todas as strings com `{% trans %}` |
 | `nginx/nginx.conf` | Adicionado `location /i18n` |
-| `locale/pt/LC_MESSAGES/django.po` | **Criado** — Traduções português |
+| `locale/pt_BR/LC_MESSAGES/django.po` | **Criado** — Traduções português (Brasil) |
 | `locale/es/LC_MESSAGES/django.po` | **Criado** — Traduções espanhol |
 
 ---
@@ -288,7 +288,7 @@ Quando o usuário seleciona um idioma no seletor, a view `set_language` salva a 
    ```python
    LANGUAGES = [
        ('en', _('English')),
-       ('pt', _('Portuguese')),
+       ('pt-br', _('Portuguese')),
        ('es', _('Spanish')),
        ('fr', _('French')),  # Novo idioma
    ]
@@ -301,7 +301,7 @@ Quando o usuário seleciona um idioma no seletor, a view `set_language` salva a 
 
 3. Copie um `.po` existente como base:
    ```bash
-   cp locale/pt/LC_MESSAGES/django.po locale/fr/LC_MESSAGES/django.po
+   cp locale/pt_BR/LC_MESSAGES/django.po locale/fr/LC_MESSAGES/django.po
    ```
 
 4. Edite o novo arquivo com as traduções para o idioma desejado.

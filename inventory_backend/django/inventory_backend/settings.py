@@ -226,7 +226,7 @@ LANGUAGE_CODE = 'en-us'
 
 LANGUAGES = [
     ('en', _('English')),
-    ('pt', _('Portuguese')),
+    ('pt-br', _('Portuguese')),
     ('es', _('Spanish')),
 ]
 
