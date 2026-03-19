@@ -99,7 +99,7 @@
                         <tr class="bg-white dark:bg-base-900">
                             <td class="p-3">
                                 <p class="text-sm text-base-500 dark:text-base-400 mb-3">
-                                    {% trans "Pack your CSV files into a single .zip archive containing locations, tags, and links CSV filesand upload it here." %}
+                                    {% trans "Pack your CSV files into a single .zip archive containing locations, tags, and links CSV files and upload it here." %}
                                 </p>
                                 <input
                                     type="file"
@@ -258,13 +258,13 @@
                            bg-primary-600 text-white shadow-sm
                            hover:bg-primary-700 dark:hover:bg-primary-500 transition-colors
                            focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">
-                    <span class="material-symbols-outlined text-[1rem]">search</span>
+                    <span class="material-symbols-outlined text-[1rem] shrink-0 align-middle leading-none">search</span>
                     {% trans "Analyse & Preview Changes" %}
                 </button>
                 <a href="/admin/"
                    class="inline-flex items-center gap-1 text-sm font-medium text-base-500 dark:text-base-400
                           hover:text-base-700 dark:hover:text-base-200 transition-colors">
-                    <span class="material-symbols-outlined text-[1rem]">close</span>
+                    <span class="material-symbols-outlined text-[1rem] shrink-0 align-middle leading-none">close</span>
                     {% trans "Cancel" %}
                 </a>
             </div>
@@ -300,10 +300,10 @@ function csvShowFileList(input, containerId) {
     }
 
     const typeMap = {
-        location: { label: 'Locations', icon: 'location_on', color: 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800' },
-        tag:      { label: 'Tags',      icon: 'label',       color: 'text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-950/30 border-violet-200 dark:border-violet-800' },
-        link:     { label: 'Links',     icon: 'cable',       color: 'text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-950/30 border-teal-200 dark:border-teal-800' },
-        zip:      { label: 'Archive',   icon: 'folder_zip',  color: 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800' },
+        location: { label: 'Locations', icon: 'location_on' },
+        tag:      { label: 'Tags',      icon: 'label' },
+        link:     { label: 'Links',     icon: 'cable' },
+        zip:      { label: 'Archive',   icon: 'folder_zip' },
     };
 
     Array.from(input.files).forEach(function(file) {
@@ -318,7 +318,7 @@ function csvShowFileList(input, containerId) {
         } else if (nameLower.includes('link')) {
             typeInfo = typeMap.link;
         } else {
-            typeInfo = { label: 'CSV', icon: 'description', color: 'text-base-600 dark:text-base-400 bg-base-50 dark:bg-base-800 border-base-200 dark:border-base-700' };
+            typeInfo = { label: 'CSV', icon: 'description', color: '' };
         }
 
         const sizeKB = file.size < 1024
@@ -328,12 +328,12 @@ function csvShowFileList(input, containerId) {
                 : (file.size / (1024 * 1024)).toFixed(2) + ' MB';
 
         const row = document.createElement('div');
-        row.className = 'flex items-center gap-2.5 px-3 py-2 rounded border text-sm ' + typeInfo.color;
+        row.className = 'flex items-center gap-2.5 px-3 py-2 rounded border text-sm text-base-600 dark:text-base-400 bg-base-50 dark:bg-base-800 border-base-200 dark:border-base-700';
         row.innerHTML =
-            '<span class="material-symbols-outlined text-[1rem] shrink-0">' + typeInfo.icon + '</span>' +
+            '<span class="material-symbols-outlined text-[1rem] shrink-0 align-middle leading-none">' + typeInfo.icon + '</span>' +
             '<span class="font-medium truncate grow">' + file.name + '</span>' +
             '<span class="shrink-0 text-xs opacity-70">' + sizeKB + '</span>' +
-            '<span class="shrink-0 text-xs font-semibold opacity-80">' + typeInfo.label + '</span>';
+            '<span class="shrink-0 text-xs font-semibold opacity-80 ml-1">' + typeInfo.label + '</span>';
         container.appendChild(row);
     });
 
