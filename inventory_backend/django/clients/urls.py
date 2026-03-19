@@ -1,6 +1,7 @@
 from django.urls import include, path
 from django.conf import settings
 from django.conf.urls.static import static
+from django.conf.urls.i18n import i18n_patterns
 
 from rest_framework import routers
 
@@ -41,6 +42,7 @@ router.register(
 
 urlpatterns = [
     path('admin/', tenant_admin_site.urls),
+    path('i18n/', include('django.conf.urls.i18n')),
     path('api-auth/', include('rest_framework.urls')),
     path('', include(router.urls)),
     path('import/', include("importer.urls")),
