@@ -53,6 +53,7 @@ UNFOLD = {
             "href": "https://i.imgur.com/65Yiw9X.png",
         },
     ],
+    "SHOW_LANGUAGES": True,
 
 }
 
@@ -170,6 +171,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'django.template.context_processors.i18n',
             ],
             'libraries': {
                 'my_templatetag': 'administration.templatetags.importer_tags',

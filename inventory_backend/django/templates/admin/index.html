@@ -7,25 +7,6 @@
 {% block content %}
 {{ block.super }}
 
-{# Language selector #}
-<div class="bg-base-50 mb-6 rounded-default p-3 dark:bg-base-800">
-    <div class="font-semibold mb-3 text-base-900 dark:text-base-100">{% trans "Language" %}</div>
-    <form action="{% url 'set_language' %}" method="post" style="display: inline-flex; align-items: center; gap: 8px;">
-        {% csrf_token %}
-        <input type="hidden" name="next" value="{{ request.path }}">
-        {% get_current_language as LANGUAGE_CODE %}
-        {% get_available_languages as LANGUAGES %}
-        <select name="language" onchange="this.form.submit()"
-            class="border border-base-300 rounded-md px-3 py-1.5 text-sm dark:bg-base-900 dark:border-base-700 dark:text-base-100"
-            style="cursor: pointer;">
-            {% for lang_code, lang_name in LANGUAGES %}
-                <option value="{{ lang_code }}" {% if lang_code == LANGUAGE_CODE %}selected{% endif %}>
-                    {{ lang_name }}
-                </option>
-            {% endfor %}
-        </select>
-    </form>
-</div>
 
 <!-- <div class="app-administration module">
     <div class="bg-base-50 mb-6 rounded-default p-3 dark:bg-base-800">
