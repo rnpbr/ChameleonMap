@@ -6,6 +6,7 @@ from django.shortcuts import render
 from .sources.InfraDPDI import Requester, Translator
 from .sources import Merger, Replacer
 from .sources.CSV import Detector, Validator, Translator as CSVTranslator
+from .sources.xlsx_to_csv_streams import expand_xlsx_upload
 
 
 def index(request):
@@ -37,8 +38,8 @@ def _extract_named_files(request):
     """
     Returns a list of (filename, file_like_object) from the upload.
     Handles:
-      - A single .zip file (field name 'zip_file')
-      - One or more .csv files (field name 'csv_files')
+      - A single .zip file (field name 'zip_file') — CSV members only
+      - One or more .csv and/or .xlsx files (field name 'csv_files')
     """
     named_files = []
 
@@ -53,7 +54,13 @@ def _extract_named_files(request):
             return None, ["The uploaded file is not a valid ZIP archive."]
 
     for uploaded_file in request.FILES.getlist('csv_files'):
-        named_files.append((uploaded_file.name, uploaded_file))
+        if uploaded_file.name.lower().endswith('.xlsx'):
+            expanded, xlsx_errors = expand_xlsx_upload(uploaded_file)
+            if xlsx_errors:
+                return None, xlsx_errors
+            named_files.extend(expanded)
+        else:
+            named_files.append((uploaded_file.name, uploaded_file))
 
     return named_files, []
 
@@ -72,7 +79,7 @@ def _admin_context(request, title, extra=None):
 
 
 def _csv_upload_context(request, extra=None):
-    return _admin_context(request, 'Import data from CSV', extra)
+    return _admin_context(request, 'Import map data', extra)
 
 
 def csv_upload(request):
@@ -90,7 +97,7 @@ def csv_upload(request):
     if not named_files:
         return render(request, 'importer/csv_upload.html',
                       _csv_upload_context(request, {'errors': [
-                          "No files were uploaded. Please select at least one CSV file or a ZIP archive."
+                          "No files were uploaded. Please select at least one CSV or Excel file, or a ZIP archive of CSV files."
                       ]}))
 
     # --- Detect file types ---

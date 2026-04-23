@@ -10,3 +10,4 @@ django-axes~=7.0.0
 django-tenants==3.7.0
 django-tenant-users==2.1.1
 django-unfold==0.62.0
+openpyxl==3.1.5

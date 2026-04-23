@@ -7,6 +7,8 @@ import csv
 import io
 import re
 
+from .numerics import parse_float_loose, parse_int_loose
+
 COLOR_RE = re.compile(r'^#[0-9A-Fa-f]{6}$')
 
 LOCATIONS_REQUIRED_COLUMNS = {'name', 'latitude', 'longitude'}
@@ -74,7 +76,7 @@ def validate_locations(filename, fileobj):
                 errors.append(_err(filename, i, 'latitude', "Field 'latitude' is required and cannot be empty."))
             else:
                 try:
-                    lat_f = float(lat)
+                    lat_f = parse_float_loose(lat)
                     if not (-90 <= lat_f <= 90):
                         errors.append(_err(filename, i, 'latitude',
                                            f"Latitude '{lat}' is out of range (-90 to 90)."))
@@ -87,7 +89,7 @@ def validate_locations(filename, fileobj):
                 errors.append(_err(filename, i, 'longitude', "Field 'longitude' is required and cannot be empty."))
             else:
                 try:
-                    lon_f = float(lon)
+                    lon_f = parse_float_loose(lon)
                     if not (-180 <= lon_f <= 180):
                         errors.append(_err(filename, i, 'longitude',
                                            f"Longitude '{lon}' is out of range (-180 to 180)."))
@@ -145,7 +147,7 @@ def validate_tags(filename, fileobj):
             hierarchy = row.get('menu_hierarchy_level', '')
             if hierarchy:
                 try:
-                    int(hierarchy)
+                    parse_int_loose(hierarchy)
                 except ValueError:
                     errors.append(_err(filename, i, 'menu_hierarchy_level',
                                        f"Field 'menu_hierarchy_level' must be an integer, got '{hierarchy}'."))
@@ -202,7 +204,7 @@ def validate_links(filename, fileobj):
             opacity = row.get('link_group_opacity', '')
             if opacity:
                 try:
-                    op_f = float(opacity)
+                    op_f = parse_float_loose(opacity)
                     if not (0.0 <= op_f <= 1.0):
                         errors.append(_err(filename, i, 'link_group_opacity',
                                            f"Opacity '{opacity}' is out of range (0.0 to 1.0)."))
@@ -213,7 +215,7 @@ def validate_links(filename, fileobj):
             curvature = row.get('curvature', '')
             if curvature:
                 try:
-                    cur_f = float(curvature)
+                    cur_f = parse_float_loose(curvature)
                     if not (1.0 <= cur_f <= 4.0):
                         errors.append(_err(filename, i, 'curvature',
                                            f"Curvature '{curvature}' is out of range (1.0 to 4.0)."))
@@ -224,7 +226,7 @@ def validate_links(filename, fileobj):
             weight = row.get('weight', '')
             if weight:
                 try:
-                    int(weight)
+                    parse_int_loose(weight)
                 except ValueError:
                     errors.append(_err(filename, i, 'weight',
                                        f"Weight '{weight}' must be an integer."))

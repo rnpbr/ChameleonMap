@@ -16,6 +16,7 @@ import csv
 import io
 
 from administration.models import MenuGroup, Menu, Location, Tag, Links_group, Link
+from .numerics import parse_float_loose, parse_int_loose
 from importer.models import (
     MapData,
     MenuGroupsType, MenusType, LocationsType, TagsType,
@@ -57,19 +58,19 @@ def _parse_color(value, default='#FF0000'):
 
 
 def _parse_float(value, default):
-    if not value or not value.strip():
+    if not value or not str(value).strip():
         return default
     try:
-        return float(value.strip())
+        return parse_float_loose(value)
     except ValueError:
         return default
 
 
 def _parse_int(value, default):
-    if not value or not value.strip():
+    if not value or not str(value).strip():
         return default
     try:
-        return int(value.strip())
+        return parse_int_loose(value)
     except ValueError:
         return default
 
