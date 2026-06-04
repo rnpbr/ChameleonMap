@@ -25,7 +25,7 @@ export class FilterMenuComponent {
   public _menugroups: Array<MenuGroup>;
   private _menus: Array<Menu>;
   private _tags: Array<Tag>;
-  private _kmlShapes: Array<KmlShape>;
+  private _kmlShapes: Array<KmlLayerDto>;
   private _linkGroups: Array<LinksGroup>;
   public _locations: Array<Location>;
   public _selectedTagsMenuId: number;
@@ -393,11 +393,11 @@ export class FilterMenuComponent {
     this.tagReactivated.emit({ tag: tag });
   }
 
-  removeKmlShape(kmlShape: KmlShape) {
+  removeKmlShape(kmlShape: KmlLayerDto) {
     this.shapeRemoval.emit({ shape: kmlShape });
   }
 
-  insertKmlShape(kmlShape: KmlShape) {
+  insertKmlShape(kmlShape: KmlLayerDto) {
     this.shapeReactivated.emit({ shape: kmlShape });
   }
 

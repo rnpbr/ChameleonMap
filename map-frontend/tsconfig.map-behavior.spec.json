@@ -1,0 +1,25 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./out-tsc/map-behavior-spec",
+    "typeRoots": [
+      "./node_modules/@types",
+      "./src/typings"
+    ],
+    "types": [
+      "jasmine"
+    ]
+  },
+  "files": [
+    "src/test-map-behavior.ts",
+    "src/polyfills.ts"
+  ],
+  "include": [
+    "src/typings/config.d.ts",
+    "src/typings/map-data.d.ts",
+    "src/app/map/map-behavior.ts",
+    "src/app/map/map-behavior.spec.ts",
+    "src/app/map/popup-content.service.ts",
+    "src/app/map/popup-content.service.spec.ts"
+  ]
+}

@@ -1,4 +1,3 @@
-import { TagContentType } from '@angular/compiler';
 import {
   Component,
   OnInit,
@@ -13,12 +12,19 @@ import {
 import * as L from 'leaflet';
 import 'leaflet-responsive-popup';
 import '@elfalem/leaflet-curve';
-import { ApiService } from '../api.service';
 import { OverlayedPopupComponent } from '../overlayed-popup/overlayed-popup.component';
-import { forkJoin } from 'rxjs';
-import { kml } from '@tmcw/togeojson';
 import { TooltipComponent } from '../tooltip/tooltip.component';
 import { ChameleonButtonComponent } from '../chameleon-button/chameleon-button.component';
+import { createMapLoadProfiler, MapLoadProfiler } from './map-load-profiler';
+import { MapDataService, MapDataStore } from './map-data.service';
+import { PopupContentService } from './popup-content.service';
+import {
+  buildEntityIndex,
+  isAnyClusterActive,
+  isLinkEligible,
+  isMenuSimultaneousAndSelected,
+  shouldShowTagForMenu
+} from './map-behavior';
 
 @Component({
   selector: 'app-map',
@@ -37,10 +43,9 @@ export class MapComponent implements OnInit {
   private _mapSettings: any;
   private _links: Array<Link>;
   private _linksGroup: Array<LinksGroup>;
-  private _kmlShapes: Array<KmlShape>;
+  private _kmlShapes: Array<KmlLayerDto>;
   public mapSetting: any = null;
   public map: L.Map;
-  private locationHeaderSize = 0;
   private mapLoaded = false;
   private mapInitialized = false;
   private markerClusterGroup: L.MarkerClusterGroup;
@@ -72,6 +77,7 @@ export class MapComponent implements OnInit {
   }
 
   private kmlLayers: { [key: number]: L.Layer } = {};
+  private readonly loadProfiler: MapLoadProfiler = createMapLoadProfiler();
 
   @HostListener('document:click', ['$event'])
   clickout(event: any) {
@@ -128,9 +134,11 @@ export class MapComponent implements OnInit {
   }
   set mapSettings(value) {
     this._mapSettings = value;
-    if (value !== undefined) {
-      this.mapSetting = this._mapSettings[0];
+    if (value === undefined || value === null) {
+      this.mapSetting = null;
+      return;
     }
+    this.mapSetting = Array.isArray(value) ? value[0] : value;
   }
 
   get links() {
@@ -154,95 +162,98 @@ export class MapComponent implements OnInit {
     this._kmlShapes = value;
   }
 
-  constructor(private api: ApiService) {
+  constructor(
+    private mapDataService: MapDataService,
+    private popupContent: PopupContentService
+  ) {
     this.checkOrientation();
   }
 
   ngOnInit() {
-    forkJoin({
-      menugroups: this.api.getMenuGroups(),
-      menus: this.api.getMenus(),
-      locations: this.api.getLocations(),
-      tags: this.api.getTags(),
-      tagRelationships: this.api.getTagRelationships(),
-      mapSettings: this.api.getSettings(),
-      links: this.api.getLinks(),
-      linksGroup: this.api.getLinkGroups(),
-      kmlShapes: this.api.getKmlShapes()
-    }).subscribe({
-      next: (results) => {
-        this.menugroups = results.menugroups.sort((a: MenuGroup, b: MenuGroup) => a.id - b.id);
-
-        if (this.menugroups.length > 0) {
-          this.currentMenuGroup = this.menugroups[0].name;
-        }
-  
-        this.menus = results.menus;
-        this.menus.forEach(menu => {
-          menu.expanded = this.menus.length < 3;
-        });
-        this.menus.forEach(menu => {
-          if (menu.group == this.menugroups[0].id) {
-            this.selectedMenu = menu.id;
-            this.defaultMenuId = menu.id;
-            return;
-          }
-        });
-  
-        this.locations = results.locations;
-        this.tags = results.tags;
-        this.tagRelationships = results.tagRelationships;
-        this.mapSettings = results.mapSettings;
-        this.links = results.links;
-        this.linksGroup = results.linksGroup;
-        this.kmlShapes = results.kmlShapes;
-  
-        // After all data is set, initialize the map
+    this.loadProfiler.mark('map.load.total.start');
+    this.loadProfiler.mark('map.load.mapData.start');
+    this.mapDataService.load().subscribe({
+      next: (store) => {
+        this.loadProfiler.endMark('map.load.mapData.end');
+        this.loadProfiler.measure('map.load.mapData', 'map.load.mapData.start', 'map.load.mapData.end');
+        this.hydrateFromStore(store);
         this.initializeMap();
       },
       error: (error) => {
         this.error = error;
-        console.error('Error loading data:', error);
+        console.error('Error loading map data:', error);
       }
     });
   }
 
-  private initializeMap(): void {
-    if (this.mapSetting) {
-      this.initializeMapOptions();
-      this.initLocations();
-      this.insertTagRelations();
-      this.markerPreConfigure();
-      if (this.mapSetting.link_feature) {
-        this.insertLinks();
-      }
-      this.mapLoaded = true;
+  private hydrateFromStore(store: MapDataStore) {
+    this.menugroups = [...store.menuGroups].sort((a, b) => a.id - b.id);
+    if (this.menugroups.length > 0) {
+      this.currentMenuGroup = this.menugroups[0].name;
     }
-  }
-  
-  private async loadKMLs() {
-    const parser = new DOMParser();
-    const kmlLoadPromises = this._kmlShapes.map(async (storedKml) => {
-      try {
-        const kmlData = await this.loadKMLData(storedKml.kml_file);
-        const kmlDoc = parser.parseFromString(kmlData, 'text/xml');
-        const geoJsonData = kml(kmlDoc);
-  
-        this.createAndAddGeoJsonLayer(storedKml, geoJsonData);
-      } catch (error) {
-        console.error('Error loading KML file:', error);
+
+    this.menus = store.menus;
+    this.menus.forEach((menu) => {
+      if (menu.group == this.menugroups[0]?.id) {
+        this.selectedMenu = menu.id;
+        this.defaultMenuId = menu.id;
       }
     });
-  
-    await Promise.all(kmlLoadPromises);
+
+    this.locations = store.locations;
+    this.tags = store.tags;
+    this.tagRelationships = [];
+    this.mapSettings = store.settings;
+    this.links = store.links;
+    this.linksGroup = store.linksGroups;
+    this.kmlShapes = store.kmlLayers;
   }
-  
-  private loadKMLData(kmlFile: string): Promise<string> {
-    return new Promise((resolve, reject) => {
-      this.api.getKml(kmlFile).subscribe(
-        (kmlData) => resolve(kmlData),
-        (error) => reject(error)
+
+  private initializeMap(): void {
+    if (this.mapSetting) {
+      this.loadProfiler.timeSync('map.load.initializeMap', () => {
+        this.loadProfiler.timeSync('map.load.initializeMapOptions', () => {
+          this.initializeMapOptions();
+        });
+        this.loadProfiler.timeSync('map.load.initLocations', () => {
+          this.initLocations();
+        });
+        this.loadProfiler.timeSync('map.load.markerPreConfigure', () => {
+          this.markerPreConfigure();
+        });
+        if (this.mapSetting.link_feature) {
+          this.loadProfiler.timeSync('map.load.insertLinks', () => {
+            this.insertLinks();
+          });
+        }
+        this.loadProfiler.timeSync('map.load.kml', () => {
+          this.initKmlLayers();
+        });
+        this.mapLoaded = true;
+      });
+      this.loadProfiler.endMark('map.load.interactive.end');
+      this.loadProfiler.measure(
+        'map.load.interactive.total',
+        'map.load.total.start',
+        'map.load.interactive.end'
       );
+      this.loadProfiler.endMark('map.load.full.end');
+      this.loadProfiler.measure(
+        'map.load.full.total',
+        'map.load.total.start',
+        'map.load.full.end'
+      );
+      this.loadProfiler.logInteractiveSummary();
+      this.loadProfiler.logFullSummary();
+    }
+  }
+
+  private initKmlLayers() {
+    const kmlShapes = this._kmlShapes ?? [];
+    kmlShapes.forEach((storedKml) => {
+      if (storedKml.geojson) {
+        this.createAndAddGeoJsonLayer(storedKml, storedKml.geojson);
+      }
     });
   }
   
@@ -286,7 +297,7 @@ export class MapComponent implements OnInit {
     }
   }
 
-  private shouldLoadKML(kmlShape: KmlShape): boolean {
+  private shouldLoadKML(kmlShape: KmlLayerDto): boolean {
     let parent_menu = this.getMenuById(kmlShape.parent_menu)
     if (!parent_menu) {
       return false;
@@ -302,20 +313,13 @@ export class MapComponent implements OnInit {
   }
 
   private isMenuSimultaneousAndSelectedInItsMenuGroup(menu_id: number, menu_group: MenuGroup | undefined = undefined) {
-    let menu = this.getMenuById(menu_id);
-    if (!menu) return false;
-    if (menu_group == undefined) {
-      let parent_menu_group_id = menu?.group;
-      if (parent_menu_group_id == undefined) return false;
-      menu_group = this.getMenuGroup(parent_menu_group_id)
-    }
-    if (menu_group == undefined || !menu_group.simultaneous_context) return false;
-    if (this.selectedMenusByGroup[menu_group.name] == undefined) {
-      // If no menu is selected in that menu group yet, then select it
-      this.selectedMenusByGroup[menu_group.name] = menu_id;
-      return true;
-    }
-    return this.selectedMenusByGroup[menu_group.name] == menu_id;
+    return isMenuSimultaneousAndSelected(
+      menu_id,
+      buildEntityIndex(this.menus ?? []),
+      buildEntityIndex(this.menugroups ?? []),
+      this.selectedMenusByGroup,
+      menu_group
+    );
   }
 
   private initLocations() {
@@ -324,12 +328,8 @@ export class MapComponent implements OnInit {
         location.onMap = false;
         location.activeColors = [];
         location.locationMarker = {};
-        location.popup =
-          "<div style='max-height:calc(100vh - 500px); min-height: 180px; overflow:scroll; overflow-x:hidden; margin-top: 20px; margin-right:0px; margin-left: 10px; text-align: justify;'>";
-        this.locationHeaderSize = location.popup.length;
       });
     }
-    this.loadKMLs()
   }
 
   private getOriginAndDestiny(
@@ -354,80 +354,83 @@ export class MapComponent implements OnInit {
     this.resetlinks();
     if (this._linksGroup && this._links && this._links.length > 0) {
       this.linksFeatureOn = true;
+      const menusById = buildEntityIndex(this.menus ?? []);
+      const menuGroupsById = buildEntityIndex(this.menugroups ?? []);
       this._links.forEach((link: Link) => {
         const loc1 = this.getLocationById(link.location_1);
         const loc2 = this.getLocationById(link.location_2);
         const linkgroup = this.getLinksGroupById(link.links_group);
-        if (linkgroup == undefined) return;
-        let isSimultaneous = this.isMenuSimultaneousAndSelectedInItsMenuGroup(linkgroup.parent_menu);
-        if (linkgroup.parent_menu == this.selectedMenu || isSimultaneous){
-          if (loc1 && loc2) {
-            linkgroup.visibility = true;
-            let pointA;
-            let pointB;
-            let values;
-            values = this.getOriginAndDestiny(loc1, loc2, link.invert_link);
-            pointA = values[0];
-            pointB = values[1];
-  
-            const pointList = [pointA, pointB];
-            if (isSimultaneous || (loc1.onMap && loc2.onMap)) {
-              const latlngs = [];
-  
-              const latlng1 = [pointA.lat, pointA.lng],
-                latlng2 = [pointB.lat, pointB.lng];
-  
-              const offsetX = latlng2[1] - latlng1[1],
-                offsetY = latlng2[0] - latlng1[0];
-  
-              const r = Math.sqrt(Math.pow(offsetX, 2) + Math.pow(offsetY, 2)),
-                theta = Math.atan2(offsetY, offsetX);
-  
-              const thetaOffset = 3.14 / 10;
-  
-              const r2 = r / 2 / Math.cos(thetaOffset),
-                theta2 = theta + thetaOffset;
-  
-              const midpointX = (r2 * Math.cos(theta2)) / 1.5 + latlng1[1],
-                midpointY = (r2 * Math.sin(theta2)) / 1.5 + latlng1[0];
-  
-              const midpointLatLng = [midpointY, midpointX];
-  
-              latlngs.push(latlng1, midpointLatLng, latlng2);
-  
-              const pathOptions = {
-                color: linkgroup.links_color,
-                weight: link.weight,
-                opacity: linkgroup.opacity, //link.opacity;
-                smoothFactor: 1,
-                stroke: true,
-                dashArray:'',
-                dashOffset: ''
-              };
-              if(link.dashed){
-                pathOptions.dashArray = '10, 10';
-                pathOptions.dashOffset = '10';
-              }
-              if(link.straight_link){
-                link.line = new L.Polyline([pointA, pointB], pathOptions);
-              }else{
-                link.line = L.curve(
-                  [
-                    'M',
-                    [latlng1[0], latlng1[1]],
-                    'S',
-                    [midpointLatLng[0], midpointLatLng[1]],
-                    [latlng2[0], latlng2[1]]
-                  ],
-                  pathOptions
-                );
-              }
-              
-              link.line.bindTooltip(linkgroup.name, {sticky : true});
-              link.line.addTo(this.map);
-            }
-          }
+        if (
+          !isLinkEligible(
+            link,
+            linkgroup ?? undefined,
+            this.selectedMenu,
+            loc1 ?? undefined,
+            loc2 ?? undefined,
+            menusById,
+            menuGroupsById,
+            this.selectedMenusByGroup
+          )
+        ) {
+          return;
         }
+        linkgroup!.visibility = true;
+        const values = this.getOriginAndDestiny(loc1!, loc2!, link.invert_link);
+        const pointA = values[0];
+        const pointB = values[1];
+        const latlngs = [];
+
+        const latlng1 = [pointA.lat, pointA.lng];
+        const latlng2 = [pointB.lat, pointB.lng];
+
+        const offsetX = latlng2[1] - latlng1[1];
+        const offsetY = latlng2[0] - latlng1[0];
+
+        const r = Math.sqrt(Math.pow(offsetX, 2) + Math.pow(offsetY, 2));
+        const theta = Math.atan2(offsetY, offsetX);
+
+        const thetaOffset = 3.14 / 10;
+
+        const r2 = r / 2 / Math.cos(thetaOffset);
+        const theta2 = theta + thetaOffset;
+
+        const midpointX = (r2 * Math.cos(theta2)) / 1.5 + latlng1[1];
+        const midpointY = (r2 * Math.sin(theta2)) / 1.5 + latlng1[0];
+
+        const midpointLatLng = [midpointY, midpointX];
+
+        latlngs.push(latlng1, midpointLatLng, latlng2);
+
+        const pathOptions = {
+          color: linkgroup!.links_color,
+          weight: link.weight,
+          opacity: linkgroup!.opacity,
+          smoothFactor: 1,
+          stroke: true,
+          dashArray: '',
+          dashOffset: ''
+        };
+        if (link.dashed) {
+          pathOptions.dashArray = '10, 10';
+          pathOptions.dashOffset = '10';
+        }
+        if (link.straight_link) {
+          link.line = new L.Polyline([pointA, pointB], pathOptions);
+        } else {
+          link.line = L.curve(
+            [
+              'M',
+              [latlng1[0], latlng1[1]],
+              'S',
+              [midpointLatLng[0], midpointLatLng[1]],
+              [latlng2[0], latlng2[1]]
+            ],
+            pathOptions
+          );
+        }
+
+        link.line.bindTooltip(linkgroup!.name, { sticky: true });
+        link.line.addTo(this.map);
       });
     }
   }
@@ -555,124 +558,18 @@ export class MapComponent implements OnInit {
           tag.onMap = true;
           tag.dependenciesActive = true;
           tag.visibility = true;
-          if (this.mapSetting.inherit_children_tag_locations) {
-            this.insertChildrenLocations(tag, tag);
-          }
-          tag.related_locations.forEach((location_id: number) => {
-            const location: Location | null = this.getLocationById(location_id);
-
-            if (location) {
-              if (location.active) {
-                if (location.popup.length === this.locationHeaderSize) {
-                  let overlayedPopupButton = '';
-
-                  if (
-                    location.overlayed_popup_content &&
-                    location.overlayed_popup_content !== null
-                  ) {
-                    overlayedPopupButton =
-                      this.overlayedPopup.getOverlayedPopupButtonForLocation(
-                        location
-                      );
-                  }
-
-                  location.popup +=
-                    '<div style="margin-right: 10px;"><h1 class="popup-title">' +
-                    location.name +
-                    ' ' +
-                    overlayedPopupButton +
-                    '</h1><hr>';
-                  if (location.description && location.description !== 'nan') {
-                    location.popup +=
-                      '<div style = "border-top: 1px; margin-top: -5px; margin-bottom: 15px"> <p>' +
-                      location.description +
-                      '</p> </div> ';
-                  }
-                }
-
-                this.insertTagOnPopup(tag, location);
-              }
-            }
-          });
         }
       });
       this.getFirstMenuId();
-      this.insertMarkersByMenu(this.defaultMenuId);
+      this.loadProfiler.timeSync('map.load.insertMarkersByMenu', () => {
+        this.insertMarkersByMenu(this.defaultMenuId);
+      });
       if (typeof this.mapSetting.map_name === 'string')
         document.title = this.mapSetting.map_name;
       if (this.menus && this.locations && this.mapSettings)
         this.mapLoaded = true;
     }
     this.markerClusterGroup.refreshClusters();
-  }
-
-  private insertChildrenLocations(tag: Tag, iterationTag: Tag) {
-    if (iterationTag.child_tags) {
-      iterationTag.child_tags.forEach((childRelated: any) => {
-        const child = this.getTagById(childRelated.child_tag);
-        if (child) {
-          if (!this.isIndirectChild(tag, child)) {
-            child?.related_locations.forEach((locationId: any) => {
-              tag.related_locations.push(locationId);
-            });
-          } else {
-            let cluster_ids: any[] = [];
-            const relatedMenus: any[] = [];
-
-            child?.parent_tags.forEach((relation: any) => {
-              cluster_ids.push(relation.cluster_id);
-              relatedMenus.push(
-                this.getTagById(relation.parent_tag)?.parent_menu
-              );
-            });
-            cluster_ids = [...new Set(cluster_ids)];
-
-            if (
-              cluster_ids.length === 1 ||
-              !relatedMenus.includes(tag.parent_menu)
-            ) {
-              child?.related_locations.forEach((locationId: any) => {
-                tag.related_locations.push(locationId);
-              });
-            }
-          }
-        }
-
-        // Using recursion to insert indirect children locations
-        child?.child_tags.forEach((childRelated: any) => {
-          const itTag = this.getTagById(childRelated.parent_tag);
-          if (itTag) {
-            this.insertChildrenLocations(tag, itTag);
-          }
-        });
-      });
-
-      tag.related_locations = [...new Set(tag.related_locations)];
-    }
-  }
-
-  private isIndirectChild(tag: Tag, childTag: Tag) {
-    let directFlag = false;
-    tag.child_tags.forEach((relation: any) => {
-      if (relation.child_tag === childTag.id) {
-        directFlag = true;
-      }
-    });
-    if (directFlag) {
-      return false;
-    }
-    const tagMenu = this.getMenuById(tag.parent_menu)?.hierarchy_level;
-    const childTagMenu = this.getMenuById(
-      childTag.parent_menu
-    )?.hierarchy_level;
-
-    if (tagMenu && childTagMenu) {
-      if (childTagMenu > tagMenu + 1) {
-        return true;
-      }
-    }
-
-    return false;
   }
 
   private getMenuGroup(id: number): MenuGroup | undefined {
@@ -718,8 +615,16 @@ export class MapComponent implements OnInit {
       });
     });
 
+    const menusById = buildEntityIndex(this.menus ?? []);
+    const menuGroupsById = buildEntityIndex(this.menugroups ?? []);
     this._tags.forEach((tag: Tag) => {
-      let isMenuShown = tag.parent_menu === selectedTagsMenuId || this.isMenuSimultaneousAndSelectedInItsMenuGroup(tag.parent_menu);
+      const isMenuShown = shouldShowTagForMenu(
+        tag,
+        selectedTagsMenuId,
+        menusById,
+        menuGroupsById,
+        this.selectedMenusByGroup
+      );
       if (
         tag.active &&
         tag.dependenciesActive &&
@@ -852,38 +757,17 @@ export class MapComponent implements OnInit {
     });
   }
 
-  private insertTagRelations() {
-    if (this._tagRelationships) {
-      this._tagRelationships.forEach((relation: TagRelationship) => {
-        this._tags.forEach((tag: Tag) => {
-          if (!tag.child_tags) {
-            tag.child_tags = [];
-          }
-          if (!tag.parent_tags) {
-            tag.parent_tags = [];
-          }
-          if (relation.parent_tag === tag.id) {
-            tag.child_tags.push(relation);
-          } else if (relation.child_tag === tag.id) {
-            tag.parent_tags.push(relation);
-          }
-        });
-      });
-    }
-  }
-
   private insertTagOnPopup(tag: Tag, location: Location) {
-    let opp_btn = '';
-    if (tag.description) {
-      if (tag.overlayed_popup_content && tag.overlayed_popup_content != null) {
-        opp_btn = this.overlayedPopup.getOverlayedPopupButtonForTag(tag);
-      }
+    const tagOverlayButton = tag.overlayed_popup_content && tag.overlayed_popup_content != null
+      ? this.popupContent.getTagOverlayButton(tag.id)
+      : '';
 
+    if (tag.description) {
       location.popup +=
         `
       <div class="tag-popup-${tag.id}">
         <h3 class="popup-subtitle">
-          ${tag.name} ${opp_btn}
+          ${tag.name} ${tagOverlayButton}
         </h3>
         <p>${tag.description}</p> 
       </div>
@@ -1182,37 +1066,7 @@ export class MapComponent implements OnInit {
   }
 
   private anyClusterIsActive(childTag: Tag) {
-    let cluster_ids: any[] = [];
-    let isAnyClusterActive = true;
-
-    childTag.parent_tags.forEach((relation: any) => {
-      cluster_ids.push(relation.cluster_id);
-    }); // get all cluster ids in this tag
-
-    cluster_ids = [...new Set(cluster_ids)]; // remove duplicates
-
-    cluster_ids.forEach((cluster: number) => {
-      const parentsInThisCluster = childTag.parent_tags.filter(
-        (relation: any) => relation.cluster_id === cluster
-      );
-
-      // A cluster is considered inactive if *at least one* tag that composes it is inactive.
-      // if ANY cluster present on the tag is active, the tag dependencies will be active.
-      if (this.parentsInactive(parentsInThisCluster)) {
-        isAnyClusterActive = false;
-      }
-    });
-
-    return isAnyClusterActive;
-  }
-
-  private parentsInactive(relations: any) {
-    return relations.every((relation: any) => {
-      return (
-        this.getTagById(relation.parent_tag)?.visibility === false ||
-        this.getTagById(relation.parent_tag)?.dependenciesActive === false
-      );
-    });
+    return isAnyClusterActive(childTag, buildEntityIndex(this._tags ?? []));
   }
 
   public onMenuCliked(event: any) {

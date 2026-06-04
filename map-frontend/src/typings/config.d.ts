@@ -56,7 +56,7 @@ declare global {
     readonly id: number;
     readonly parent_tag: number;
     readonly child_tag: number;
-    readonly is_subtag: boolean;
+    readonly cluster_id: number | null;
   }
 
   export interface Link {
