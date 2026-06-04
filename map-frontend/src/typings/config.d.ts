@@ -47,7 +47,9 @@ declare global {
     onMap: boolean;
     activeColors: Array<string>;
     locationMarker: any;
-    popup: string;
+    popup?: string;
+    popupDto?: LocationPopupDto;
+    interactionsAttached?: boolean;
     overlayed_popup_content: string;
     /*  containedTags: Array<{tag: Tag, activeOnMap: boolean}>; */
   }
@@ -72,6 +74,7 @@ declare global {
     readonly dashed: boolean;
     readonly weight: number;
     line: any;
+    interactionsAttached?: boolean;
   }
 
   export interface LinksGroup {

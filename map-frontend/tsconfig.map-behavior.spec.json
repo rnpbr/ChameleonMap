@@ -20,6 +20,7 @@
     "src/app/map/map-behavior.ts",
     "src/app/map/map-behavior.spec.ts",
     "src/app/map/popup-content.service.ts",
-    "src/app/map/popup-content.service.spec.ts"
+    "src/app/map/popup-content.service.spec.ts",
+    "src/app/map/map-location-popup.spec.ts"
   ]
 }

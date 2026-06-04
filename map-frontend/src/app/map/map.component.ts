@@ -18,6 +18,7 @@ import { ChameleonButtonComponent } from '../chameleon-button/chameleon-button.c
 import { createMapLoadProfiler, MapLoadProfiler } from './map-load-profiler';
 import { MapDataService, MapDataStore } from './map-data.service';
 import { PopupContentService } from './popup-content.service';
+import { runBatchedWork, BatchSchedulerHandle } from './map-interaction-scheduler';
 import {
   buildEntityIndex,
   isAnyClusterActive,
@@ -78,6 +79,18 @@ export class MapComponent implements OnInit {
 
   private kmlLayers: { [key: number]: L.Layer } = {};
   private readonly loadProfiler: MapLoadProfiler = createMapLoadProfiler();
+
+  mapInteractionPhase: 'loading' | 'static' | 'enriching' | 'ready' = 'loading';
+  private deferClusterTooltips = true;
+  private clusterHoverAttached = false;
+  private markerClusterOnMap = false;
+  private isInitialStaticLoad = true;
+  private enrichGeneration = 0;
+  private enrichSchedulerHandle: BatchSchedulerHandle | null = null;
+  private pendingKmlTooltipAttaches: Array<() => void> = [];
+
+  private static readonly MARKER_INTERACTION_CHUNK = 200;
+  private static readonly LINK_INTERACTION_CHUNK = 100;
 
   @HostListener('document:click', ['$event'])
   clickout(event: any) {
@@ -223,28 +236,25 @@ export class MapComponent implements OnInit {
         });
         if (this.mapSetting.link_feature) {
           this.loadProfiler.timeSync('map.load.insertLinks', () => {
-            this.insertLinks();
+            this.insertLinkGeometries();
           });
         }
         this.loadProfiler.timeSync('map.load.kml', () => {
           this.initKmlLayers();
         });
+        this.ensureMarkerClusterOnMap();
         this.mapLoaded = true;
+        this.mapInteractionPhase = 'static';
       });
+      this.isInitialStaticLoad = false;
       this.loadProfiler.endMark('map.load.interactive.end');
       this.loadProfiler.measure(
         'map.load.interactive.total',
         'map.load.total.start',
         'map.load.interactive.end'
       );
-      this.loadProfiler.endMark('map.load.full.end');
-      this.loadProfiler.measure(
-        'map.load.full.total',
-        'map.load.total.start',
-        'map.load.full.end'
-      );
       this.loadProfiler.logInteractiveSummary();
-      this.loadProfiler.logFullSummary();
+      this.startEnrichPhase();
     }
   }
 
@@ -260,41 +270,60 @@ export class MapComponent implements OnInit {
   private createAndAddGeoJsonLayer(storedKml: any, geoJsonData: any) {
     storedKml.currentColor = storedKml.links_color;
     storedKml.visibility = true;
-    
+
     const geojsonMarkerOptions = {
       radius: 2,
       fillColor: '#000000',
-      color: "#000000",
+      color: '#000000',
       weight: 1,
       opacity: 1,
       fillOpacity: 1
     };
-  
+
     const polygonStyle = {
-      "color": storedKml.links_color,
-      "weight": 3,
-      "opacity": storedKml.opacity
+      color: storedKml.links_color,
+      weight: 3,
+      opacity: storedKml.opacity
     };
-  
-    const geoJsonTooltip = L.tooltip({ 'sticky': true });
-    geoJsonTooltip.setContent(storedKml.name);
-  
+
     const geoJsonLayer = L.geoJSON(geoJsonData, {
-      pointToLayer: (feature, latlng) => {
-        const tooltip = L.tooltip({ 'sticky': true });
-        tooltip.setContent(storedKml.name + " - " + feature.properties['name']);
-        tooltip.on('add', () => geoJsonTooltip.setOpacity(0));
-        tooltip.on('remove', () => geoJsonTooltip.setOpacity(1));
-  
-        return L.circleMarker(latlng, geojsonMarkerOptions).bindTooltip(tooltip);
+      pointToLayer: (_feature, latlng) => {
+        return L.circleMarker(latlng, geojsonMarkerOptions);
       },
       style: polygonStyle
-    }).bindTooltip(geoJsonTooltip);
-  
+    });
+
     this.kmlLayers[storedKml.id] = geoJsonLayer;
+    this.queueKmlTooltipAttach(storedKml, geoJsonLayer);
     if (this.shouldLoadKML(storedKml)) {
       this.kmlLayers[storedKml.id].addTo(this.map);
     }
+  }
+
+  private queueKmlTooltipAttach(storedKml: any, geoJsonLayer: L.GeoJSON) {
+    this.pendingKmlTooltipAttaches.push(() => {
+      const layer = this.kmlLayers[storedKml.id] as L.GeoJSON | undefined;
+      if (!layer) {
+        return;
+      }
+
+      const geoJsonTooltip = L.tooltip({ sticky: true });
+      geoJsonTooltip.setContent(storedKml.name);
+      layer.bindTooltip(geoJsonTooltip);
+
+      layer.eachLayer((featureLayer: L.Layer) => {
+        const circle = featureLayer as L.CircleMarker;
+        if (!circle.bindTooltip) {
+          return;
+        }
+        const featureName = (circle as any).feature?.properties?.name ?? '';
+        const tooltip = L.tooltip({ sticky: true });
+        tooltip.setContent(storedKml.name + ' - ' + featureName);
+        tooltip.on('add', () => geoJsonTooltip.setOpacity(0));
+        tooltip.on('remove', () => geoJsonTooltip.setOpacity(1));
+        circle.bindTooltip(tooltip);
+      });
+    });
   }
 
   private shouldLoadKML(kmlShape: KmlLayerDto): boolean {
@@ -328,6 +357,7 @@ export class MapComponent implements OnInit {
         location.onMap = false;
         location.activeColors = [];
         location.locationMarker = {};
+        location.interactionsAttached = false;
       });
     }
   }
@@ -351,6 +381,13 @@ export class MapComponent implements OnInit {
   }
 
   private insertLinks() {
+    this.insertLinkGeometries();
+    if (this.mapInteractionPhase === 'ready') {
+      this.attachAllLinkInteractions();
+    }
+  }
+
+  private insertLinkGeometries() {
     this.resetlinks();
     if (this._linksGroup && this._links && this._links.length > 0) {
       this.linksFeatureOn = true;
@@ -378,7 +415,6 @@ export class MapComponent implements OnInit {
         const values = this.getOriginAndDestiny(loc1!, loc2!, link.invert_link);
         const pointA = values[0];
         const pointB = values[1];
-        const latlngs = [];
 
         const latlng1 = [pointA.lat, pointA.lng];
         const latlng2 = [pointB.lat, pointB.lng];
@@ -398,8 +434,6 @@ export class MapComponent implements OnInit {
         const midpointY = (r2 * Math.sin(theta2)) / 1.5 + latlng1[0];
 
         const midpointLatLng = [midpointY, midpointX];
-
-        latlngs.push(latlng1, midpointLatLng, latlng2);
 
         const pathOptions = {
           color: linkgroup!.links_color,
@@ -429,10 +463,29 @@ export class MapComponent implements OnInit {
           );
         }
 
-        link.line.bindTooltip(linkgroup!.name, { sticky: true });
+        link.interactionsAttached = false;
         link.line.addTo(this.map);
       });
     }
+  }
+
+  private attachLinkInteractions(link: Link) {
+    if (link.interactionsAttached || !link.line) {
+      return;
+    }
+    const linkgroup = this.getLinksGroupById(link.links_group);
+    if (!linkgroup) {
+      return;
+    }
+    link.line.bindTooltip(linkgroup.name, { sticky: true });
+    link.interactionsAttached = true;
+  }
+
+  private attachAllLinkInteractions() {
+    if (!this._links) {
+      return;
+    }
+    this._links.forEach((link) => this.attachLinkInteractions(link));
   }
 
   private initializeMapOptions() {
@@ -506,7 +559,7 @@ export class MapComponent implements OnInit {
     }
 
     this.markerClusterGroup = L.markerClusterGroup({
-      iconCreateFunction: function (cluster) {
+      iconCreateFunction: (cluster) => {
         let colors: Array<any> = [];
 
         cluster.getAllChildMarkers().forEach((marker: any) => {
@@ -517,17 +570,18 @@ export class MapComponent implements OnInit {
           colors.splice(colors.indexOf('#5c5c5c'), 1);
         });
         const clusterLength = cluster.getChildCount();
-        cluster.bindTooltip(clusterLength.toString() + ' locations grouped', {
-          offset: L.point(0, 0),
-          direction: 'left'
-        });
+        if (!this.deferClusterTooltips) {
+          cluster.bindTooltip(clusterLength.toString() + ' locations grouped', {
+            offset: L.point(0, 0),
+            direction: 'left'
+          });
+        }
         return getMarkerIcon(colors, clusterLength);
       },
       maxClusterRadius: maxRadius,
       disableClusteringAtZoom: 12,
       showCoverageOnHover: false
     });
-    this.addHoverFunction(this.markerClusterGroup);
 
     this.footerUrl = this.mapSetting.footer_file;
 
@@ -651,8 +705,19 @@ export class MapComponent implements OnInit {
         });
       }
     });
-    if (this.mapSetting.link_feature) this.insertLinks();
+    if (!this.isInitialStaticLoad && this.mapSetting.link_feature) {
+      this.insertLinks();
+    }
     if (this._kmlShapes.length) this.insertKmlShapes();
+    this.ensureMarkerClusterOnMap();
+    if (this.mapInteractionPhase === 'ready') {
+      this._locations.forEach((location) => {
+        if (location.onMap && !location.interactionsAttached) {
+          this.attachLocationInteractions(location);
+        }
+      });
+      this.attachAllLinkInteractions();
+    }
   }
 
   private insertKmlShapes() {
@@ -678,6 +743,9 @@ export class MapComponent implements OnInit {
           const loc2 = this.getLocationById(link.location_2);
           if (loc1?.onMap && loc2?.onMap) {
             link.line.addTo(this.map);
+            if (this.mapInteractionPhase === 'ready') {
+              this.attachLinkInteractions(link);
+            }
           }
         }
       }
@@ -705,44 +773,91 @@ export class MapComponent implements OnInit {
   }
 
   private resetMarkers() {
+    this.cancelEnrichPhase();
     this._locations.forEach((location: Location) => {
       if (location.onMap) {
         this.markerClusterGroup.removeLayer(location.locationMarker);
         location.locationMarker = {};
         location.onMap = false;
         location.activeColors = [];
+        location.interactionsAttached = false;
       }
     });
   }
 
   private insertLocationOnMap(location: Location, color = '') {
     if (!location.onMap) {
-      location.onMap = true;
-      if (color != '') location.activeColors = [color];
+      this.insertLocationShell(location, color);
+      if (this.mapInteractionPhase === 'ready') {
+        this.attachLocationInteractions(location);
+      }
+      return;
+    }
 
-      const pop = L.responsivePopup({ offset: L.point(-3, -11), hasTip: false, closeButton: false }).setContent(location.popup);
-
-      location.locationMarker = L.marker(
-        [location.latitude, location.longitude],
-        { icon: this.generatePinIcon(location.activeColors) }
-      )
-        .bindPopup(pop)
-        .bindTooltip(location.name, {
-          offset: L.point(-3, -18),
-          direction: 'top'
-        });
-
-      this.markerClusterGroup.addLayer(location.locationMarker);
-      this.map.addLayer(this.markerClusterGroup);
-    } else {
+    if (color != '') {
+      location.activeColors.push(color);
+    }
+    location.locationMarker.setIcon(this.generatePinIcon(location.activeColors));
+    if (location.interactionsAttached && location.locationMarker._popup) {
+      this.ensureLocationPopup(location);
       location.popup += '</div>';
       location.locationMarker._popup.setContent(location.popup);
-      if (color != '') location.activeColors.push(color);
-      location.locationMarker.setIcon(
-        this.generatePinIcon(location.activeColors)
+    }
+  }
+
+  private insertLocationShell(location: Location, color = '') {
+    location.onMap = true;
+    if (color != '') {
+      location.activeColors = [color];
+    }
+    location.interactionsAttached = false;
+
+    location.locationMarker = L.marker(
+      [location.latitude, location.longitude],
+      { icon: this.generatePinIcon(location.activeColors) }
+    );
+
+    this.markerClusterGroup.addLayer(location.locationMarker);
+  }
+
+  private ensureLocationPopup(location: Location): string {
+    if (!location.popup) {
+      location.popup = this.popupContent.buildLocationPopup(
+        location.id,
+        location.popupDto
       );
     }
+    return location.popup;
+  }
+
+  private attachLocationInteractions(location: Location) {
+    if (location.interactionsAttached || !location.onMap || !location.locationMarker) {
+      return;
+    }
+
+    const popupHtml = this.ensureLocationPopup(location);
+    const pop = L.responsivePopup({
+      offset: L.point(-3, -11),
+      hasTip: false,
+      closeButton: false
+    }).setContent(popupHtml);
+
+    location.locationMarker
+      .bindPopup(pop)
+      .bindTooltip(location.name, {
+        offset: L.point(-3, -18),
+        direction: 'top'
+      });
+
     this.addHoverFunction(location.locationMarker);
+    location.interactionsAttached = true;
+  }
+
+  private ensureMarkerClusterOnMap() {
+    if (!this.markerClusterOnMap && this.map && this.markerClusterGroup) {
+      this.map.addLayer(this.markerClusterGroup);
+      this.markerClusterOnMap = true;
+    }
   }
 
   private addHoverFunction(marker: any) {
@@ -763,6 +878,7 @@ export class MapComponent implements OnInit {
       : '';
 
     if (tag.description) {
+      this.ensureLocationPopup(location);
       location.popup +=
         `
       <div class="tag-popup-${tag.id}">
@@ -921,10 +1037,10 @@ export class MapComponent implements OnInit {
       for (const link of this._links) {
         if (link.line != null) {
           link.line.remove(this.map);
+          link.interactionsAttached = false;
         }
       }
     }
-
   }
 
   private insertLinkByLinkGroup(lg: LinksGroup) {
@@ -938,6 +1054,9 @@ export class MapComponent implements OnInit {
           const loc2 = this.getLocationById(link.location_2);
           if (loc1 && loc2 && loc1.onMap && loc2.onMap) {
             link.line.addTo(this.map);
+            if (this.mapInteractionPhase === 'ready') {
+              this.attachLinkInteractions(link);
+            }
           }
         }
       }
@@ -982,6 +1101,7 @@ export class MapComponent implements OnInit {
     this.markerClusterGroup.removeLayer(location.locationMarker);
     location.onMap = false;
     location.locationMarker = {};
+    location.interactionsAttached = false;
 
     for (const link of this._links) {
       if (link.location_1 == location.id || link.location_2 == location.id) {
@@ -993,9 +1113,15 @@ export class MapComponent implements OnInit {
   private removeTagFromPopups(tag: Tag) {
     tag.related_locations.forEach((location_id: number) => {
       const location = this.getLocationById(location_id);
-      if (location && location.locationMarker._popup) {
-        location.popup = this.removeTagFromDiv(tag.id, location.popup);
-        location.locationMarker.bindPopup(location.popup);
+      if (!location) {
+        return;
+      }
+      if (location.popup || location.popupDto) {
+        const popup = this.ensureLocationPopup(location);
+        location.popup = this.removeTagFromDiv(tag.id, popup);
+        if (location.interactionsAttached && location.locationMarker?._popup) {
+          location.locationMarker.bindPopup(location.popup);
+        }
       }
     });
   }
@@ -1010,9 +1136,15 @@ export class MapComponent implements OnInit {
   private putTagBackOnPopup(tag: Tag) {
     tag.related_locations.forEach((location_id: number) => {
       const location = this.getLocationById(location_id);
-      if (location && location.locationMarker._popup) {
-        location.popup = this.makeTagVisibleOnDiv(tag.id, location.popup);
-        location.locationMarker.bindPopup(location.popup);
+      if (!location) {
+        return;
+      }
+      if (location.popup || location.popupDto) {
+        const popup = this.ensureLocationPopup(location);
+        location.popup = this.makeTagVisibleOnDiv(tag.id, popup);
+        if (location.interactionsAttached && location.locationMarker?._popup) {
+          location.locationMarker.bindPopup(location.popup);
+        }
       }
     });
   }
@@ -1181,6 +1313,74 @@ export class MapComponent implements OnInit {
     
     this.overlayedPopup.activateWithPersonalizedContent(popupContent, "About This Map")
     console.log('Popup activated!');
+  }
+
+  private cancelEnrichPhase() {
+    this.enrichSchedulerHandle?.cancel();
+    this.enrichSchedulerHandle = null;
+    this.enrichGeneration++;
+  }
+
+  private startEnrichPhase() {
+    this.mapInteractionPhase = 'enriching';
+    this.cancelEnrichPhase();
+    const generation = this.enrichGeneration;
+
+    this.loadProfiler.mark('map.load.enrichInteractions.start');
+
+    const work: Array<() => void> = [];
+
+    for (const location of this._locations ?? []) {
+      if (location.onMap && !location.interactionsAttached) {
+        work.push(() => this.attachLocationInteractions(location));
+      }
+    }
+    for (const link of this._links ?? []) {
+      if (link.line && !link.interactionsAttached) {
+        work.push(() => this.attachLinkInteractions(link));
+      }
+    }
+    work.push(...this.pendingKmlTooltipAttaches);
+
+    const chunkSize = MapComponent.MARKER_INTERACTION_CHUNK;
+
+    this.enrichSchedulerHandle = runBatchedWork(work, chunkSize, () => {
+      if (generation !== this.enrichGeneration) {
+        return;
+      }
+      this.loadProfiler.timeSync('map.load.attachClusterInteractions', () => {
+        this.attachClusterInteractions();
+      });
+      this.finishEnrichPhase();
+    });
+  }
+
+  private attachClusterInteractions() {
+    this.deferClusterTooltips = false;
+    if (!this.clusterHoverAttached && this.markerClusterGroup) {
+      this.addHoverFunction(this.markerClusterGroup);
+      this.clusterHoverAttached = true;
+    }
+    this.markerClusterGroup?.refreshClusters();
+  }
+
+  private finishEnrichPhase() {
+    this.mapInteractionPhase = 'ready';
+    this.enrichSchedulerHandle = null;
+
+    this.loadProfiler.endMark('map.load.enrichInteractions.end');
+    this.loadProfiler.measure(
+      'map.load.enrichInteractions',
+      'map.load.enrichInteractions.start',
+      'map.load.enrichInteractions.end'
+    );
+    this.loadProfiler.endMark('map.load.full.end');
+    this.loadProfiler.measure(
+      'map.load.full.total',
+      'map.load.total.start',
+      'map.load.full.end'
+    );
+    this.loadProfiler.logFullSummary();
   }
 }
 

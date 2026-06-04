@@ -67,7 +67,8 @@ export class MapDataService {
         onMap: false,
         activeColors: [],
         locationMarker: {},
-        popup: this.popupContent.buildLocationPopup(location.id, popupDto),
+        popupDto,
+        interactionsAttached: false,
       };
     });
 
@@ -85,6 +86,7 @@ export class MapDataService {
     const links = bundle.links.map((link) => ({
       ...link,
       line: null,
+      interactionsAttached: false,
     }));
 
     const store: MapDataStore = {
