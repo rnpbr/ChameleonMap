@@ -1,18 +1,18 @@
 <body>
     <div id="main-frame">
-      <div class="container">
-        <img src="/home/assets/header-home-w26.png" alt="WRNP logo" id="home-header">
+      <div class="video-background-container">
+      <video
+          autoplay
+          muted
+          loop
+          playsinline
+          src="assets/logo_video_web.mp4">
+      </video>
+        <img src="assets/logo_csbc2026.png" alt="CSBS logo" id="home-header">
       </div>
       <div id="subtitle">Escolha qual mapa visualizar:</div>
-      <div class="collection-frame">
-        <a class="map-frame" id="map2"  routerLink="/map/5" routerLinkActive="active">
-          <div class="map-img-wrapper">
-            <svg class="map-img">
-              <image xlink:href="/home/assets/event-map.svg" class="map-img"/>
-            </svg>
-          </div>
-          <div class="map-title">WRNP 2026</div>
-        </a>
+      
+      <div class="collection-frame">        
         <a class="map-frame" id="map1"  routerLink="/map/1" routerLinkActive="active">
           <div class="map-img-wrapper">
             <svg class="map-img">
@@ -21,7 +21,17 @@
           </div>
           <div class="map-title">Sistema RNP</div>
         </a>
-        <a class="map-frame" id="map1"  routerLink="/map/2" routerLinkActive="active">
+        
+        <a class="map-frame" id="map2"  routerLink="/map/2" routerLinkActive="active">
+          <div class="map-img-wrapper">
+            <svg class="map-img">
+              <image xlink:href="/home/assets/blockchain.png" class="map-img"/>
+            </svg>
+          </div>
+          <div class="map-title">Iniciativas de Cyberseg.</div>
+        </a>                
+        
+        <a class="map-frame" id="map3"  routerLink="/map/3" routerLinkActive="active">
           <div class="map-img-wrapper">
             <svg class="map-img">
               <image xlink:href="/home/assets/evento-icon.png" class="map-img"/>
@@ -29,21 +39,32 @@
           </div>
           <div class="map-title">Laboratório Multiusuário</div>
         </a>
-        <a class="map-frame" id="map1"  routerLink="/map/3" routerLinkActive="active">
+         
+        <a class="map-frame" id="map4"  routerLink="/map/4" routerLinkActive="active">
+          <div class="map-img-wrapper">
+            <svg class="map-img">
+              <image xlink:href="/home/assets/ilhas_openran.png" class="map-img"/>
+            </svg>
+          </div>
+          <div class="map-title">Ilhas OpenRan@Brasil</div>
+        </a>
+
+        <a class="map-frame" id="map5"  routerLink="/map/5" routerLinkActive="active">
+          <div class="map-img-wrapper">
+            <svg class="map-img">
+              <image xlink:href="/home/assets/observatorio_quantico.png" class="map-img"/>
+            </svg>
+          </div>
+          <div class="map-title">Observatório Quântico</div>
+        </a>
+        
+        <a class="map-frame" id="map6"  routerLink="/map/6" routerLinkActive="active">
           <div class="map-img-wrapper">
             <svg class="map-img">
               <image xlink:href="/home/assets/observatorio.png" class="map-img"/>
             </svg>
           </div>
           <div class="map-title">Observatório Blockchain</div>
-        </a>
-        <a class="map-frame" id="map2"  routerLink="/map/4" routerLinkActive="active">
-          <div class="map-img-wrapper">
-            <svg class="map-img">
-              <image xlink:href="/home/assets/blockchain.png" class="map-img"/>
-            </svg>
-          </div>
-          <div class="map-title">Iniciativas de Cyberseg.</div>
         </a>
       </div>
     </div>
