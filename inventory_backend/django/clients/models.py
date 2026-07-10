@@ -1,6 +1,7 @@
 
 from django_tenants.models import TenantMixin, DomainMixin
 from django.db import models
+from django.utils.translation import gettext_lazy as _
 from tenant_users.tenants.models import TenantBase, UserProfile
 import re
 from django.core.validators import RegexValidator
@@ -27,16 +28,16 @@ def is_valid_label(label):
 
 class Client(TenantBase):
     slug = models.CharField(
-        'Tenant Name',
+        _('Tenant Name'),
         max_length=63,
-        help_text='The domain will be generated automatically: if the Tenant Name is "wrnp-2026", the domain will be "wrnp-2026.mapa.rnp.br".'
+        help_text=_('The domain will be generated automatically: if the Tenant Name is "wrnp-2026", the domain will be "wrnp-2026.mapa.rnp.br".')
     )
-    name = models.CharField(max_length=100)
-    created_on = models.DateField(auto_now_add=True)
-    tenancytype = models.CharField(max_length=100, choices=[
-        ('public', 'Public'),
-        ('scoped', 'Scoped'),
-        ('root', 'Root'),
+    name = models.CharField(max_length=100, verbose_name=_("name"))
+    created_on = models.DateField(auto_now_add=True, verbose_name=_("created on"))
+    tenancytype = models.CharField(max_length=100, verbose_name=_("tenancy type"), choices=[
+        ('public', _('Public')),
+        ('scoped', _('Scoped')),
+        ('root', _('Root')),
     ], default='scoped')
 
     def clean(self):
@@ -47,9 +48,13 @@ class Client(TenantBase):
             # If there is a subdomain, get only the main label
             label = slug.split('.', 1)[0]
             if not is_valid_label(label):
-                raise ValidationError({'slug': 'Invalid domain name: it must have 2-26 characters, letters, numbers, hyphens or accented characters, not only numbers, and must not start or end with a hyphen.'})
+                raise ValidationError({'slug': _('Invalid domain name: it must have 2-26 characters, letters, numbers, hyphens or accented characters, not only numbers, and must not start or end with a hyphen.')})
             self.slug = slug
         super().clean()
+
+    class Meta:
+        verbose_name = _("Client")
+        verbose_name_plural = _("Clients")
 
     def __str__(self):
         return self.name
@@ -60,6 +65,7 @@ class Domain(DomainMixin):
         max_length=253,
         unique=True,
         db_index=True,
+        verbose_name=_("domain"),
     )
 
     def clean(self):
@@ -71,9 +77,17 @@ class Domain(DomainMixin):
         if domain:
             label = domain.split('.', 1)[0]
             if not is_valid_label(label):
-                raise ValidationError({'domain': 'Invalid domain name: it must have 2-26 characters, letters, numbers, hyphens or accented characters, not only numbers, and must not start or end with a hyphen.'})
+                raise ValidationError({'domain': _('Invalid domain name: it must have 2-26 characters, letters, numbers, hyphens or accented characters, not only numbers, and must not start or end with a hyphen.')})
         self.domain = domain
         super().clean()
 
+    class Meta:
+        verbose_name = _("Domain")
+        verbose_name_plural = _("Domains")
+
 class TenantUser(UserProfile):
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, verbose_name=_("name"))
+
+    class Meta:
+        verbose_name = _("User")
+        verbose_name_plural = _("Users")

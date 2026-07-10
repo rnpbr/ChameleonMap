@@ -1,13 +1,14 @@
 from django.contrib import admin
+from django.utils.translation import gettext_lazy as _
 from administration.models import *
 from django.utils.html import format_html
 from unfold.admin import ModelAdmin
 from unfold.apps import UnfoldAdminSite
 
 class TenantAdminSite(UnfoldAdminSite):
-    site_header = "ChameleonMap Admin"
-    site_title = "ChameleonMap Portal"
-    index_title = "Welcome to ChameleonMap Admin Portal"
+    site_header = _("ChameleonMap Admin")
+    site_title = _("ChameleonMap Portal")
+    index_title = _("Welcome to ChameleonMap Admin Portal")
 
 tenant_admin_site = TenantAdminSite(name='tenant_admin')
 

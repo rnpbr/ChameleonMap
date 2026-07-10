@@ -14,6 +14,7 @@ import os
 
 from pathlib import Path
 from datetime import timedelta
+from django.utils.translation import gettext_lazy as _
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -39,9 +40,9 @@ ROOT_URLCONF = 'inventory_backend.urls'
 TENANT_URLCONF = 'clients.urls'
 
 UNFOLD = { 
-    "SITE_TITLE": "ChameleonMap Portal",
-    "SITE_HEADER": "ChameleonMap Admin",
-    "SITE_SUBHEADER": "Welcome to ChameleonMap Admin Portal",
+    "SITE_TITLE": _("ChameleonMap Portal"),
+    "SITE_HEADER": _("ChameleonMap Admin"),
+    "SITE_SUBHEADER": _("Welcome to ChameleonMap Admin Portal"),
     "SITE_URL": "/admin",
     "SITE_ICON": "https://i.imgur.com/65Yiw9X.png",
     "SITE_FAVICONS": [
@@ -52,6 +53,7 @@ UNFOLD = {
             "href": "https://i.imgur.com/65Yiw9X.png",
         },
     ],
+    "SHOW_LANGUAGES": True,
 
 }
 
@@ -69,10 +71,10 @@ TENANT_TYPES = {
         "APPS": [
             'unfold',
             'django_tenants',
-            'tenant_users.permissions',
+            'inventory_backend.apps_overrides.TenantPermissionsConfig',
             'tenant_users.tenants',
             'clients',
-            'axes',
+            'inventory_backend.apps_overrides.AxesConfig',
             'django.contrib.admin',
             'django.contrib.auth',
             'django.contrib.contenttypes',
@@ -90,9 +92,9 @@ TENANT_TYPES = {
         "APPS": [
             'unfold',
             'django_tenants',
-            'tenant_users.permissions',
+            'inventory_backend.apps_overrides.TenantPermissionsConfig',
             'tenant_users.tenants',
-            'axes',
+            'inventory_backend.apps_overrides.AxesConfig',
             'django.contrib.admin',
             'django.contrib.auth',
             'django.contrib.contenttypes',
@@ -112,7 +114,7 @@ TENANT_TYPES = {
             'administration.apps.AdministrationConfig',
             'django.contrib.auth',
             'django.contrib.contenttypes',
-            'tenant_users.permissions',
+            'inventory_backend.apps_overrides.TenantPermissionsConfig',
         ],
         "URLCONF": TENANT_URLCONF,
     }
@@ -127,6 +129,7 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -168,6 +171,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'django.template.context_processors.i18n',
             ],
             'libraries': {
                 'my_templatetag': 'administration.templatetags.importer_tags',
@@ -221,6 +225,16 @@ AUTH_PASSWORD_VALIDATORS = [
 # https://docs.djangoproject.com/en/3.2/topics/i18n/
 
 LANGUAGE_CODE = 'en-us'
+
+LANGUAGES = [
+    ('en', _('English')),
+    ('pt-br', _('Portuguese')),
+    ('es', _('Spanish')),
+]
+
+LOCALE_PATHS = [
+    os.path.join(BASE_DIR, 'locale'),
+]
 
 TIME_ZONE = 'UTC'
 

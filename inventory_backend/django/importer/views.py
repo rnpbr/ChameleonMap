@@ -1,6 +1,7 @@
 from django.shortcuts import render
 from django.http import HttpResponse
 from django.template import loader
+from django.utils.translation import gettext as _
 
 from .sources.InfraDPDI import Requester, Translator
 from .sources import Merger, Replacer
@@ -22,7 +23,7 @@ def netbox(request):
         request.session['importedData'] = MapData_diff
         return HttpResponse(template.render(context, request))
     else:
-        status = { 'status': "No changes detected.", 'logs': [] }
+        status = { 'status': _("No changes detected."), 'logs': [] }
         template = loader.get_template('importer/applied_changes.html')
         context = { 'status': status }
         

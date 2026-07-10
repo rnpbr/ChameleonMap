@@ -1,0 +1,765 @@
+# Portuguese (Brazil) translations for ChameleonMap
+# Copyright (C) 2024 ChameleonMap
+# This file is distributed under the same license as the ChameleonMap package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: ChameleonMap 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2024-01-01 00:00+0000\n"
+"PO-Revision-Date: 2024-01-01 00:00+0000\n"
+"Last-Translator: ChameleonMap Team\n"
+"Language-Team: Portuguese (Brazil)\n"
+"Language: pt_BR\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+# =====================
+# settings.py - UNFOLD
+# =====================
+
+msgid "ChameleonMap Portal"
+msgstr "Portal ChameleonMap"
+
+msgid "ChameleonMap Admin"
+msgstr "Administração ChameleonMap"
+
+msgid "Welcome to ChameleonMap Admin Portal"
+msgstr "Bem-vindo ao Portal de Administração ChameleonMap"
+
+msgid "English"
+msgstr "Inglês"
+
+msgid "Portuguese"
+msgstr "Português"
+
+msgid "Spanish"
+msgstr "Espanhol"
+
+# =====================
+# urls.py
+# =====================
+
+msgid "Map Administration"
+msgstr "Administração do Mapa"
+
+# =====================
+# administration/apps.py
+# =====================
+
+msgid "Map data"
+msgstr "Dados do mapa"
+
+# =====================
+# clients/apps.py
+# =====================
+
+msgid "Clients"
+msgstr "Clientes"
+
+# =====================
+# importer/apps.py
+# =====================
+
+msgid "Importer"
+msgstr "Importador"
+
+# =====================
+# atlas_builder/apps.py
+# =====================
+
+msgid "Atlas Builder"
+msgstr "Construtor de Atlas"
+
+# =====================
+# administration/models.py - MenuGroup
+# =====================
+
+msgid "Menu Group"
+msgstr "Grupo de Menu"
+
+msgid "Menu Groups"
+msgstr "Grupos de Menu"
+
+msgid "When checked, this menu group context will remain active even when other menu groups are selected."
+msgstr "Quando marcado, o contexto deste grupo de menu permanecerá ativo mesmo quando outros grupos de menu forem selecionados."
+
+# =====================
+# administration/models.py - Menu
+# =====================
+
+msgid "Menu"
+msgstr "Menu"
+
+msgid "Menus"
+msgstr "Menus"
+
+msgid "group"
+msgstr "grupo"
+
+msgid "hierarchy level"
+msgstr "nível hierárquico"
+
+msgid "active"
+msgstr "ativo"
+
+msgid "Menus with the same number are considered siblings. Menus with lower numbers are considered parents of the ones with higher numbers. For example, a menu with the number 0 is considered parent of menus with the number 1."
+msgstr "Menus com o mesmo número são considerados irmãos. Menus com números menores são considerados pais dos que possuem números maiores. Por exemplo, um menu com o número 0 é considerado pai dos menus com o número 1."
+
+# =====================
+# administration/models.py - Tag
+# =====================
+
+msgid "Tag"
+msgstr "Tag"
+
+msgid "Tags"
+msgstr "Tags"
+
+msgid "related tags"
+msgstr "tags relacionadas"
+
+msgid "related locations"
+msgstr "locais relacionados"
+
+msgid "parent menu"
+msgstr "menu pai"
+
+msgid "color"
+msgstr "cor"
+
+msgid "Popup content"
+msgstr "Conteúdo do popup"
+
+msgid "sidebar content"
+msgstr "conteúdo da barra lateral"
+
+msgid "<b style='font-size: 0.85rem'>* Leave blank to use default template</b>"
+msgstr "<b style='font-size: 0.85rem'>* Deixe em branco para usar o modelo padrão</b>"
+
+msgid "overlayed popup content"
+msgstr "conteúdo do popup sobreposto"
+
+msgid "<b style='font-size: 0.85rem'>* This text will be displayed on 'show more info' popup</b>"
+msgstr "<b style='font-size: 0.85rem'>* Este texto será exibido no popup 'mostrar mais informações'</b>"
+
+# =====================
+# administration/models.py - Tag_relationship
+# =====================
+
+msgid "Tag to tag relation"
+msgstr "Relação entre tags"
+
+msgid "Tag to tag relationships"
+msgstr "Relações entre tags"
+
+msgid "child tag"
+msgstr "tag filha"
+
+msgid "parent tag"
+msgstr "tag pai"
+
+msgid "cluster ID"
+msgstr "ID do cluster"
+
+msgid "Tag clusters are group of parent tags from the tag. To a cluster id be active, all tags in that id must be active. The child tag will be active if at least one of the cluster ids is active."
+msgstr "Clusters de tags são grupos de tags pai da tag. Para que um ID de cluster esteja ativo, todas as tags naquele ID devem estar ativas. A tag filha estará ativa se pelo menos um dos IDs de cluster estiver ativo."
+
+# =====================
+# administration/models.py - Location
+# =====================
+
+msgid "Location"
+msgstr "Local"
+
+msgid "Locations"
+msgstr "Locais"
+
+msgid "description"
+msgstr "descrição"
+
+msgid "latitude"
+msgstr "latitude"
+
+msgid "longitude"
+msgstr "longitude"
+
+# =====================
+# administration/models.py - Kml_shape
+# =====================
+
+msgid "KML Shape"
+msgstr "Forma KML"
+
+msgid "KML Shapes"
+msgstr "Formas KML"
+
+msgid "links color"
+msgstr "cor dos links"
+
+msgid "opacity"
+msgstr "opacidade"
+
+msgid "Opacity of the link. Min(0)-Max(1)"
+msgstr "Opacidade do link. Mín(0)-Máx(1)"
+
+msgid "KML file"
+msgstr "Arquivo KML"
+
+msgid "Upload a custom KML file (max 30Mb)."
+msgstr "Carregue um arquivo KML personalizado (máx. 30Mb)."
+
+# =====================
+# administration/models.py - Links_group
+# =====================
+
+msgid "Links group"
+msgstr "Grupo de links"
+
+msgid "Links groups"
+msgstr "Grupos de links"
+
+# =====================
+# administration/models.py - Link
+# =====================
+
+msgid "Link"
+msgstr "Link"
+
+msgid "Links"
+msgstr "Links"
+
+msgid "display name"
+msgstr "nome de exibição"
+
+msgid "popup description"
+msgstr "descrição do popup"
+
+msgid "curvature"
+msgstr "curvatura"
+
+msgid "This field controls how curved the link will appear in the front-end. The higher the number, the less the link will be curved. Min(1)-Max(4). Accept decimal values."
+msgstr "Este campo controla a curvatura do link no front-end. Quanto maior o número, menos curvado será o link. Mín(1)-Máx(4). Aceita valores decimais."
+
+msgid "weight"
+msgstr "espessura"
+
+msgid "This field controls the weight of the link line. The higher the number, the wider the line."
+msgstr "Este campo controla a espessura da linha do link. Quanto maior o número, mais larga será a linha."
+
+msgid "dashed"
+msgstr "tracejado"
+
+msgid "This field, when active, will make the link stroke dashed."
+msgstr "Este campo, quando ativo, tornará o traço do link tracejado."
+
+msgid "straight link"
+msgstr "link reto"
+
+msgid "This field, when active, will make the link line straight."
+msgstr "Este campo, quando ativo, tornará a linha do link reta."
+
+msgid "location 1"
+msgstr "local 1"
+
+msgid "location 2"
+msgstr "local 2"
+
+msgid "links group"
+msgstr "grupo de links"
+
+msgid "invert link"
+msgstr "inverter curvatura"
+
+msgid "This field, when active, will invert the curvature of the link."
+msgstr "Este campo, quando ativo, inverterá a curvatura do link."
+
+# =====================
+# administration/models.py - Map_configuration
+# =====================
+
+msgid "Map Settings"
+msgstr "Configurações do Mapa"
+
+msgid "map name"
+msgstr "nome do mapa"
+
+msgid "map style"
+msgstr "estilo do mapa"
+
+msgid "Default (gray colored)"
+msgstr "Padrão (cinza)"
+
+msgid "Blue colored"
+msgstr "Azul"
+
+msgid "inherit children tag locations"
+msgstr "herdar locais das tags filhas"
+
+msgid "When this field is enabled, a tag that is parent from another tags will inherit all locations from the children that was not previously declared on the parent. If instead you want to manually declare the locations for all tags, we suggest to keep this field disabled."
+msgstr "Quando este campo está habilitado, uma tag que é pai de outras tags herdará todos os locais dos filhos que não foram previamente declarados no pai. Se, em vez disso, você deseja declarar manualmente os locais para todas as tags, sugerimos manter este campo desabilitado."
+
+msgid "cluster close tags"
+msgstr "agrupar tags próximas"
+
+msgid "When this field is enabled, tags located very close to each other will be grouped in clusters."
+msgstr "Quando este campo está habilitado, tags localizadas muito próximas umas das outras serão agrupadas em clusters."
+
+msgid "initial zoom level"
+msgstr "nível de zoom inicial"
+
+msgid "Please insert a value from 0 to 13 (max zoom)."
+msgstr "Por favor, insira um valor de 0 a 13 (zoom máximo)."
+
+msgid "initial latitude"
+msgstr "latitude inicial"
+
+msgid "initial longitude"
+msgstr "longitude inicial"
+
+msgid "link feature"
+msgstr "funcionalidade de links"
+
+msgid "When this field is enabled, the link feature will be displayed on the front-end."
+msgstr "Quando este campo está habilitado, o recurso de link será exibido no front-end."
+
+msgid "hide menu group when unique"
+msgstr "ocultar grupo de menu quando único"
+
+msgid "When there is only one Menu Group active, hide the menu groups tabs"
+msgstr "Quando há apenas um Grupo de Menu ativo, ocultar as abas dos grupos de menu"
+
+msgid "footer file"
+msgstr "arquivo de rodapé"
+
+msgid "Upload a custom footer file."
+msgstr "Carregue um arquivo de rodapé personalizado."
+
+# =====================
+# clients/models.py
+# =====================
+
+msgid "Client"
+msgstr "Cliente"
+
+msgid "Tenant Name"
+msgstr "Nome do Tenant"
+
+msgid "The domain will be generated automatically: if the Tenant Name is \"wrnp-2026\", the domain will be \"wrnp-2026.mapa.rnp.br\"."
+msgstr "O domínio será gerado automaticamente: se o Nome do Tenant for \"wrnp-2026\", o domínio será \"wrnp-2026.mapa.rnp.br\"."
+
+msgid "name"
+msgstr "nome"
+
+msgid "created on"
+msgstr "criado em"
+
+msgid "tenancy type"
+msgstr "tipo de tenant"
+
+msgid "Public"
+msgstr "Público"
+
+msgid "Scoped"
+msgstr "Delimitado"
+
+msgid "Root"
+msgstr "Raiz"
+
+msgid "Invalid domain name: it must have 2-26 characters, letters, numbers, hyphens or accented characters, not only numbers, and must not start or end with a hyphen."
+msgstr "Nome de domínio inválido: deve ter de 2 a 26 caracteres, letras, números, hífens ou caracteres acentuados, não apenas números, e não deve começar ou terminar com hífen."
+
+msgid "Domain"
+msgstr "Domínio"
+
+msgid "Domains"
+msgstr "Domínios"
+
+msgid "domain"
+msgstr "domínio"
+
+msgid "User"
+msgstr "Usuário"
+
+msgid "Users"
+msgstr "Usuários"
+
+# =====================
+# clients/admin.py
+# =====================
+
+#, python-format
+msgid "Cannot remove tenant \"%(tenant_name)s\" because this user is the owner. Please change the owner first before removing access."
+msgstr "Não é possível remover o tenant \"%(tenant_name)s\" porque este usuário é o proprietário. Por favor, altere o proprietário antes de remover o acesso."
+
+# =====================
+# importer/views.py
+# =====================
+
+msgid "No changes detected."
+msgstr "Nenhuma alteração detectada."
+
+# =====================
+# Templates - admin/login.html
+# =====================
+
+msgid "First Access or Forgot Password?"
+msgstr "Primeiro Acesso ou Esqueceu a Senha?"
+
+# =====================
+# Templates - registration/password_reset_form.html
+# =====================
+
+msgid "Reset Password"
+msgstr "Redefinir Senha"
+
+msgid "Enter your email to receive the password reset link."
+msgstr "Insira seu e-mail para receber o link de redefinição de senha."
+
+msgid "Send reset link"
+msgstr "Enviar link de redefinição"
+
+msgid "Back to login"
+msgstr "Voltar ao login"
+
+# =====================
+# Templates - registration/password_reset_done.html
+# =====================
+
+msgid "Email Sent"
+msgstr "E-mail Enviado"
+
+msgid "If an account exists for the email provided, you will receive a password reset link shortly."
+msgstr "Se uma conta existir para o e-mail fornecido, você receberá um link de redefinição de senha em breve."
+
+# =====================
+# Templates - registration/password_reset_confirm.html
+# =====================
+
+msgid "Set New Password"
+msgstr "Definir Nova Senha"
+
+msgid "Enter your new password below."
+msgstr "Insira sua nova senha abaixo."
+
+msgid "Set password"
+msgstr "Definir senha"
+
+msgid "Invalid Link"
+msgstr "Link Inválido"
+
+msgid "The password reset link is invalid, expired, or has already been used."
+msgstr "O link de redefinição de senha é inválido, expirou ou já foi utilizado."
+
+msgid "Request a new password reset"
+msgstr "Solicitar nova redefinição de senha"
+
+# =====================
+# Templates - registration/password_reset_complete.html
+# =====================
+
+msgid "Password Reset Complete"
+msgstr "Redefinição de Senha Concluída"
+
+msgid "Your password has been set. You may now log in."
+msgstr "Sua senha foi definida. Agora você pode fazer login."
+
+msgid "Go to login"
+msgstr "Ir para o login"
+
+# =====================
+# Templates - registration/password_reset_email_en.html
+# =====================
+
+msgid "Password Reset - ChameleonMap"
+msgstr "Redefinição de Senha - ChameleonMap"
+
+msgid "Password Reset"
+msgstr "Redefinição de Senha"
+
+#, python-format
+msgid "Hello %(name)s,"
+msgstr "Olá %(name)s,"
+
+#, python-format
+msgid "We received a request to reset the password for your account at <strong>%(site)s</strong>."
+msgstr "Recebemos uma solicitação para redefinir a senha da sua conta em <strong>%(site)s</strong>."
+
+msgid "To create a new password, click the button below:"
+msgstr "Para criar uma nova senha, clique no botão abaixo:"
+
+msgid "If the button above does not work, copy and paste the link below into your browser:"
+msgstr "Se o botão acima não funcionar, copie e cole o link abaixo no seu navegador:"
+
+msgid "If you did not request this change, you can ignore this email."
+msgstr "Se você não solicitou esta alteração, pode ignorar este e-mail."
+
+msgid "This message was sent automatically, please do not reply."
+msgstr "Esta mensagem foi enviada automaticamente, por favor não responda."
+
+msgid "Powered by:"
+msgstr "Desenvolvido por:"
+
+# =====================
+# Templates - registration/password_reset_subject_en.txt
+# =====================
+
+msgid "ChameleonMap password reset"
+msgstr "Redefinição de senha ChameleonMap"
+
+# =====================
+# Templates - admin/index.html
+# =====================
+
+msgid "Your managed map instances"
+msgstr "Suas instâncias de mapa"
+
+msgid "Current"
+msgstr "Atual"
+
+msgid "Manage instance"
+msgstr "Gerenciar instância"
+
+msgid "Import data"
+msgstr "Importar dados"
+
+msgid "Import data from Netbox"
+msgstr "Importar dados do Netbox"
+
+msgid "Import"
+msgstr "Importar"
+
+msgid "Loading, please wait..."
+msgstr "Carregando, aguarde..."
+
+# =====================
+# Templates - importer/diff.html
+# =====================
+
+msgid "Diff page"
+msgstr "Página de comparação"
+
+msgid "Merge imported data"
+msgstr "Mesclar dados importados"
+
+# =====================
+# Templates - importer/applied_changes.html
+# =====================
+
+msgid "Import logs"
+msgstr "Logs de importação"
+
+# =====================
+# Language selector
+# =====================
+
+msgid "Language"
+msgstr "Idioma"
+
+# =====================
+# Third-party apps - Axes
+# =====================
+
+msgid "Axes"
+msgstr "Acessos"
+
+msgid "access attempt"
+msgstr "tentativa de acesso"
+
+msgid "access attempts"
+msgstr "tentativas de acesso"
+
+msgid "access log"
+msgstr "registro de acesso"
+
+msgid "access logs"
+msgstr "registros de acesso"
+
+msgid "access failure"
+msgstr "falha de acesso"
+
+msgid "access failures"
+msgstr "falhas de acesso"
+
+msgid "access attempt expiration"
+msgstr "expiração de tentativa de acesso"
+
+msgid "access attempt expirations"
+msgstr "expirações de tentativas de acesso"
+
+# =====================
+# Third-party apps - Tenant Permissions
+# =====================
+
+msgid "Permissions"
+msgstr "Permissões"
+
+msgid "user tenant permission"
+msgstr "permissão de tenant"
+
+msgid "user tenant permissions"
+msgstr "permissões de tenant"
+
+# =====================
+# Unfold Admin Theme
+# =====================
+
+msgid "No results found"
+msgstr "Nenhum resultado encontrado"
+
+msgid "This page yielded into no results. Create a new item or reset your filters."
+msgstr "Esta página não retornou resultados. Crie um novo item ou redefina seus filtros."
+
+msgid "Reset filters"
+msgstr "Redefinir filtros"
+
+msgid "Type to search"
+msgstr "Digite para buscar"
+
+msgid "Go back"
+msgstr "Voltar"
+
+msgid "All applications"
+msgstr "Todas as aplicações"
+
+msgid "Light"
+msgstr "Claro"
+
+msgid "Dark"
+msgstr "Escuro"
+
+msgid "System"
+msgstr "Sistema"
+
+msgid "No data"
+msgstr "Sem dados"
+
+msgid "You don't have permission to view or edit anything."
+msgstr "Você não tem permissão para visualizar ou editar nada."
+
+msgid "Show all"
+msgstr "Mostrar tudo"
+
+msgid "Click here to select the objects across all pages"
+msgstr "Clique aqui para selecionar os objetos em todas as páginas"
+
+msgid "Clear selection"
+msgstr "Limpar seleção"
+
+msgid "More actions"
+msgstr "Mais ações"
+
+msgid "Yes, I'm sure"
+msgstr "Sim, tenho certeza"
+
+msgid "No, take me back"
+msgstr "Não, voltar"
+
+msgid "Summary"
+msgstr "Resumo"
+
+msgid "Objects"
+msgstr "Objetos"
+
+msgid "Filters"
+msgstr "Filtros"
+
+msgid "Toggle navigation"
+msgstr "Alternar navegação"
+
+msgid "View site"
+msgstr "Ver site"
+
+msgid "Change password"
+msgstr "Alterar senha"
+
+msgid "Log out"
+msgstr "Sair"
+
+msgid "Recent actions"
+msgstr "Ações recentes"
+
+msgid "This object doesn't have a change history. It probably wasn't added via this admin site."
+msgstr "Este objeto não possui histórico de alterações. Provavelmente não foi adicionado por este site de administração."
+
+msgid "Select all"
+msgstr "Selecionar tudo"
+
+msgid "Add another"
+msgstr "Adicionar outro"
+
+msgid "Remove"
+msgstr "Remover"
+
+msgid "action"
+msgstr "ação"
+
+msgid "date/time"
+msgstr "data/hora"
+
+# =====================
+# Axes model fields
+# =====================
+
+msgid "User Agent"
+msgstr "Agente do Usuário"
+
+msgid "IP Address"
+msgstr "Endereço IP"
+
+msgid "Username"
+msgstr "Nome de usuário"
+
+msgid "HTTP Accept"
+msgstr "HTTP Accept"
+
+msgid "Path"
+msgstr "Caminho"
+
+msgid "Attempt Time"
+msgstr "Data da Tentativa"
+
+msgid "GET Data"
+msgstr "Dados GET"
+
+msgid "POST Data"
+msgstr "Dados POST"
+
+msgid "Failed Logins"
+msgstr "Logins com Falha"
+
+msgid "Logout Time"
+msgstr "Data do Logout"
+
+msgid "Session key hash (sha256)"
+msgstr "Hash da chave de sessão (sha256)"
+
+msgid "Access lock out"
+msgstr "Acesso bloqueado"
+
+msgid "Access Attempt"
+msgstr "Tentativa de Acesso"
+
+msgid "Expires At"
+msgstr "Expira em"
+
+# =====================
+# Client owner field (tenant_users)
+# =====================
+
+msgid "owner"
+msgstr "proprietário"
+
+# =====================
+# Django admin SelectFilter
+# =====================
+
+msgid "%s selected option not visible"
+msgid_plural "%s selected options not visible"
+msgstr[0] "%s opção selecionada não visível"
+msgstr[1] "%s opções selecionadas não visíveis"
+
+msgid "(click to clear)"
+msgstr "(clique para limpar)"
