@@ -81,7 +81,7 @@ If you want to use pgAdmin to access PostgreSQL, you must configure the followin
 
 To apply ssl to the inventory map it is necessary to change some nginx settings so that it adapts to your site.
 
-1. Change the name of the site in the file nginx_ssl/nginx.conf:
+1. Change the site name in `nginx_ssl/default.conf.template` (or set `DJANGO_BASE_DOMAIN` when `ENABLE_MULTITENANT=true`). For a fixed single-host deployment, edit the template's HTTP/HTTPS server blocks directly.
 
 ```
   server {
@@ -101,7 +101,7 @@ to
   }
 ```
 
-Still in the nginx_ssl/nginx.conf file, change the server clause:
+Still in `nginx_ssl/default.conf.template`, change the HTTPS server clause:
 
 ```
   server {

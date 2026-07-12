@@ -18,6 +18,8 @@ http {
         listen 80 default;
         client_max_body_size 30M;
 
+        include /etc/nginx/mode.conf;
+
         location / {
             proxy_pass http://frontend-map;
             proxy_set_header X-Forwarded-Proto $scheme;
