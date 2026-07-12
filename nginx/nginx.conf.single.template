@@ -1,0 +1,183 @@
+
+events {
+    worker_connections 1024;
+}
+
+http {
+    include mime.types;
+
+    upstream backend-map {
+        server backend:8000;
+    }
+
+    upstream frontend-map {
+        server frontend:80;
+    }
+
+    server {
+        listen 80 default;
+        client_max_body_size 30M;
+
+        location / {
+            proxy_pass http://frontend-map;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header Host $host;
+            proxy_redirect off;
+        }
+
+        location /location/detail {
+            proxy_pass http://frontend-map;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header Host $host;
+            proxy_redirect off;
+            try_files $uri $uri/ /index.html;
+        }
+
+        location /tag/detail {
+            proxy_pass http://frontend-map;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header Host $host;
+            proxy_redirect off;
+            try_files $uri $uri/ /index.html;
+        }
+
+        location /admin {
+            proxy_pass http://backend-map;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header Host $host;
+            proxy_redirect off;
+        }
+
+        location /password_reset {
+            proxy_pass http://backend-map;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header Host $host;
+            proxy_redirect off;
+        }
+
+        location /password_reset/done/ {
+            proxy_pass http://backend-map;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header Host $host;
+            proxy_redirect off;
+        }
+
+        location ~ ^/reset/[^/]+/[^/]+/$ {
+            proxy_pass http://backend-map;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header Host $host;
+            proxy_redirect off;
+        }
+
+        location /reset/done/ {
+            proxy_pass http://backend-map;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header Host $host;
+            proxy_redirect off;
+        }
+
+        location /media/uploads {
+            proxy_pass http://backend-map;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header Host $host;
+            proxy_redirect off;
+        }
+
+        location /menu {
+            proxy_pass http://backend-map;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header Host $host;
+            proxy_redirect off;
+        }
+
+        location /tag {
+            proxy_pass http://backend-map;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header Host $host;
+            proxy_redirect off;
+        }
+
+        location /location {
+            proxy_pass http://backend-map;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header Host $host;
+            proxy_redirect off;
+        }
+
+        location /tagrelationship {
+            proxy_pass http://backend-map;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header Host $host;
+            proxy_redirect off;
+        }
+
+        location /link {
+            proxy_pass http://backend-map;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header Host $host;
+            proxy_redirect off;
+        }
+
+        location /linksgroup {
+            proxy_pass http://backend-map;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header Host $host;
+            proxy_redirect off;
+        }
+
+        location /kmlshape {
+            proxy_pass http://backend-map;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header Host $host;
+            proxy_redirect off;
+        }
+
+        location /settings {
+            proxy_pass http://backend-map;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header Host $host;
+            proxy_redirect off;
+        }
+
+        location /import {
+            proxy_pass http://backend-map;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header Host $host;
+            proxy_redirect off;
+        }
+
+        location /atlas {
+            proxy_pass http://backend-map;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header Host $host;
+        }
+
+        location /staticfiles/ {
+            expires -1;
+            alias /home/dpdadm/web/staticfiles/;
+        }
+
+        add_header X-Xss-Protection "1; mode=block";
+        add_header Referrer-Policy "same-origin";
+        add_header Permissions-Policy "geolocation=(), midi=(), sync-xhr=(), microphone=(), camera=(), magnetometer=(), gyroscope=(), fullscreen=(), payment=(), accelerometer=(), autoplay=(), encrypted-media=(), payment=(), usb=()";
+
+    }
+
+}

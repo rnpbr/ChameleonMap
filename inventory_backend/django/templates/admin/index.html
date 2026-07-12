@@ -1,34 +1,14 @@
 {% extends "admin/index.html" %}
 {% load importer_tags %}
+{% load tenancy_tags %}
 {% load get_managed_maps %}
 {% load get_current_tenant_name %}
 
 {% block content %}
 {{ block.super }}
 
-<!-- <div class="app-administration module">
-    <div class="bg-base-50 mb-6 rounded-default p-3 dark:bg-base-800">
-        <table class="border border-base-400/10 border-spacing-none border-separate rounded-default overflow-hidden shadow-xs w-full dark:border-base-800">
-        <caption class="font-semibold mb-3 text-base-900 text-left dark:text-base-100">
-        </caption>
-        <tbody>
-                {% get_managed_maps as maps %}
-                {% for instance in maps %}
-                <tr class="bg-white dark:bg-base-900 model-instance">
-                    <th scope="row" class="font-normal p-3 text-left border-b border-base-100 dark:border-base-800">
-                        <a href={{ instance.url }}>{{ instance.name }}</a>
-                    </th>
-                    <td class="border-b border-base-100 dark:border-base-800 p-3 text-right">
-                        <a href={{ instance.url }} class="changelink">Manage instance</a>
-                    </td>
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    </div>
-    
-</div> -->
-
+{% multitenant_enabled as is_multitenant %}
+{% if is_multitenant %}
 <div class="flex flex-col lg:flex-row lg:gap-8">
     <div class="grow">
         <div class="bg-base-50 mb-6 rounded-default p-3 dark:bg-base-800">
@@ -72,6 +52,7 @@
                 </tbody>
             </table>
         </div>
+{% endif %}
 
         {% if 'AVAILABLE_IMPORTS'|env == 'infradpdi' %}
         <div class="bg-base-50 mb-6 rounded-default p-3 dark:bg-base-800">
@@ -87,7 +68,7 @@
                         <td class=" p-3 text-right">
                             <div class="flex flex-row items-center ml-auto gap-4 justify-end">
                                 <a href="/import/netbox/" onclick="showSpinner()">Import</a>
-                                <a href={{ instance.url }} class="changelink block leading-none text-base-400 transition-colors dark:text-base-500 " title="Import">
+                                <a href="/import/netbox/" class="changelink block leading-none text-base-400 transition-colors dark:text-base-500 " title="Import">
                                     <span class="material-symbols-outlined">input</span>
                                 </a>
                             </div>
@@ -96,9 +77,13 @@
                 </tbody>
             </table>
         </div>
+        {% endif %}
+
+{% if is_multitenant %}
     </div>
     <div class="lg:w-96"></div>
 </div>
+{% endif %}
 
 <div class="background-no-go" id="loading-bg"></div>
 <div class="spinner" id="spinner"></div>
@@ -160,6 +145,5 @@
         100% { transform: rotate(360deg); }
     }
 </style>
-{% endif %}
 
 {% endblock %}

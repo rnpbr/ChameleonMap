@@ -34,6 +34,8 @@ and replace/insert values for the keys listed below with your own.
  - **DJANGO_SUPERUSER_USERNAME** - A username for the admin user
  - **DJANGO_SUPERUSER_PASSWORD** - A password for the admin user
  - **DJANGO_SUPERUSER_EMAIL** - The email address for the admin user
+ - **ENABLE_MULTITENANT** - Set to `true` for subdomain multitenancy; leave `false` or unset for classic single-map mode. Must be chosen **before the first database migration** and must not be changed on an existing Postgres volume (use a separate database for each mode).
+ - **DJANGO_BASE_DOMAIN** - Base domain for tenant subdomains (required when `ENABLE_MULTITENANT=true`, e.g. `localhost` for dev or `example.com` for prod)
  - **SQL_DATABASE** - The preferred name of the created database
  - **SQL_USER** - The username for the database
  - **SQL_PASSWORD** - The password for the database

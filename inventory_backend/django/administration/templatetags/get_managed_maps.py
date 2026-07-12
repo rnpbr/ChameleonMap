@@ -1,9 +1,12 @@
 from django import template
+from django.conf import settings
 
 register = template.Library()
 
 @register.simple_tag(takes_context=True)
 def get_managed_maps(context):
+    if not settings.ENABLE_MULTITENANT:
+        return []
     request = context['request']
     user = request.user
     if not user.is_authenticated:
