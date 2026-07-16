@@ -70,11 +70,10 @@
 .logos-frame {
   position: fixed;
   top: 92%;
-  margin-top: 10px;
   width: 100%;
   text-align: center;
 }
   
 .logos {
-  height: 5vh;
+  width: 70%;
 }
