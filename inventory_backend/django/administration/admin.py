@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.contrib import admin
+from django.utils.translation import gettext_lazy as _
 from django.utils.html import format_html
 from unfold.admin import ModelAdmin as BaseModelAdmin
 from unfold.apps import UnfoldAdminSite
@@ -18,9 +19,9 @@ from administration.models import (
 
 if settings.ENABLE_MULTITENANT:
     class TenantAdminSite(UnfoldAdminSite):
-        site_header = "ChameleonMap Admin"
-        site_title = "ChameleonMap Portal"
-        index_title = "Welcome to ChameleonMap Admin Portal"
+        site_header = _("ChameleonMap Admin")
+        site_title = _("ChameleonMap Portal")
+        index_title = _("Welcome to ChameleonMap Admin Portal")
 
     tenant_admin_site = TenantAdminSite(name='tenant_admin')
     map_admin_site = tenant_admin_site

@@ -14,6 +14,7 @@ import os
 
 from pathlib import Path
 from datetime import timedelta
+from django.utils.translation import gettext_lazy as _
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -53,7 +54,7 @@ MAP_STACK_APPS = [
     'rest_framework',
     'corsheaders',
     'tinymce',
-    'axes',
+    'inventory_backend.apps_overrides.AxesConfig',
 ]
 
 UNFOLD_APP = 'unfold'
@@ -62,8 +63,11 @@ ADMINISTRATION_APP = 'administration.apps.AdministrationConfig'
 
 CLIENTS_APP = 'clients'
 
+TENANT_PERMISSIONS_APP = 'inventory_backend.apps_overrides.TenantPermissionsConfig'
+
 SHARED_MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -95,9 +99,9 @@ def _installed_apps(*app_groups):
     return _unique_apps([UNFOLD_APP], *app_groups)
 
 UNFOLD = {
-    "SITE_TITLE": "ChameleonMap Portal",
-    "SITE_HEADER": "ChameleonMap Admin",
-    "SITE_SUBHEADER": "Welcome to ChameleonMap Admin Portal",
+    "SITE_TITLE": _("ChameleonMap Portal"),
+    "SITE_HEADER": _("ChameleonMap Admin"),
+    "SITE_SUBHEADER": _("Welcome to ChameleonMap Admin Portal"),
     "SITE_URL": "/admin",
     "SITE_ICON": "https://i.imgur.com/65Yiw9X.png",
     "SITE_FAVICONS": [
@@ -108,6 +112,7 @@ UNFOLD = {
             "href": "https://i.imgur.com/65Yiw9X.png",
         },
     ],
+    "SHOW_LANGUAGES": True,
 }
 
 # Axes config (suspicious login middleware)
@@ -139,6 +144,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'django.template.context_processors.i18n',
             ],
             'libraries': {
                 'my_templatetag': 'administration.templatetags.importer_tags',
@@ -154,7 +160,7 @@ if ENABLE_MULTITENANT:
     TENANT_MODEL = "clients.Client"
     MULTITENANT_FRAMEWORK_APPS = [
         'django_tenants',
-        'tenant_users.permissions',
+        TENANT_PERMISSIONS_APP,
         'tenant_users.tenants',
     ]
     TENANT_DOMAIN_MODEL = "clients.Domain"
@@ -185,7 +191,7 @@ if ENABLE_MULTITENANT:
                 ADMINISTRATION_APP,
                 'django.contrib.auth',
                 'django.contrib.contenttypes',
-                'tenant_users.permissions',
+                TENANT_PERMISSIONS_APP,
             ],
             "URLCONF": TENANT_URLCONF,
         },
@@ -265,6 +271,16 @@ AUTH_PASSWORD_VALIDATORS = [
 # https://docs.djangoproject.com/en/3.2/topics/i18n/
 
 LANGUAGE_CODE = 'en-us'
+
+LANGUAGES = [
+    ('en', _('English')),
+    ('pt-br', _('Portuguese')),
+    ('es', _('Spanish')),
+]
+
+LOCALE_PATHS = [
+    os.path.join(BASE_DIR, 'locale'),
+]
 
 TIME_ZONE = 'UTC'
 

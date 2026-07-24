@@ -8,6 +8,7 @@ including synchronization of permissions and relationships across tenant schemas
 from django import forms
 from django.contrib import admin
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.utils.translation import gettext_lazy as _
 
 from django_tenants.admin import TenantAdminMixin
 from django_tenants.utils import tenant_context
@@ -69,8 +70,8 @@ class TenantUserForm(forms.ModelForm):
         for owned_tenant in owned_tenants:
             if owned_tenant not in selected_tenants:
                 raise ValidationError(
-                    f'Cannot remove tenant "{owned_tenant.name}" because this user is the owner. '
-                    f'Please change the owner first before removing access.'
+                    _('Cannot remove tenant "%(tenant_name)s" because this user is the owner. '
+                      'Please change the owner first before removing access.') % {'tenant_name': owned_tenant.name}
                 )
 
 @admin.register(Client)

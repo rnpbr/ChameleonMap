@@ -1,4 +1,5 @@
 {% extends "admin/login.html" %}
+{% load i18n %}
 
 {% block content %}
     {# Keeps the original content of the login form #}
@@ -9,9 +10,27 @@
         <p>
             <a href="{% url 'password_reset' %}" 
                 class="text-sm text-blue-600 hover:text-blue-800 underline transition-colors duration-200">
-                    First Access or Forgot Password?
+                    {% trans "First Access or Forgot Password?" %}
             </a>
         </p>
+    </div>
+
+    {# Language selector #}
+    <div class="text-center mt-4">
+        <form action="{% url 'set_language' %}" method="post" style="display: inline-flex; align-items: center; gap: 8px;">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.path }}">
+            <select name="language" onchange="this.form.submit()" 
+                style="padding: 4px 8px; border-radius: 4px; border: 1px solid #ccc; font-size: 13px; cursor: pointer;">
+                {% get_current_language as LANGUAGE_CODE %}
+                {% get_available_languages as LANGUAGES %}
+                {% for lang_code, lang_name in LANGUAGES %}
+                    <option value="{{ lang_code }}" {% if lang_code == LANGUAGE_CODE %}selected{% endif %}>
+                        {{ lang_name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </form>
     </div>
 {% endblock %}
 

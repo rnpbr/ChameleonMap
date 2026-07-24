@@ -2,6 +2,7 @@ import io
 import zipfile
 
 from django.shortcuts import render
+from django.utils.translation import gettext as _
 
 from .sources.InfraDPDI import Requester, Translator
 from .sources import Merger, Replacer
@@ -23,10 +24,9 @@ def netbox(request):
         return render(request, 'importer/diff.html',
                       _admin_context(request, 'Preview Changes', {'models': MapData_diff}))
     else:
-        status = {'status': "No changes detected.", 'logs': []}
+        status = {'status': _("No changes detected."), 'logs': []}
         return render(request, 'importer/applied_changes.html',
                       _admin_context(request, 'Import Results', {'status': status}))
-
 
 def replace(request):
     replaceStatus = Replacer.execute(request)
