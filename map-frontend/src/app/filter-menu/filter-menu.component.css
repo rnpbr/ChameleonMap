@@ -235,4 +235,17 @@ mat-expansion-panel  {
 #menu-button-expand{
   display: inline;
   vertical-align: middle;
+  font-size: 40px;
+}
+
+.pinned-header {
+  position: relative;
+  background-image: 
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='30' height='30'><text x='0' y='20' font-size='20' fill='white'>★</text></svg>"),
+
+    linear-gradient(135deg, rgba(100, 100, 100, 0.4) 0%, rgba(100, 100, 100, 0.4) 25%, transparent 25%, transparent 100%);
+  
+  background-repeat: no-repeat;
+  background-position: 0.5rem center, 0 0;
+  background-size: 30px 30px, 60px 100%;
 }

@@ -18,6 +18,7 @@ import { OverlayedPopupComponent } from '../overlayed-popup/overlayed-popup.comp
 import { forkJoin } from 'rxjs';
 import { kml } from '@tmcw/togeojson';
 import { TooltipComponent } from '../tooltip/tooltip.component';
+import { ChameleonButtonComponent } from '../chameleon-button/chameleon-button.component';
 
 @Component({
   selector: 'app-map',
@@ -441,7 +442,8 @@ export class MapComponent implements OnInit {
       ],
       zoom: this.mapSetting.initial_zoom_level + 3,
       // zoom: this.mapSetting.initial_zoom_level + 5,
-      zoomControl: false
+      zoomControl: false,
+      attributionControl: false
     });
 
     this.map.on('zoom', () => {
@@ -1258,6 +1260,73 @@ export class MapComponent implements OnInit {
 
   closeMessage() {
     this.showRotateMessage = false;
+  }
+
+  public aboutUsButtonClick() {
+    let popupContent: string =  `
+      <div style="
+        position: relative;
+        font-family: Arial, sans-serif;
+        padding: 40px 20px 20px 20px;
+        max-width: 90%%;
+        border: 4px solid transparent;
+        border-radius: 15px;
+        background: linear-gradient(white, white) padding-box,
+                    linear-gradient(135deg, #00f9ff, #00ff94, #fff200, #ff005d, #a100ff) border-box;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      ">
+
+        <!-- Logo in the top-left corner of the frame -->
+        <img src="/assets/chameleonMapLogo-transparent.png" alt="ChameleonMap Logo"
+            style="position: absolute; top: -30px; left: -30px; height: 80px; z-index: 1; background: white; border-radius: 50%; padding: 5px; box-shadow: 0 2px 6px rgba(0,0,0,0.2);">
+
+        <!-- Main content -->
+        <p style="text-align: center;">
+          <strong>ChameleonMap ®</strong> is a pioneering open-source system born from the collaboration between the Informatics Institute of the Federal University of Rio Grande do Sul (INF-UFRGS) and the Brazilian National Research and Education Network (RNP). 
+          Designed to represent complex and dynamic topologies, it adapts and evolves like its namesake, the chameleon, offering an interactive mapping solution driven by geolocated data.
+        </p>
+
+        <p style="text-align: center;">
+          With its remarkable adaptability, ChameleonMap is suited for a wide range of applications — from visualizing computer networks to analyzing socio-economic infrastructures. Its modular design makes it a powerful and customizable tool across diverse domains. This collaborative development effort has resulted in a system that balances technical sophistication with ease of use. ChameleonMap is both intuitive for end-users and robust enough for administrators, making it an accessible and efficient solution for dynamic topology visualization.
+        </p>
+
+        <!-- Authors and Logos using Table -->
+        <table style="display: flex; width: 100%; margin-top: 15px; vertical-align: middle;">
+          <tr>
+            <!-- Logos -->
+            <td style="width: 50%; border: 1px solid #ccc; vertical-align: middle">
+              <img src="/assets/inf-logo.svg" alt="Logo INF-UFRGS" style="width: 25%; margin: 5px; vertical-align: middle;">
+              <img src="/assets/rnp-logo.png" alt="Logo RNP" style="width: 25%; margin: 5px; vertical-align: middle;"><br>
+            </td>
+            
+            <!-- Authors -->
+            <td style="width: 50%; padding: 10px; border: 1px solid #ccc; text-align: center; vertical-align: middle;">
+              <p><strong>Authors:</strong><br>
+                Eduardo Peretto<br>
+                Gabriel Vassoler<br>
+                Gustavo Hermínio de Araújo<br>
+                Leonardo Lauryel Batista dos Santos<br>
+                Prof. Lisandro Zambenedetti Granville<br>
+                Prof. Luciano Paschoal Gaspary<br>
+                Manoel Narciso Reis Soares Filho
+              </p>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Footer -->
+        <hr style="margin: 30px auto; width: 60%;">
+        <footer style="text-align: center; font-size: 0.9em;">
+          <p>
+            <strong><a href="https://github.com/seu-usuario/seu-repositorio" target="_blank">ChameleonMap</a> ®</strong><br>
+            Powered by <a href="https://leafletjs.com/" target="_blank">Leaflet</a> and <a href="https://www.openstreetmap.org/" target="_blank">OpenStreetMap</a>
+          </p>
+        </footer>
+      </div>
+    `
+    
+    this.overlayedPopup.activateWithPersonalizedContent(popupContent, "About This Map")
+    console.log('Popup activated!');
   }
 }
 

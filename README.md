@@ -47,8 +47,8 @@ If you want to use pgAdmin to access PostgreSQL, you must configure the followin
         
 2- Run the following command:
 
-  - **Production mode** - docker-compose -f docker-compose.yml -f docker-compose.prod.yml -p map up --build
   - **Development mode** - docker-compose -f docker-compose.yml -f docker-compose.dev.yml -p map up --build
+  - **Production mode** - docker-compose -f docker-compose.yml -f docker-compose.prod.yml -p map up --build
   - **Production mode with ssl** - docker-compose -f docker-compose.yml -f docker-compose.prod.ssl.yml -p map up --build
 
 <br />

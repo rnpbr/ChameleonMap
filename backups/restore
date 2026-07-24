@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Variables
-CONTAINER_NAME="map-db-1"
+CONTAINER_NAME="chameleonmap-db-1"
 DB_NAME="postgres"                     # Replace with your database name
 DB_USER="postgres"                   # Replace with your database user
 BACKUP_DIR="." # Replace with the directory containing the backup file

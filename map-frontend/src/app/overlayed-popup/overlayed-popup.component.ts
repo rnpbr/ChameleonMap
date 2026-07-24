@@ -56,7 +56,9 @@ export class OverlayedPopupComponent {
     this.setCurrentKeeperByButtonId(buttonId);
     this.setNewTabButtonLink();
 
-    this.overlayedPopupContainer.nativeElement.classList.remove('hidden');
+    const popup = this.overlayedPopupContainer.nativeElement;
+    popup.classList.add('visible');
+    popup.classList.remove('hidden');
     this._isActive = true;
   }
 
@@ -65,18 +67,38 @@ export class OverlayedPopupComponent {
       this._currentKeeperType = 'location';
       this._currentKeeper = this.getLocationById(location.id);
 
+      const popup = this.overlayedPopupContainer.nativeElement;
       this.overlayedPopupTitle.nativeElement.innerHTML = `<div>${this.getPopupTitle()}</div>`;
       this.subMap.keeper = this._currentKeeper;
 
       this.setNewTabButtonLink();
 
-      this.overlayedPopupContainer.nativeElement.classList.remove('hidden');
+      popup.classList.remove('hidden');
+      this._isActive = true;
+    }
+  }
+
+  public activateWithPersonalizedContent(content: string, title: string) {
+    if (location !== null) {
+      // this._currentKeeperType = 'location';
+      // this._currentKeeper = this.getLocationById(location.id);
+
+      const popup = this.overlayedPopupContainer.nativeElement;
+      this.overlayedPopupTitle.nativeElement.innerHTML = `<div>${title}</div>`;
+      // this.subMap.keeper = this._currentKeeper;
+      this.subMap.setContentDirectly(content)
+      // this.setNewTabButtonLink();
+
+      popup.classList.add('visible');
+      popup.classList.remove('hidden');
       this._isActive = true;
     }
   }
 
   public desactivate() {
-    this.overlayedPopupContainer.nativeElement.classList.add('hidden');
+    const popup = this.overlayedPopupContainer.nativeElement;
+    popup.classList.add('hidden');
+    popup.classList.remove('visible');
     this._isActive = false;
   }
 
@@ -91,7 +113,7 @@ export class OverlayedPopupComponent {
     }
 
     // Set title
-    this.overlayedPopupTitle.nativeElement.innerHTML = `<div>${this.getPopupTitle()} <span style="font-size: smaller; font-weight: normal;">(Dados obtidos de: <a href="https://sos-rs.com/">SOS-RS</a>)</span></div>`;
+    this.overlayedPopupTitle.nativeElement.innerHTML = `<div>${this.getPopupTitle()}</div>`;
 
     // Set Content
     this.subMap.keeper = this._currentKeeper;

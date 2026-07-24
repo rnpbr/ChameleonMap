@@ -9,6 +9,7 @@ import {
 import * as L from 'leaflet';
 import { LeafletMouseEvent } from 'leaflet';
 import { ATLASComponent } from '../atlas/atlas.component';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 // import { ScrollBar } from 'leaflet-scroll-bar';
 
 @Component({
@@ -23,6 +24,8 @@ export class SubMapComponent implements OnInit {
   
   public subMap: L.Map;
   private subMapId: string;
+
+  public popupContentBody: SafeHtml = ""
   
   public defaultSubMapCenterCoordinates: L.LatLng;
   private defaultViewBounds: L.LatLngBounds;
@@ -54,7 +57,9 @@ export class SubMapComponent implements OnInit {
   @Input() getLocationById: any;
   @Input() getTagById: any;
 
-  constructor() { }
+  constructor(
+    private sanitizer: DomSanitizer,
+  ) { }
 
   ngOnInit() {
     // this.initSubMapPropertiesValues();
@@ -69,7 +74,15 @@ export class SubMapComponent implements OnInit {
   public set keeper( keeper: Location | Tag){
     this._keeper = keeper;
     // console.log(this._keeper.overlayed_popup_content)
-    this.popup_content.nativeElement.innerHTML = `<div style='height: 1000px'>${this._keeper.overlayed_popup_content}</div>`;
+    let keeperHtml = `<div style=''>${this._keeper.overlayed_popup_content}</div>`;
+    this.popupContentBody = this.sanitizer.bypassSecurityTrustHtml(keeperHtml);
+  
+  }
+
+
+  public setContentDirectly(content: string){
+    let fullHtml = `<div style='width:100%;'>${content}</div>`;
+    this.popupContentBody = this.sanitizer.bypassSecurityTrustHtml(fullHtml);
   }
     
     
