@@ -163,4 +163,28 @@ describe('map-behavior', () => {
       )
     ).toBeTrue();
   });
+
+  it('allows links from pinned menus even when not selected', () => {
+    const menusById = new Map([
+      [1, { id: 1, group: 1, hierarchy_level: 0, pinned: false }],
+      [2, { id: 2, group: 1, hierarchy_level: 0, pinned: true }]
+    ]);
+    const menuGroupsById = new Map([
+      [1, { id: 1, name: 'Group A', simultaneous_context: false }]
+    ]);
+    const selectedMenusByGroup = { 'Group A': 1 };
+
+    expect(
+      isLinkEligible(
+        { id: 1, location_1: 1, location_2: 2, links_group: 2 },
+        { id: 2, parent_menu: 2 },
+        1,
+        { id: 1, onMap: true },
+        { id: 2, onMap: true },
+        menusById,
+        menuGroupsById,
+        selectedMenusByGroup
+      )
+    ).toBeTrue();
+  });
 });

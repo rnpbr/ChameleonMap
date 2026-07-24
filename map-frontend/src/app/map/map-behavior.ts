@@ -19,6 +19,7 @@ export interface MenuLike {
   readonly id: number;
   readonly group: number;
   readonly hierarchy_level: number;
+  readonly pinned?: boolean;
 }
 
 export interface MenuGroupLike {
@@ -207,8 +208,13 @@ export function isLinkEligible(
     menuGroupsById,
     selectedMenusByGroup
   );
+  const isPinned = menusById.get(linksGroup.parent_menu)?.pinned === true;
 
-  if (linksGroup.parent_menu !== selectedMenuId && !isSimultaneous) {
+  if (
+    linksGroup.parent_menu !== selectedMenuId &&
+    !isSimultaneous &&
+    !isPinned
+  ) {
     return false;
   }
 

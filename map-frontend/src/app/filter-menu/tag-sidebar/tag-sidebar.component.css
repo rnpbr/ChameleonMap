@@ -1,3 +1,9 @@
+:host {
+  display: block;
+  min-height: 0;
+  max-width: 100%;
+}
+
 .sidebar {
     position: relative;
     z-index: 400;
@@ -14,14 +20,12 @@
 }
 
 .outer{
-  position: absolute;
+  position: relative;
   z-index: 400;
-  top: 100px;
-  right: 15px;
-  max-height: calc(100% - 100px);
-  overflow-x: hidden;  
+  max-height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
   scrollbar-width: none;
-  padding: 3px;
 }
 
 .collapsed {

@@ -16,6 +16,7 @@ import { ScrollingModule } from '@angular/cdk/scrolling';
 import { LeafletMarkerClusterModule } from '@asymmetrik/ngx-leaflet-markercluster';
 import { CollapserComponent } from './collapser/collapser.component';
 import { TagSidebarComponent } from './filter-menu/tag-sidebar/tag-sidebar.component';
+import { PinnedMenusSidebarComponent } from './filter-menu/pinned-menus-sidebar/pinned-menus-sidebar.component';
 import { MatTableModule } from '@angular/material/table';
 import { SafeHtmlPipe } from './safe-html.pipe';
 import { LinksMenuComponent } from './links-menu/links-menu.component';
@@ -41,6 +42,7 @@ import { PopupContentService } from './map/popup-content.service';
     FilterMenuComponent,
     CollapserComponent,
     TagSidebarComponent,
+    PinnedMenusSidebarComponent,
     SafeHtmlPipe,
     LinksMenuComponent,
     MenuChooserComponent,
