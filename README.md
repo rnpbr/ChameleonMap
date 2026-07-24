@@ -34,6 +34,8 @@ and replace/insert values for the keys listed below with your own.
  - **DJANGO_SUPERUSER_USERNAME** - A username for the admin user
  - **DJANGO_SUPERUSER_PASSWORD** - A password for the admin user
  - **DJANGO_SUPERUSER_EMAIL** - The email address for the admin user
+ - **ENABLE_MULTITENANT** - Set to `true` for subdomain multitenancy; leave `false` or unset for classic single-map mode. Must be chosen **before the first database migration** and must not be changed on an existing Postgres volume (use a separate database for each mode).
+ - **DJANGO_BASE_DOMAIN** - Base domain for tenant subdomains (required when `ENABLE_MULTITENANT=true`, e.g. `localhost` for dev or `example.com` for prod)
  - **SQL_DATABASE** - The preferred name of the created database
  - **SQL_USER** - The username for the database
  - **SQL_PASSWORD** - The password for the database
@@ -79,7 +81,7 @@ If you want to use pgAdmin to access PostgreSQL, you must configure the followin
 
 To apply ssl to the inventory map it is necessary to change some nginx settings so that it adapts to your site.
 
-1. Change the name of the site in the file nginx_ssl/nginx.conf:
+1. Change the site name in `nginx_ssl/default.conf.template` (or set `DJANGO_BASE_DOMAIN` when `ENABLE_MULTITENANT=true`). For a fixed single-host deployment, edit the template's HTTP/HTTPS server blocks directly.
 
 ```
   server {
@@ -99,7 +101,7 @@ to
   }
 ```
 
-Still in the nginx_ssl/nginx.conf file, change the server clause:
+Still in `nginx_ssl/default.conf.template`, change the HTTPS server clause:
 
 ```
   server {

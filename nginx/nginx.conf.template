@@ -18,24 +18,8 @@ http {
         listen 80 default;
         client_max_body_size 30M;
 
-        # server_name .chameleon.com;
-        server_name *.${DJANGO_BASE_DOMAIN};
-    
-        # (ponto na frente significa que *chameleon-map.com.br*
-        # e todos os subdomínios ex: XXX.chameleon-map.com.br)
+        include /etc/nginx/mode.conf;
 
-        # Redirect admin subdomain root to /admin
-        set $redirect_admin_root 0;
-        if ($host = "admin.${DJANGO_BASE_DOMAIN}") {
-            set $redirect_admin_root 1;
-        }
-        if ($uri = /) {
-            set $redirect_admin_root "${redirect_admin_root}1";
-        }
-        if ($redirect_admin_root = 11) {
-            return 302 /admin$is_args$args;
-        }
-        
         location / {
             proxy_pass http://frontend-map;
             proxy_set_header X-Forwarded-Proto $scheme;
@@ -196,21 +180,12 @@ http {
         }
 
         location /staticfiles/ {
-            # Doesn't allow the browser to cache static assets while in development
             expires -1;
             alias /home/dpdadm/web/staticfiles/;
         }
 
-        # Standard security headers:
-        # Content-Security-Policy defined in django/base_app/settings.py
-
-        # Do not render our content if there are signs of reflected cross site scripting.
         add_header X-Xss-Protection "1; mode=block";
-
-        # Do not pass information about any site that links to us in the "Referer" header.
         add_header Referrer-Policy "same-origin";
-
-        # We do not need to use any of these features.
         add_header Permissions-Policy "geolocation=(), midi=(), sync-xhr=(), microphone=(), camera=(), magnetometer=(), gyroscope=(), fullscreen=(), payment=(), accelerometer=(), autoplay=(), encrypted-media=(), payment=(), usb=()";
 
     }
