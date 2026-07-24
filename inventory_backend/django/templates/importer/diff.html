@@ -1,227 +1,349 @@
-{% load static %}
-{% load importer_tags %}
+{% extends "admin/base_site.html" %}
+{% load i18n %}
 
-<head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" type="text/css" href="{% static 'import/css/diff.css' %}" media="screen" />
-    <script src="https://use.fontawesome.com/195a536412.js"></script>
-    <title>Diff page</title>
-</head>
+{% block title %}{% trans "Preview Changes" %} | {{ site_title|default:"Site Admin" }}{% endblock %}
 
-<body>
-    <header>
-        <div id="page-info">
-            <a href="/admin/" style="color: white; text-decoration: none;">Map Administration</a>
-        </div>
-        <div id="system-info">
-            Merge imported data
-        </div>
-    </header>
-    <div id="form-frame">
-        <form action="/import/replace/" method="post">{% csrf_token %}
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="/admin/">{% trans "Home" %}</a>
+    &rsaquo; {% trans "Preview Changes" %}
+</div>
+{% endblock %}
 
-            {% for model_name, object in models.items %}
-            {% if object.added|length > 0 or object.edited|length > 0 or object.removed|length > 0 %}
-            <div class="model-frame">
+{% block content %}
+<form action="/import/replace/" method="post" id="diff-form">
+    {% csrf_token %}
 
-                <div class="model-header">
-                    {{model_name}} <i id="{{model_name}}-icon" class="fa fa-chevron-up"
-                        onclick="hide('{{model_name}}')"></i>
-                </div>
+    {# ── Per-model cards ─────────────────────────────────────────────────────── #}
+    {% for model_name, object in models.items %}
+    {% if object.added|length > 0 or object.edited|length > 0 or object.removed|length > 0 %}
 
-                <div id={{model_name}}>
-                    <!-- Added Items -->
+    <div class="bg-base-50 mb-6 rounded-default dark:bg-base-800 overflow-hidden border border-base-200/60 dark:border-base-700/60">
+
+        {# Model header #}
+        <div class="flex items-center justify-between px-4 py-3 border-b border-base-200 dark:border-base-700 cursor-pointer select-none"
+             onclick="diffToggleSection('model-{{ model_name }}')"
+             role="button" aria-expanded="true">
+            <span class="font-semibold text-base-900 dark:text-base-100 flex items-center gap-2">
+                <span class="material-symbols-outlined text-base-400 dark:text-base-500 text-[1.1rem]">folder</span>
+                {{ model_name }}
+                <span class="text-xs font-normal text-base-400 dark:text-base-500">
                     {% if object.added|length > 0 %}
-                    <div class="model-changes">
-                        <div class="model-change-header">
-                            Added items <i id="{{model_name}}-added-icon" class="fa fa-chevron-down"
-                                onclick="hide('{{model_name}}-added')"></i>
-                        </div>
-
-                        <div class="collapsed" id={{model_name}}-added>
-                            {% for element in object.added %}
-                            <div class="element-changed-frame">
-                                <div class="element-header">
-                                    {{element.name}} <i id="{{model_name}}-{{element.id}}-icon"
-                                        class="fa fa-chevron-up" onclick="hide('{{model_name}}-{{element.id}}')"></i>
-                                </div>
-                                <div class="element-expansion" id="{{model_name}}-{{element.id}}">
-                                    <div class="fields-frame">
-                                        {% for attr_name, value in element.items %}
-                                        {% if attr_name != "id" and attr_name != "name" %}
-                                        <div class="field-row">
-                                            <div class="field-label">
-                                                <label for="fname">{{attr_name}}</label>
-                                            </div>
-                                            <div class="field-input">
-                                                {% if not attr_name == "active" %}
-                                                <input disabled class="line-text" type="text" value={{value}}>
-                                                {% elif value == True %}
-                                                <input disabled class="element-active" type="checkbox" checked>
-                                                {% else %}
-                                                <input disabled class="element-active" type="checkbox">
-                                                {% endif %}
-                                            </div>
-                                        </div>
-                                        {% endif %}
-                                        {% endfor %}
-                                    </div>
-                                    <div class="approve-change-frame">
-                                        Apply Changes
-                                        <input type="checkbox" name="{{model_name}}-{{element.id}}" checked>
-                                    </div>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </div>
-
-                    </div>
+                    <span class="inline-flex items-center gap-0.5 text-green-600 dark:text-green-400">
+                        +{{ object.added|length }}
+                    </span>
                     {% endif %}
-                    <!-- Edited Items -->
                     {% if object.edited|length > 0 %}
-                    <div class="model-changes">
-                        <div class="model-change-header">
-                            Edited items <i id="{{model_name}}-edited-icon" class="fa fa-chevron-down"
-                                onclick="hide('{{model_name}}-edited')"></i>
-                        </div>
-
-                        <div class="collapsed" id={{model_name}}-edited>
-                            {% for element in object.edited %}
-                            <div class="element-changed-frame">
-                                <div class="element-header edited">
-                                    {{element.name}} <i id="{{model_name}}-{{element.id}}-icon"
-                                        class="fa fa-chevron-down" onclick="hide('{{model_name}}-{{element.id}}')"></i>
-                                </div>
-                                <div class="element-expansion edited" id="{{model_name}}-{{element.id}}">
-                                    <div class="fields-frame edited">
-                                        {% for attr_name, valueDiff in element.items %}
-                                        {% if attr_name != "id" and attr_name != "name" %}
-                                        <div class="field-row edited">
-                                            <div class="field-label">
-                                                <label for="fname">{{attr_name}}</label>
-                                            </div>
-                                            <div class="field-input">
-                                                {% if attr_name != "active"%}
-                                                {% if valueDiff.old != valueDiff.new %}
-                                                <input disabled class="line-text old" type="text" value='{{valueDiff.old}}'>
-                                                {% else %}
-                                                <input disabled class="line-text" type="text" value='{{valueDiff.old}}'>
-                                                {% endif %}
-                                                {% elif valueDiff.old == True %}
-                                                <input disabled class="element-active" type="checkbox" checked>
-                                                {% else %}
-                                                <input disabled class="element-active" type="checkbox">
-                                                {% endif %}
-                                            </div>
-                                            <div class="field-input">
-                                                {% if attr_name != "active" %}
-                                                {% if valueDiff.old != valueDiff.new %}
-                                                <input disabled class="line-text new" type="text" value='{{valueDiff.new}}''>
-                                                {% else %}
-                                                <input disabled class="line-text" type="text" value='{{valueDiff.new}}''>
-                                                {% endif %}
-                                                {% elif valueDiff.new == True %}
-                                                <input disabled class="element-active" type="checkbox" checked>
-                                                {% else %}
-                                                <input disabled class="element-active" type="checkbox">
-                                                {% endif %}
-                                            </div>
-                                        </div>
-                                        {% endif %}
-                                        {% endfor %}
-                                    </div>
-                                    <div class="approve-change-frame">
-                                        Apply Changes
-                                        <input type="checkbox" name="{{model_name}}-{{element.id}}" checked>
-                                    </div>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </div>
-
-                    </div>
+                    <span class="inline-flex items-center gap-0.5 text-amber-600 dark:text-amber-400 ml-1">
+                        ~{{ object.edited|length }}
+                    </span>
                     {% endif %}
-                    <!-- Removed Items -->
                     {% if object.removed|length > 0 %}
-                    <div class="model-changes">
-                        <div class="model-change-header">
-                            Removed items <i id="{{model_name}}-removed-icon" class="fa fa-chevron-down"
-                                onclick="hide('{{model_name}}-removed')"></i>
-                        </div>
-
-                        <div class="collapsed" id={{model_name}}-removed>
-                            {% for element in object.removed %}
-                            <div class="element-changed-frame">
-                                <div class="element-header removed">
-                                    {{element.name}} <i id="{{model_name}}-{{element.id}}-icon"
-                                        class="fa fa-chevron-down" onclick="hide('{{model_name}}-{{element.id}}')"></i>
-                                </div>
-                                <div class="element-expansion removed" id="{{model_name}}-{{element.id}}">
-                                    <div class="fields-frame">
-                                        {% for attr_name, value in element.items %}
-                                        {% if attr_name != "id" and attr_name != "name" %}
-                                        <div class="field-row">
-                                            <div class="field-label">
-                                                <label for="fname">{{attr_name}}</label>
-                                            </div>
-                                            <div class="field-input">
-                                                {% if not attr_name == "active" %}
-                                                <input disabled class="line-text" type="text" value='{{value}}'>
-                                                {% elif value == True %}
-                                                <input disabled class="element-active" type="checkbox" checked>
-                                                {% else %}
-                                                <input disabled class="element-active" type="checkbox">
-                                                {% endif %}
-                                            </div>
-                                        </div>
-                                        {% endif %}
-                                        {% endfor %}
-                                    </div>
-                                    <div class="approve-change-frame">
-                                        Apply Changes
-                                        <input type="checkbox" name="{{model_name}}-{{element.id}}" checked>
-                                    </div>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </div>
-
-                    </div>
+                    <span class="inline-flex items-center gap-0.5 text-red-600 dark:text-red-400 ml-1">
+                        -{{ object.removed|length }}
+                    </span>
                     {% endif %}
+                </span>
+            </span>
+            <span id="model-{{ model_name }}-chevron"
+                  class="material-symbols-outlined text-base-400 dark:text-base-500 transition-transform duration-150">
+                expand_less
+            </span>
+        </div>
+
+        <div id="model-{{ model_name }}">
+
+            {# ── Added items ──────────────────────────────────────────────── #}
+            {% if object.added|length > 0 %}
+            <div class="border-b border-base-200 dark:border-base-700 last:border-b-0">
+                <div class="flex items-center justify-between px-4 py-2.5 bg-green-50/70 dark:bg-green-950/10 cursor-pointer select-none"
+                     onclick="diffToggleSection('{{ model_name }}-added-body')"
+                     role="button" aria-expanded="false">
+                    <span class="flex items-center gap-2 text-sm font-medium text-green-700 dark:text-green-400">
+                        <span class="material-symbols-outlined text-[1rem]">add_circle</span>
+                        {% trans "Added" %} ({{ object.added|length }})
+                    </span>
+                    <div class="flex items-center gap-3">
+                        <button type="button"
+                                class="text-xs text-base-500 hover:text-base-700 dark:hover:text-base-300 underline"
+                                onclick="event.stopPropagation(); diffSelectAll('{{ model_name }}', 'added', true)">
+                            {% trans "select all" %}
+                        </button>
+                        <button type="button"
+                                class="text-xs text-base-500 hover:text-base-700 dark:hover:text-base-300 underline"
+                                onclick="event.stopPropagation(); diffSelectAll('{{ model_name }}', 'added', false)">
+                            {% trans "none" %}
+                        </button>
+                        <span id="{{ model_name }}-added-body-chevron"
+                              class="material-symbols-outlined text-base-400 dark:text-base-500 text-[1.1rem] transition-transform duration-150 rotate-180">
+                            expand_less
+                        </span>
+                    </div>
                 </div>
 
+                <div id="{{ model_name }}-added-body" class="diff-hidden divide-y divide-base-100 dark:divide-base-700/60">
+                    {% for element in object.added %}
+                    <div class="diff-element" data-group="{{ model_name }}-added">
+                        {# Element header row #}
+                        <div class="flex items-center justify-between px-4 py-2.5 bg-white dark:bg-base-900 hover:bg-base-50 dark:hover:bg-base-800/60">
+                            <button type="button"
+                                    class="flex items-center gap-2 text-sm text-base-800 dark:text-base-200 hover:text-primary-600 dark:hover:text-primary-400"
+                                    onclick="diffToggleElement('{{ model_name }}-el-{{ element.id }}')">
+                                <span id="{{ model_name }}-el-{{ element.id }}-chevron"
+                                      class="material-symbols-outlined text-[1rem] text-base-400 transition-transform duration-150">
+                                    chevron_right
+                                </span>
+                                <span class="font-medium">{{ element.name }}</span>
+                            </button>
+                            <label class="flex items-center gap-2 cursor-pointer text-sm text-base-600 dark:text-base-400 select-none">
+                                <input type="checkbox"
+                                       name="{{ model_name }}-{{ element.id }}"
+                                       class="diff-check rounded border-base-300 dark:border-base-600"
+                                       checked>
+                                {% trans "Apply" %}
+                            </label>
+                        </div>
+                        {# Element fields #}
+                        <div id="{{ model_name }}-el-{{ element.id }}" class="diff-hidden px-4 pb-3 pt-1 bg-white dark:bg-base-900 border-t border-base-100 dark:border-base-700/40">
+                            <table class="w-full text-sm">
+                                {% for attr_name, value in element.items %}
+                                {% if attr_name != "id" and attr_name != "name" %}
+                                <tr class="border-b border-base-100 dark:border-base-700/40 last:border-b-0">
+                                    <td class="py-1.5 pr-4 w-40 text-xs font-medium text-base-500 dark:text-base-400 align-top">{{ attr_name }}</td>
+                                    <td class="py-1.5 text-base-800 dark:text-base-200">
+                                        {% if attr_name == "active" %}
+                                            {% if value %}<span class="text-green-600 dark:text-green-400">✓ active</span>{% else %}<span class="text-base-400">✗ inactive</span>{% endif %}
+                                        {% else %}
+                                            <span class="font-mono text-xs bg-base-100 dark:bg-base-700 px-1.5 py-0.5 rounded">{{ value }}</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endif %}
+                                {% endfor %}
+                            </table>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
             </div>
             {% endif %}
-            {% endfor %}
 
-            <div class="submit-frame">
-                <input type="submit" value="Apply Changes" id="submit-btn">
+            {# ── Edited items ─────────────────────────────────────────────── #}
+            {% if object.edited|length > 0 %}
+            <div class="border-b border-base-200 dark:border-base-700 last:border-b-0">
+                <div class="flex items-center justify-between px-4 py-2.5 bg-amber-50/70 dark:bg-amber-950/10 cursor-pointer select-none"
+                     onclick="diffToggleSection('{{ model_name }}-edited-body')"
+                     role="button" aria-expanded="false">
+                    <span class="flex items-center gap-2 text-sm font-medium text-amber-700 dark:text-amber-400">
+                        <span class="material-symbols-outlined text-[1rem]">edit</span>
+                        {% trans "Edited" %} ({{ object.edited|length }})
+                    </span>
+                    <div class="flex items-center gap-3">
+                        <button type="button"
+                                class="text-xs text-base-500 hover:text-base-700 dark:hover:text-base-300 underline"
+                                onclick="event.stopPropagation(); diffSelectAll('{{ model_name }}', 'edited', true)">
+                            {% trans "select all" %}
+                        </button>
+                        <button type="button"
+                                class="text-xs text-base-500 hover:text-base-700 dark:hover:text-base-300 underline"
+                                onclick="event.stopPropagation(); diffSelectAll('{{ model_name }}', 'edited', false)">
+                            {% trans "none" %}
+                        </button>
+                        <span id="{{ model_name }}-edited-body-chevron"
+                              class="material-symbols-outlined text-base-400 dark:text-base-500 text-[1.1rem] transition-transform duration-150 rotate-180">
+                            expand_less
+                        </span>
+                    </div>
+                </div>
+
+                <div id="{{ model_name }}-edited-body" class="diff-hidden divide-y divide-base-100 dark:divide-base-700/60">
+                    {% for element in object.edited %}
+                    <div class="diff-element" data-group="{{ model_name }}-edited">
+                        <div class="flex items-center justify-between px-4 py-2.5 bg-white dark:bg-base-900 hover:bg-base-50 dark:hover:bg-base-800/60">
+                            <button type="button"
+                                    class="flex items-center gap-2 text-sm text-base-800 dark:text-base-200 hover:text-primary-600 dark:hover:text-primary-400"
+                                    onclick="diffToggleElement('{{ model_name }}-el-{{ element.id }}')">
+                                <span id="{{ model_name }}-el-{{ element.id }}-chevron"
+                                      class="material-symbols-outlined text-[1rem] text-base-400 transition-transform duration-150">
+                                    chevron_right
+                                </span>
+                                <span class="font-medium">{{ element.name }}</span>
+                            </button>
+                            <label class="flex items-center gap-2 cursor-pointer text-sm text-base-600 dark:text-base-400 select-none">
+                                <input type="checkbox"
+                                       name="{{ model_name }}-{{ element.id }}"
+                                       class="diff-check rounded border-base-300 dark:border-base-600"
+                                       checked>
+                                {% trans "Apply" %}
+                            </label>
+                        </div>
+                        <div id="{{ model_name }}-el-{{ element.id }}" class="diff-hidden px-4 pb-3 pt-1 bg-white dark:bg-base-900 border-t border-base-100 dark:border-base-700/40">
+                            <table class="w-full text-sm">
+                                {% for attr_name, valueDiff in element.items %}
+                                {% if attr_name != "id" and attr_name != "name" %}
+                                <tr class="border-b border-base-100 dark:border-base-700/40 last:border-b-0 {% if valueDiff.old != valueDiff.new %}bg-amber-50/40 dark:bg-amber-950/10{% endif %}">
+                                    <td class="py-1.5 pr-4 w-40 text-xs font-medium text-base-500 dark:text-base-400 align-top">{{ attr_name }}</td>
+                                    <td class="py-1.5 align-top">
+                                        {% if attr_name == "active" %}
+                                            {% if valueDiff.old %}<span class="text-green-600 dark:text-green-400">✓ active</span>{% else %}<span class="text-base-400">✗ inactive</span>{% endif %}
+                                        {% else %}
+                                            <span class="font-mono text-xs {% if valueDiff.old != valueDiff.new %}line-through text-red-400 dark:text-red-500{% else %}bg-base-100 dark:bg-base-700 px-1.5 py-0.5 rounded text-base-800 dark:text-base-200{% endif %}">
+                                                {{ valueDiff.old }}
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="py-1.5 pl-2 align-top">
+                                        {% if valueDiff.old != valueDiff.new %}
+                                            {% if attr_name == "active" %}
+                                                {% if valueDiff.new %}<span class="text-green-600 dark:text-green-400">✓ active</span>{% else %}<span class="text-base-400">✗ inactive</span>{% endif %}
+                                            {% else %}
+                                                <span class="material-symbols-outlined text-[0.9rem] text-base-400 align-middle">arrow_forward</span>
+                                                <span class="font-mono text-xs bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-1.5 py-0.5 rounded">
+                                                    {{ valueDiff.new }}
+                                                </span>
+                                            {% endif %}
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endif %}
+                                {% endfor %}
+                            </table>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
             </div>
+            {% endif %}
 
-        </form>
+            {# ── Removed items ────────────────────────────────────────────── #}
+            {% if object.removed|length > 0 %}
+            <div class="border-b border-base-200 dark:border-base-700 last:border-b-0">
+                <div class="flex items-center justify-between px-4 py-2.5 bg-red-50/70 dark:bg-red-950/10 cursor-pointer select-none"
+                     onclick="diffToggleSection('{{ model_name }}-removed-body')"
+                     role="button" aria-expanded="false">
+                    <span class="flex items-center gap-2 text-sm font-medium text-red-700 dark:text-red-400">
+                        <span class="material-symbols-outlined text-[1rem]">remove_circle</span>
+                        {% trans "Removed" %} ({{ object.removed|length }})
+                    </span>
+                    <div class="flex items-center gap-3">
+                        <button type="button"
+                                class="text-xs text-base-500 hover:text-base-700 dark:hover:text-base-300 underline"
+                                onclick="event.stopPropagation(); diffSelectAll('{{ model_name }}', 'removed', true)">
+                            {% trans "select all" %}
+                        </button>
+                        <button type="button"
+                                class="text-xs text-base-500 hover:text-base-700 dark:hover:text-base-300 underline"
+                                onclick="event.stopPropagation(); diffSelectAll('{{ model_name }}', 'removed', false)">
+                            {% trans "none" %}
+                        </button>
+                        <span id="{{ model_name }}-removed-body-chevron"
+                              class="material-symbols-outlined text-base-400 dark:text-base-500 text-[1.1rem] transition-transform duration-150 rotate-180">
+                            expand_less
+                        </span>
+                    </div>
+                </div>
+
+                <div id="{{ model_name }}-removed-body" class="diff-hidden divide-y divide-base-100 dark:divide-base-700/60">
+                    {% for element in object.removed %}
+                    <div class="diff-element" data-group="{{ model_name }}-removed">
+                        <div class="flex items-center justify-between px-4 py-2.5 bg-white dark:bg-base-900 hover:bg-base-50 dark:hover:bg-base-800/60">
+                            <button type="button"
+                                    class="flex items-center gap-2 text-sm text-base-800 dark:text-base-200 hover:text-primary-600 dark:hover:text-primary-400"
+                                    onclick="diffToggleElement('{{ model_name }}-el-{{ element.id }}')">
+                                <span id="{{ model_name }}-el-{{ element.id }}-chevron"
+                                      class="material-symbols-outlined text-[1rem] text-base-400 transition-transform duration-150">
+                                    chevron_right
+                                </span>
+                                <span class="font-medium">{{ element.name }}</span>
+                            </button>
+                            <label class="flex items-center gap-2 cursor-pointer text-sm text-base-600 dark:text-base-400 select-none">
+                                <input type="checkbox"
+                                       name="{{ model_name }}-{{ element.id }}"
+                                       class="diff-check rounded border-base-300 dark:border-base-600"
+                                       checked>
+                                {% trans "Apply" %}
+                            </label>
+                        </div>
+                        <div id="{{ model_name }}-el-{{ element.id }}" class="diff-hidden px-4 pb-3 pt-1 bg-white dark:bg-base-900 border-t border-base-100 dark:border-base-700/40">
+                            <table class="w-full text-sm">
+                                {% for attr_name, value in element.items %}
+                                {% if attr_name != "id" and attr_name != "name" %}
+                                <tr class="border-b border-base-100 dark:border-base-700/40 last:border-b-0">
+                                    <td class="py-1.5 pr-4 w-40 text-xs font-medium text-base-500 dark:text-base-400 align-top">{{ attr_name }}</td>
+                                    <td class="py-1.5 text-base-800 dark:text-base-200">
+                                        {% if attr_name == "active" %}
+                                            {% if value %}<span class="text-green-600 dark:text-green-400">✓ active</span>{% else %}<span class="text-base-400">✗ inactive</span>{% endif %}
+                                        {% else %}
+                                            <span class="font-mono text-xs bg-base-100 dark:bg-base-700 px-1.5 py-0.5 rounded">{{ value }}</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endif %}
+                                {% endfor %}
+                            </table>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+        </div>{# /model-{{ model_name }} #}
     </div>
-</body>
+
+    {% endif %}
+    {% endfor %}
+
+    {# ── Submit row ──────────────────────────────────────────────────────────── #}
+    <div class="flex items-center gap-4 mt-8">
+        <button type="submit"
+                class="inline-flex items-center gap-1.5 rounded-default px-5 py-2.5 text-sm font-semibold
+                       bg-primary-600 text-white shadow-sm
+                       hover:bg-primary-700 dark:hover:bg-primary-500 transition-colors
+                       focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">
+            <span class="material-symbols-outlined text-[1rem] shrink-0 align-middle leading-none">check_circle</span>
+            {% trans "Apply Selected Changes" %}
+        </button>
+        <a href="/admin/"
+           class="inline-flex items-center gap-1 text-sm font-medium text-base-500 dark:text-base-400
+                  hover:text-base-700 dark:hover:text-base-200 transition-colors">
+            <span class="material-symbols-outlined text-[1rem] shrink-0 align-middle leading-none">close</span>
+            {% trans "Cancel" %}
+        </a>
+    </div>
+
+</form>
 
 <script>
-    function hide(id) {
-        let div = document.getElementById(id)
-        let icon = document.getElementById(id + '-icon')
-        if (isNotCollapsed(div)) {
-            /* Collapse */
-            div.classList.add('collapsed')
-            icon.classList.add('fa-chevron-down')
-            icon.classList.remove('fa-chevron-up')
-        } else {
-            /* Expand */
-            div.classList.remove('collapsed')
-            icon.classList.add('fa-chevron-up')
-            icon.classList.remove('fa-chevron-down')
+    function diffToggleSection(id) {
+        const el = document.getElementById(id);
+        const chevron = document.getElementById(id + '-chevron');
+        if (!el) return;
+        const hidden = el.classList.toggle('diff-hidden');
+        if (chevron) {
+            chevron.style.transform = hidden ? '' : 'rotate(180deg)';
         }
     }
 
-    function isNotCollapsed(div) {
-        return !div.classList.contains('collapsed')
+    function diffToggleElement(id) {
+        const el = document.getElementById(id);
+        const chevron = document.getElementById(id + '-chevron');
+        if (!el) return;
+        const hidden = el.classList.toggle('diff-hidden');
+        if (chevron) {
+            chevron.style.transform = hidden ? '' : 'rotate(90deg)';
+        }
+    }
+
+    function diffSelectAll(modelName, operation, checked) {
+        const group = modelName + '-' + operation;
+        document.querySelectorAll('[data-group="' + group + '"] .diff-check').forEach(function(cb) {
+            cb.checked = checked;
+        });
     }
 </script>
+
+<style>
+    .diff-hidden { display: none; }
+</style>
+{% endblock %}

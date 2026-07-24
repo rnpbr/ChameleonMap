@@ -11,32 +11,42 @@ def serial(input):
     return obj[0]["fields"]
 
 def requestAll(storedData):
-    #Menu request
-    auxiliar = []
-    auxiliar.append(list(Menu.objects.all()))
-    auxiliar = auxiliar[0]
-    for storedMenu in auxiliar:
+    # MenuGroup request
+    for storedMenuGroup in list(MenuGroup.objects.all()):
+        mg = serial(storedMenuGroup)
+        storedData.menu_groups.append(MenuGroupsType(mg['id'], mg['name'], mg['simultaneous_context']))
+    # Menu request
+    for storedMenu in list(Menu.objects.all()):
         menu = serial(storedMenu)
-        storedData.menus.append(MenusType(menu['id'], menu['name'], menu['hierarchy_level'], menu['active']))
-    #Location request
-    auxiliar = []
-    auxiliar.append(list(Location.objects.all()))
-    auxiliar = auxiliar[0]
-    for storedLocation in auxiliar:
+        storedData.menus.append(MenusType(menu['id'], menu['name'], menu['group'], menu['hierarchy_level'], menu['active']))
+    # Location request
+    for storedLocation in list(Location.objects.all()):
         location = serial(storedLocation)
         storedData.locations.append(LocationsType(location['id'], location['name'], location['description'], location['latitude'], location['longitude'], location['active']))
-    #Tag request
-    auxiliar = []
-    auxiliar.append(list(Tag.objects.all()))
-    auxiliar = auxiliar[0]
-    for storedTag in auxiliar:
+    # Tag request
+    for storedTag in list(Tag.objects.all()):
         tag = serial(storedTag)
         storedData.tags.append(TagsType(tag['id'], tag['name'], tag['parent_menu'], tag['color'].lower(), tag['description'], tag['sidebar_content'], tag['related_locations'], tag['active']))
+    # LinksGroup request
+    for storedLinksGroup in list(Links_group.objects.all()):
+        lg = serial(storedLinksGroup)
+        storedData.links_groups.append(LinksGroupsType(lg['id'], lg['name'], lg['parent_menu'], lg['links_color'], lg['opacity']))
+    # Link request
+    for storedLink in list(Link.objects.all()):
+        link = serial(storedLink)
+        storedData.links.append(LinksType(
+            link['id'], link['display_name'],
+            link['location_1'], link['location_2'], link['links_group'],
+            link['curvature'], link['weight'], link['dashed'],
+            link['straight_link'], link['invert_link'],
+            link.get('popup_description', '')
+        ))
 
     return storedData
 
 def isMenuEqual(menu1, menu2):
-    return menu1.name == menu2.name and menu1.hierarchy_level == menu2.hierarchy_level and menu1.active == menu2.active
+    return (menu1.name == menu2.name and menu1.group == menu2.group
+            and menu1.hierarchy_level == menu2.hierarchy_level and menu1.active == menu2.active)
 
 def filterMenus(importedData, storedData, menusDiff):
     #added/edited menus
@@ -138,40 +148,123 @@ def filterTags(importedData, storedData, tagsDiff):      # Padronizar com Menus
     return storedData, tagsDiff
 
 
-def createMapDataDiff(menusDiff, tagsDiff, locationsDiff):
-    menusDiffDict = json.loads(menusDiff.toJSON())
-    tagsDiffDict = json.loads(tagsDiff.toJSON())
-    locationsDiffDict = json.loads(locationsDiff.toJSON())
+def isMenuGroupEqual(mg1, mg2):
+    return mg1.name == mg2.name and mg1.simultaneous_context == mg2.simultaneous_context
 
-    mapData_diff = {'Menus': menusDiffDict, 'Tags': tagsDiffDict, 'Locations': locationsDiffDict}
 
-    modelsList = ['Locations', 'Menus', 'Tags']
+def filterMenuGroups(importedData, storedData, menuGroupsDiff):
+    toRemove = []
+    for imported in importedData.menu_groups:
+        found = False
+        for stored in storedData.menu_groups:
+            if imported.name == stored.name:
+                found = True
+                if not isMenuGroupEqual(imported, stored):
+                    menuGroupsDiff.edited.append(EditedMenuGroupsType(stored, imported))
+                if stored not in toRemove:
+                    toRemove.append(stored)
+        if not found:
+            menuGroupsDiff.added.append(imported)
+    for mg in toRemove:
+        storedData.menu_groups.remove(mg)
+    for mg in storedData.menu_groups:
+        menuGroupsDiff.removed.append(mg)
+    return storedData, menuGroupsDiff
+
+
+def isLinksGroupEqual(lg1, lg2):
+    return (lg1.name == lg2.name and lg1.parent_menu == lg2.parent_menu
+            and lg1.links_color == lg2.links_color and float(lg1.opacity) == float(lg2.opacity))
+
+
+def filterLinksGroups(importedData, storedData, linksGroupsDiff):
+    toRemove = []
+    for imported in importedData.links_groups:
+        found = False
+        for stored in storedData.links_groups:
+            if imported.name == stored.name:
+                found = True
+                if not isLinksGroupEqual(imported, stored):
+                    linksGroupsDiff.edited.append(EditedLinksGroupsType(stored, imported))
+                if stored not in toRemove:
+                    toRemove.append(stored)
+        if not found:
+            linksGroupsDiff.added.append(imported)
+    for lg in toRemove:
+        storedData.links_groups.remove(lg)
+    for lg in storedData.links_groups:
+        linksGroupsDiff.removed.append(lg)
+    return storedData, linksGroupsDiff
+
+
+def isLinkEqual(l1, l2):
+    return (l1.name == l2.name and l1.location_1 == l2.location_1
+            and l1.location_2 == l2.location_2 and l1.links_group == l2.links_group
+            and float(l1.curvature) == float(l2.curvature) and l1.weight == l2.weight
+            and l1.dashed == l2.dashed and l1.straight_link == l2.straight_link
+            and l1.invert_link == l2.invert_link)
+
+
+def filterLinks(importedData, storedData, linksDiff):
+    toRemove = []
+    for imported in importedData.links:
+        found = False
+        for stored in storedData.links:
+            if imported.name == stored.name:
+                found = True
+                if not isLinkEqual(imported, stored):
+                    linksDiff.edited.append(EditedLinksType(stored, imported))
+                if stored not in toRemove:
+                    toRemove.append(stored)
+        if not found:
+            linksDiff.added.append(imported)
+    for link in toRemove:
+        storedData.links.remove(link)
+    for link in storedData.links:
+        linksDiff.removed.append(link)
+    return storedData, linksDiff
+
+
+def createMapDataDiff(menuGroupsDiff, menusDiff, locationsDiff, tagsDiff, linksGroupsDiff, linksDiff):
+    diff_map = {
+        'MenuGroups': json.loads(menuGroupsDiff.toJSON()),
+        'Menus': json.loads(menusDiff.toJSON()),
+        'Locations': json.loads(locationsDiff.toJSON()),
+        'Tags': json.loads(tagsDiff.toJSON()),
+        'LinksGroups': json.loads(linksGroupsDiff.toJSON()),
+        'Links': json.loads(linksDiff.toJSON()),
+    }
+
     operationList = ['added', 'edited', 'removed']
-
-    numberChanges = len(modelsList)*len(operationList)
-
-    for model in modelsList:
+    numberChanges = 0
+    for model_diff in diff_map.values():
         for operation in operationList:
-            if (len(mapData_diff[model][operation]) == 0):
-                numberChanges = numberChanges - 1
+            if len(model_diff[operation]) > 0:
+                numberChanges += 1
 
-    if(numberChanges == 0):
-        mapData_diff = None
+    if numberChanges == 0:
+        return None
 
-    return mapData_diff
+    return diff_map
 
 
 def run(mapData):
     storedData = StoredDataType()
-    menusDiff = MapDataDiff()   
-    tagsDiff = MapDataDiff()
+    menuGroupsDiff = MapDataDiff()
+    menusDiff = MapDataDiff()
     locationsDiff = MapDataDiff()
+    tagsDiff = MapDataDiff()
+    linksGroupsDiff = MapDataDiff()
+    linksDiff = MapDataDiff()
 
     storedData = requestAll(storedData)
-    storedData, tagsDiff = filterTags(mapData, storedData, tagsDiff)
+
+    # Dependency order: groups before menus, menus/locations before tags, etc.
+    storedData, menuGroupsDiff = filterMenuGroups(mapData, storedData, menuGroupsDiff)
     storedData, menusDiff = filterMenus(mapData, storedData, menusDiff)
     storedData, locationsDiff = filterLocations(mapData, storedData, locationsDiff)
+    storedData, tagsDiff = filterTags(mapData, storedData, tagsDiff)
+    storedData, linksGroupsDiff = filterLinksGroups(mapData, storedData, linksGroupsDiff)
+    storedData, linksDiff = filterLinks(mapData, storedData, linksDiff)
 
-    mapData_diff = createMapDataDiff(menusDiff, tagsDiff, locationsDiff)
-
-    return mapData_diff
+    return createMapDataDiff(menuGroupsDiff, menusDiff, locationsDiff, tagsDiff, linksGroupsDiff, linksDiff)
