@@ -2,19 +2,22 @@
     <mat-expansion-panel *ngFor="let menu of activeMenus" [expanded]="true" [disabled]="true">
 
         <div *ngIf="selectedTagsMenuId===menu.id; else elseThenIsNotSelectedTagsMenu">
-            <mat-expansion-panel-header [expandedHeight]="'45px'" (click)="menuClick(menu)" style="background: rgba(55, 60, 79, 0.35); width: 117%; margin-left: -25px;">
+            <mat-expansion-panel-header [expandedHeight]="'45px'" (click)="menuClick(menu)" class="menu-header selected-menu-header" [ngClass]="{'pinned-header': menu.pinned === true}">
                 <mat-panel-title>
                     <div class="menu-name">
                         <p style="display: inline-block;" class="menu-text">{{ capitalizeFirstLetter(menu.name) }}</p>
                     </div>                                        
                     <div class="menu-button-container">
                         <div class="menu-button">
-                            <div *ngIf="currentBehaviorOfMultipleTagsVisibilityButton === tagsMenuButtonBehavior.CloseAllEyes; else elseThenBehaviorIsOpenAllEyes">
+                            <div *ngIf="menu.isEyeVisibilityOpen !== false; else elseThenBehaviorIsOpenAllEyes">
                                 <mat-icon id="menu-button-close-all" (click)="closeAllEyes(menu, $event.target, $event)" class="mat-side noselect">visibility</mat-icon>
                             </div>
                             <ng-template #elseThenBehaviorIsOpenAllEyes>
                                 <mat-icon id="menu-button-open-all" (click)="openAllEyes(menu, $event.target, $event)" class="mat-side noselect"><svg class="svg-icon eye-off" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="M818.26 494.29c31.1 30.59 61.53 60.49 91.94 90.41 11.41 11.22 14.42 24.89 9.14 39.49-5.15 14.24-16.18 22.68-31.5 24.2-12.69 1.25-23.07-3.86-32-12.83q-44.05-44.29-88.39-88.31c-1.9-1.88-3.94-3.62-5.46-5l-57.4 32.91c1.2 2.74 2.56 6.06 4.08 9.3 18.09 38.63 36.31 77.19 54.24 115.88 6.83 14.75 4.76 28.9-6 41-10.43 11.72-23.83 15.39-39 10.81-10.8-3.25-18-10.63-22.65-20.72Q667.57 672 639.81 612.74c-1.71-3.67-3.53-7.29-5.15-10.6-26 4.39-51.49 8.48-76.83 13.34-2.09 0.4-4.51 6-4.54 9.19-0.33 33.79-0.09 67.59-0.25 101.39-0.11 22.42-10.41 36.37-29.67 41-20.14 4.8-41.06-8.73-43.94-29.22-1.28-9.06-0.84-18.38-0.87-27.59-0.09-30.69 0-61.38 0-92.12l-94-16.32c-1.32 2.72-3.25 6.59-5.08 10.5q-27 57.93-54.1 115.87c-8.62 18.37-22.6 27.12-39.18 25-25.95-3.26-40.68-28.25-30-52.2 13.05-29.29 26.92-58.21 40.43-87.3l18-38.76-54.84-31.18c-2.31 2.18-5 4.6-7.61 7.18-28.5 28.47-56.9 57-85.51 85.4-11.43 11.34-25.14 14.59-40.47 9.31-14.45-5-21.81-15.85-23.72-30.5-1.62-12.31 2.82-22.61 11.6-31.34 26.87-26.72 53.56-53.62 80.5-80.27 2.61-2.58 6.46-3.91 8-4.8-17.82-23.55-34.89-43.25-48.6-65.06-12.62-20.07-22.5-42-32-63.87-7.86-18.13 1.55-38.62 19-46.12 19.77-8.49 38.86-2 48.66 16.83 9.4 18.13 16.85 37.48 27.9 54.53 42.63 65.74 103.26 108.37 177.74 130.38 116.2 34.35 226.21 20.23 327.44-48.07 49.14-33.16 83.76-78.55 105.78-133.67 7.13-17.84 27-27.25 44.27-22.1 22.91 6.86 33 29.25 23.62 52.36-17.09 42.17-40.23 80.49-72 113.35-1.58 1.72-3.09 3.56-6.13 7.01z"  /></svg></mat-icon>
                             </ng-template>
+                            <mat-icon id="menu-button-lock-all" (click)="onMenuPinClicked(menu, $event)" class="mat-side noselect">
+                                {{menu.pinned ? 'lock_open' : 'lock'}}
+                            </mat-icon>
                             <mat-icon id="menu-button-expand" (click)="menuSwitch(menu, $event)" class="mat-side noselect" [ngClass]="{'mat-side-rot': menu.expanded}">keyboard_arrow_down</mat-icon>
                         </div>
                     </div>
@@ -24,12 +27,15 @@
         </div>
 
         <ng-template #elseThenIsNotSelectedTagsMenu>
-            <mat-expansion-panel-header [expandedHeight]="'45px'" (click)="menuClick(menu)" class="menu-header">
+            <mat-expansion-panel-header [expandedHeight]="'45px'" (click)="menuClick(menu)" class="menu-header" [ngClass]="{'pinned-header': menu.pinned === true}">
                 <mat-panel-title>
                     <div id="menu-name" class="menu-name">
                         <p class="menu-text">{{ capitalizeFirstLetter(menu.name) }}</p>
                     </div>
                     <div id="menu-button" class="menu-button">
+                        <mat-icon id="menu-button-lock-all" (click)="onMenuPinClicked(menu, $event)" class="mat-side noselect">
+                            {{menu.pinned ? 'lock_open' : 'lock'}}
+                        </mat-icon>
                         <mat-icon (click)="menuSwitch(menu, $event)" class="mat-side noselect" [ngClass]="{'mat-side-rot': menu.expanded}">keyboard_arrow_down</mat-icon>
                     </div>
                 </mat-panel-title>
@@ -92,4 +98,11 @@
 
     </mat-expansion-panel>
 </mat-accordion>
-<app-tag-sidebar></app-tag-sidebar>
+<div class="right-sidebars-stack" [class.has-pinned-menus]="hasPinnedMenus">
+    <app-pinned-menus-sidebar
+        [capitalizeFirstLetter]="capitalizeFirstLetter.bind(this)"
+        (unpinMenuEmitter)="sideBarUnpinMenuButtonClicked($event)"
+        (selectMenuEmitter)="onPinnedMenuSelected($event)">
+    </app-pinned-menus-sidebar>
+    <app-tag-sidebar></app-tag-sidebar>
+</div>

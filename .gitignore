@@ -10,6 +10,7 @@ docker-up.sh
 up*
 run*
 restart*
+prune*
 inventory_backend/django/staticfiles/admin/css/base.css
 up.bat
 backups/*.dump

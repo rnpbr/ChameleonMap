@@ -3,7 +3,7 @@
 ###########
 
 # pull official base image
-FROM python:3.9-alpine as builder
+FROM python:3.11-alpine as builder
 
 # set work directory
 WORKDIR /usr/src/app
@@ -28,7 +28,7 @@ RUN pip wheel --no-cache-dir --wheel-dir /usr/src/app/wheels -r requirements.txt
 #     docker build --target deployment -t django_deploy .
 
 # pull official base image
-FROM python:3.9-alpine as deployment
+FROM python:3.11-alpine as deployment
 
 # set environment variables
 ENV PYTHONDONTWRITEBYTECODE 1
