@@ -46,6 +46,7 @@ mat-expansion-panel  {
 
 .menu-name{
   width: 80%;
+  line-break: anywhere;
 }
 
 .menu-header {
@@ -164,7 +165,7 @@ mat-expansion-panel  {
   overflow-y: scroll;
   overflow-x: hidden;
   transition: all 0.3s ease;
-  padding-right: 7px;
+  padding-bottom: 5px;
 }
 
 @media (max-width: 500px) {
