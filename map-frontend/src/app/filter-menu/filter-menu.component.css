@@ -261,3 +261,29 @@ mat-expansion-panel  {
   background-position: 0.5rem center, 0 0;
   background-size: 30px 30px, 60px 100%;
 }
+
+.right-sidebars-stack {
+  position: absolute;
+  z-index: 400;
+  top: 15px;
+  right: 15px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  max-height: calc(100% - 30px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 3px;
+  pointer-events: none;
+  /* Keep tag detail clear of the top-right help button when nothing is pinned */
+  padding-top: 85px;
+}
+
+.right-sidebars-stack.has-pinned-menus {
+  padding-top: 3px;
+}
+
+.right-sidebars-stack > * {
+  pointer-events: auto;
+}

@@ -24,6 +24,10 @@ export class FilterMenuComponent {
   @ViewChild(TagSidebarComponent) tagSidebar: TagSidebarComponent;
   @ViewChild(PinnedMenusSidebarComponent) pinnedMenusSidebar: PinnedMenusSidebarComponent;
 
+  get hasPinnedMenus(): boolean {
+    return (this.pinnedMenusSidebar?._pinnedMenus?.length ?? 0) > 0;
+  }
+
   public _menugroups: Array<MenuGroup>;
   private _menus: Array<Menu>;
   private _tags: Array<Tag>;

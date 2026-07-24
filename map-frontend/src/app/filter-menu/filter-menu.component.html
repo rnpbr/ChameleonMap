@@ -98,9 +98,11 @@
 
     </mat-expansion-panel>
 </mat-accordion>
-<app-tag-sidebar></app-tag-sidebar>
-<app-pinned-menus-sidebar
-    [capitalizeFirstLetter]="capitalizeFirstLetter.bind(this)"
-    (unpinMenuEmitter)="sideBarUnpinMenuButtonClicked($event)"
-    (selectMenuEmitter)="onPinnedMenuSelected($event)">
-</app-pinned-menus-sidebar>
+<div class="right-sidebars-stack" [class.has-pinned-menus]="hasPinnedMenus">
+    <app-pinned-menus-sidebar
+        [capitalizeFirstLetter]="capitalizeFirstLetter.bind(this)"
+        (unpinMenuEmitter)="sideBarUnpinMenuButtonClicked($event)"
+        (selectMenuEmitter)="onPinnedMenuSelected($event)">
+    </app-pinned-menus-sidebar>
+    <app-tag-sidebar></app-tag-sidebar>
+</div>

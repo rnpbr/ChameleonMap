@@ -1,16 +1,17 @@
+:host {
+  display: block;
+}
+
 * {
   box-sizing: border-box;
 }
 
 .right-sidebar-container {
-  position: absolute;
+  position: relative;
   z-index: 400;
-  top: 15px;
-  right: 15px;
-  max-height: calc(100% - 100px);
+  max-height: 100%;
   overflow-x: hidden;
   scrollbar-width: none;
-  padding: 3px;
 }
 
 .pinned-menus-list-items {
