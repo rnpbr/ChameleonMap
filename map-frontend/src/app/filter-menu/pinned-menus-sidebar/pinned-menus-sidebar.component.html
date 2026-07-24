@@ -1,0 +1,27 @@
+<div *ngIf="_pinnedMenus.length > 0">
+    <div class="right-sidebar-container">
+        <div class="right-sidebar">
+            <div class="right-sidebar-title" (click)="pinnedMenusHeaderClicked()">
+                Pinned Menus
+                <div class="unpin-all-button">
+                    <mat-icon title="Unpin All" (click)="unpinAllPinnedMenus(); $event.stopPropagation()" class="noselect unpin-all-button-style">lock_open</mat-icon>
+                </div>
+                <div class="locations-button">
+                    <mat-icon title="Expand" class="noselect" [ngClass]="{'rotated-icon': !_pinnedMenusCollapsed}">expand_more</mat-icon>
+                </div>
+            </div>
+            <div class="locations-table" [ngClass]="{'hide': _pinnedMenusCollapsed}">
+                <table style="border-collapse: collapse; width: 100%;">
+                    <tbody>
+                        <tr *ngFor="let menu of _pinnedMenus;">
+                            <td class="pinned-menus-list-items" (click)="openPinnedMenu(menu)">
+                                <span>{{ capitalizeFirstLetter(menu.name) }}</span>
+                                <mat-icon title="Unpin this menu" (click)="unpinClickedMenu(menu, $event)" class="noselect unpin-all-button-style">lock_open</mat-icon>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

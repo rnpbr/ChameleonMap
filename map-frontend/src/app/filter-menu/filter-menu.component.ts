@@ -8,6 +8,7 @@ import {
 } from '@angular/core';
 import { EventEmitterService } from '../event-emitter.service';
 import { TagSidebarComponent } from './tag-sidebar/tag-sidebar.component';
+import { PinnedMenusSidebarComponent } from './pinned-menus-sidebar/pinned-menus-sidebar.component';
 
 enum TagsMenuButtonBehavior {
   CloseAllEyes,
@@ -21,6 +22,7 @@ enum TagsMenuButtonBehavior {
 })
 export class FilterMenuComponent {
   @ViewChild(TagSidebarComponent) tagSidebar: TagSidebarComponent;
+  @ViewChild(PinnedMenusSidebarComponent) pinnedMenusSidebar: PinnedMenusSidebarComponent;
 
   public _menugroups: Array<MenuGroup>;
   private _menus: Array<Menu>;
@@ -48,6 +50,7 @@ export class FilterMenuComponent {
     if (this._menus && this._menus.length > 0) {
       this.activeMenus = this.getActiveMenus();
     }
+    this.updateAllMenuEyeBehaviors();
   }
 
   @Input()
@@ -59,6 +62,7 @@ export class FilterMenuComponent {
       this._menus = value;
       this.activeMenus = this.getActiveMenus();
     }
+    this.updateAllMenuEyeBehaviors();
   }
 
   @Input()
@@ -67,6 +71,7 @@ export class FilterMenuComponent {
   }
   set tags(value) {
     this._tags = value;
+    this.updateAllMenuEyeBehaviors();
   }
 
   @Input()
@@ -75,6 +80,7 @@ export class FilterMenuComponent {
   }
   set linkGroups(value) {
     this._linkGroups = value;
+    this.updateAllMenuEyeBehaviors();
   }
 
   @Input()
@@ -83,6 +89,7 @@ export class FilterMenuComponent {
   }
   set kmlShapes(value) {
     this._kmlShapes = value;
+    this.updateAllMenuEyeBehaviors();
   }
 
   @Input()
@@ -175,6 +182,7 @@ export class FilterMenuComponent {
       lg.visibility = true;
       this.insertLinesByLinkGroup(lg);
     }
+    this.checkActiveMenuTagsVisibilityStatus(lg.parent_menu);
   }
 
   removeLinesByLinkGroup(lg: LinksGroup) {
@@ -193,18 +201,26 @@ export class FilterMenuComponent {
       }
       menu.expanded = true;
       this.selectedTagsMenuId = menu.id;
-      this.currentBehaviorOfMultipleTagsVisibilityButton = TagsMenuButtonBehavior.CloseAllEyes;
       this.menuCliked.emit({ selectedTagsMenuId: this.selectedTagsMenuId });
-      this.checkActiveMenuTagsVisibilityStatus()
+      this.checkActiveMenuTagsVisibilityStatus(menu.id);
     }
   }
 
   closeAllEyes(menu: Menu, item: any, event: any) {
+    event.stopPropagation();
+
     for (let i = 0; i < this._tags.length; i++) {
       if (this._tags[i].parent_menu == menu.id) {
         if (this._tags[i].visibility == true) {
-          this.visibilityClick(this._tags[i], event)
+          this.visibilityClick(this._tags[i], event);
         }
+      }
+    }
+
+    for (let linkGroup of this._linkGroups) {
+      if (linkGroup.parent_menu == menu.id) {
+        linkGroup.visibility = false;
+        this.removeLinesByLinkGroup(linkGroup);
       }
     }
 
@@ -216,14 +232,24 @@ export class FilterMenuComponent {
       }
     }
 
-    this.currentBehaviorOfMultipleTagsVisibilityButton = TagsMenuButtonBehavior.OpenAllEyes;
+    menu.isEyeVisibilityOpen = false;
   }
 
   openAllEyes(menu: Menu, item: any, event: any) {
+    event.stopPropagation();
+
     for (let i = 0; i < this._tags.length; i++) {
       if (this._tags[i].parent_menu == menu.id) {
         if (this._tags[i].visibility == false) {
-          this.visibilityClick(this._tags[i], event)
+          this.visibilityClick(this._tags[i], event);
+        }
+      }
+    }
+
+    for (let linkGroup of this._linkGroups) {
+      if (linkGroup.parent_menu == menu.id) {
+        if (!linkGroup.visibility) {
+          this.LGVisibilityClick(linkGroup, event);
         }
       }
     }
@@ -236,12 +262,43 @@ export class FilterMenuComponent {
       }
     }
 
-    this.currentBehaviorOfMultipleTagsVisibilityButton = TagsMenuButtonBehavior.CloseAllEyes;
+    menu.isEyeVisibilityOpen = true;
   }
 
   menuSwitch(menu: Menu, event: any) {
     menu.expanded = !menu.expanded;
     event.stopPropagation();
+  }
+
+  onMenuPinClicked(menu: Menu, event: any) {
+    event.stopPropagation();
+    if (menu.pinned) {
+      this.unpinMenuButtonClicked(menu, event);
+    } else {
+      this.pinMenuButtonClicked(menu, event);
+    }
+  }
+
+  pinMenuButtonClicked(menu: Menu, event: any) {
+    menu.pinned = true;
+    this.pinnedMenusSidebar?.addPinnedMenu(menu);
+    this.menuCliked.emit({ selectedTagsMenuId: this.selectedTagsMenuId });
+    event.stopPropagation();
+  }
+
+  unpinMenuButtonClicked(menu: Menu, event: any) {
+    menu.pinned = false;
+    this.pinnedMenusSidebar?.removePinnedMenu(menu);
+    this.menuCliked.emit({ selectedTagsMenuId: this.selectedTagsMenuId });
+    event.stopPropagation();
+  }
+
+  sideBarUnpinMenuButtonClicked(menu: Menu) {
+    this.unpinMenuButtonClicked(menu, {} as Event);
+  }
+
+  onPinnedMenuSelected(menu: Menu) {
+    this.menuClick(menu);
   }
 
   menuCollapse() {
@@ -270,7 +327,7 @@ export class FilterMenuComponent {
     } else this.switchVisibility(tag);
 
     if (tag.parent_menu === this.selectedTagsMenuId)
-      this.checkActiveMenuTagsVisibilityStatus()
+      this.checkActiveMenuTagsVisibilityStatus(tag.parent_menu);
   }
 
   kmlVisibilityClick(kmlShape: any, event: any) {
@@ -287,7 +344,7 @@ export class FilterMenuComponent {
     }
 
     if (kmlShape.parent_menu === this.selectedTagsMenuId)
-      this.checkActiveMenuTagsVisibilityStatus()
+      this.checkActiveMenuTagsVisibilityStatus(kmlShape.parent_menu);
   }
 
   pinClick(tag: any, event: any) {
@@ -329,34 +386,43 @@ export class FilterMenuComponent {
     this.tagSidebar.selectTag(tag, _selectedLocations);
   }
 
-  checkActiveMenuTagsVisibilityStatus() {
-    if (!this.tags) { return }
+  checkActiveMenuTagsVisibilityStatus(menuId: number) {
+    if (!this._tags && !this._kmlShapes && !this._linkGroups) {
+      return;
+    }
 
-    let allItemsAreClosed: Boolean = true;
-    let allItemsAreOpened: Boolean = true;
+    let allItemsAreClosed = true;
 
-    this.tags.forEach(tag => {
-      if (tag.parent_menu === this._selectedTagsMenuId) {
-        if (tag.visibility)
-          allItemsAreClosed = false;
-        else
-          allItemsAreOpened = false;
+    this._tags?.forEach(tag => {
+      if (tag.parent_menu === menuId && tag.visibility) {
+        allItemsAreClosed = false;
       }
     });
 
-    this.kmlShapes.forEach(shape => {
-      if (shape.parent_menu === this._selectedTagsMenuId) {
-        if (shape.visibility)
-          allItemsAreClosed = false;
-        else
-          allItemsAreOpened = false;
+    this._kmlShapes?.forEach(shape => {
+      if (shape.parent_menu === menuId && (shape.visibility || shape.visibility == undefined)) {
+        allItemsAreClosed = false;
       }
     });
 
-    if (allItemsAreClosed)
-      this.currentBehaviorOfMultipleTagsVisibilityButton = TagsMenuButtonBehavior.OpenAllEyes;
-    else if (allItemsAreOpened)
-      this.currentBehaviorOfMultipleTagsVisibilityButton = TagsMenuButtonBehavior.CloseAllEyes;
+    this._linkGroups?.forEach(linkGroup => {
+      if (linkGroup.parent_menu === menuId && linkGroup.visibility) {
+        allItemsAreClosed = false;
+      }
+    });
+
+    const menu = this.getMenuById(menuId);
+    if (menu) {
+      menu.isEyeVisibilityOpen = !allItemsAreClosed;
+    }
+  }
+
+  updateAllMenuEyeBehaviors() {
+    if (this.activeMenus) {
+      this.activeMenus.forEach(menu => {
+        this.checkActiveMenuTagsVisibilityStatus(menu.id);
+      });
+    }
   }
 
   switchVisibility(tag: any) {
@@ -418,6 +484,7 @@ export class FilterMenuComponent {
         let newSelectedMenu = this.getMenuById(this.selectedMenusByGroup[this._currentMenusPallete]) || activeMenus[0];
         this.menuClick(newSelectedMenu);
       }
+      this.updateAllMenuEyeBehaviors();
       return activeMenus;
     } else {
       return [];

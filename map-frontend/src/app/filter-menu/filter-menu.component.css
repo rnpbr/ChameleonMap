@@ -57,6 +57,12 @@ mat-expansion-panel  {
   margin-bottom: -1px;
 }
 
+.selected-menu-header {
+  background: rgba(55, 60, 79, 0.35) !important;
+  width: 117%;
+  margin-left: -25px;
+}
+
 .menu-header:hover {
   background-color: rgba(168, 177, 189, 0.212) !important;
 }
@@ -236,6 +242,12 @@ mat-expansion-panel  {
   display: inline;
   vertical-align: middle;
   font-size: 40px;
+}
+
+#menu-button-lock-all{
+  font-size: 22px;
+  padding-left: 2px;
+  vertical-align: middle;
 }
 
 .pinned-header {

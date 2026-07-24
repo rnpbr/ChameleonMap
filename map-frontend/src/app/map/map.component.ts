@@ -172,21 +172,35 @@ export class MapComponent implements OnInit {
     }).subscribe({
       next: (results) => {
         this.menugroups = results.menugroups.sort((a: MenuGroup, b: MenuGroup) => a.id - b.id);
-
-        if (this.menugroups.length > 0) {
-          this.currentMenuGroup = this.menugroups[0].name;
-        }
-  
         this.menus = results.menus;
+
+        let initialGroupMenu: MenuGroup | undefined;
+        if (this.menugroups.length > 0) {
+          initialGroupMenu = this.menugroups[0];
+          this.currentMenuGroup = initialGroupMenu.name;
+
+          this.menugroups.forEach(menuGroup => {
+            const firstMenuInsideGroup = this.menus.find(menu => menu.group === menuGroup.id);
+            if (firstMenuInsideGroup) {
+              this.selectedMenusByGroup[menuGroup.name] = firstMenuInsideGroup.id;
+            }
+          });
+
+          if (initialGroupMenu) {
+            const firstMenu = this.menus.find(menu => menu.group === initialGroupMenu!.id);
+            if (firstMenu) {
+              this.defaultMenuId = this.selectedMenu = firstMenu.id;
+            } else {
+              this.defaultMenuId = this.selectedMenu = 0;
+            }
+          } else {
+            this.defaultMenuId = this.selectedMenu = 0;
+          }
+        }
+
         this.menus.forEach(menu => {
           menu.expanded = this.menus.length < 3;
-        });
-        this.menus.forEach(menu => {
-          if (menu.group == this.menugroups[0].id) {
-            this.selectedMenu = menu.id;
-            this.defaultMenuId = menu.id;
-            return;
-          }
+          menu.pinned = false;
         });
   
         this.locations = results.locations;
@@ -298,7 +312,8 @@ export class MapComponent implements OnInit {
     }
     let inCurrentMenuGroup = menu_group.name == this.currentMenuGroup;
     let shouldLoadSimultaneously = !inCurrentMenuGroup && this.isMenuSimultaneousAndSelectedInItsMenuGroup(parent_menu.id, menu_group);
-    return inCurrentMenu || shouldLoadSimultaneously;
+    let isKmlShapeMenuPinned = parent_menu.pinned;
+    return inCurrentMenu || shouldLoadSimultaneously || isKmlShapeMenuPinned;
   }
 
   private isMenuSimultaneousAndSelectedInItsMenuGroup(menu_id: number, menu_group: MenuGroup | undefined = undefined) {
@@ -359,8 +374,10 @@ export class MapComponent implements OnInit {
         const loc2 = this.getLocationById(link.location_2);
         const linkgroup = this.getLinksGroupById(link.links_group);
         if (linkgroup == undefined) return;
+        let parentMenu = this.getMenuById(linkgroup.parent_menu);
+        let isMenuVisible = parentMenu?.id == this.selectedMenu || parentMenu?.pinned;
         let isSimultaneous = this.isMenuSimultaneousAndSelectedInItsMenuGroup(linkgroup.parent_menu);
-        if (linkgroup.parent_menu == this.selectedMenu || isSimultaneous){
+        if (isMenuVisible || isSimultaneous){
           if (loc1 && loc2) {
             linkgroup.visibility = true;
             let pointA;
@@ -371,7 +388,7 @@ export class MapComponent implements OnInit {
             pointB = values[1];
   
             const pointList = [pointA, pointB];
-            if (isSimultaneous || (loc1.onMap && loc2.onMap)) {
+            if (loc1.onMap && loc2.onMap) {
               const latlngs = [];
   
               const latlng1 = [pointA.lat, pointA.lng],
@@ -402,11 +419,15 @@ export class MapComponent implements OnInit {
                 smoothFactor: 1,
                 stroke: true,
                 dashArray:'',
-                dashOffset: ''
+                dashOffset: '',
+                lineCap: "round" as 'butt' | 'round' | 'square',
               };
               if(link.dashed){
-                pathOptions.dashArray = '10, 10';
+                pathOptions.dashArray = '3,3';
                 pathOptions.dashOffset = '10';
+                pathOptions.weight = 10;
+                pathOptions.smoothFactor = 0;
+                pathOptions.lineCap = "butt" as 'butt' | 'round' | 'square';
               }
               if(link.straight_link){
                 link.line = new L.Polyline([pointA, pointB], pathOptions);
@@ -597,7 +618,7 @@ export class MapComponent implements OnInit {
         }
       });
       this.getFirstMenuId();
-      this.insertMarkersByMenu(this.defaultMenuId);
+      this.insertMarkersByMenu(this.defaultMenuId, true);
       if (typeof this.mapSetting.map_name === 'string')
         document.title = this.mapSetting.map_name;
       if (this.menus && this.locations && this.mapSettings)
@@ -684,7 +705,7 @@ export class MapComponent implements OnInit {
     return undefined;
   }
 
-  private insertMarkersByMenu(selectedTagsMenuId: number) {
+  private insertMarkersByMenu(selectedTagsMenuId: number, reset: boolean) {
     if (!this._locations || !this._tags) {
       return
     }
@@ -693,11 +714,12 @@ export class MapComponent implements OnInit {
     if (!selectedMenu) {
       return
     }
-    let selectedMenuGroup = this.getMenuGroup(selectedMenu.group)
 
-    this.resetMarkers();
+    if (reset) {
+      this.resetMarkers();
+      this.selectedMenu = selectedTagsMenuId;
+    }
 
-    this.selectedMenu = selectedTagsMenuId;
     const menuHierarchy = this.getMenuById(selectedTagsMenuId)?.hierarchy_level;
     const otherMenuTags = this._tags.filter((currentTag: Tag) => {
       const currentTagHierarchy = this.getMenuById(
@@ -733,11 +755,9 @@ export class MapComponent implements OnInit {
             if (location.active) {
               const tagMenu = this.getMenuById(tag.parent_menu);
               if (tagMenu) {
-                if (tagMenu.hierarchy_level > 1) {
-                  // if (allOtherMenuLocations.includes(location.id)) {
+                if (reset) {
                   this.insertLocationOnMap(location, tag.currentColor);
-                  // }
-                } else {
+                } else if (selectedTagsMenuId === tag.parent_menu) {
                   this.insertLocationOnMap(location, tag.currentColor);
                 }
               }
@@ -771,7 +791,7 @@ export class MapComponent implements OnInit {
         if (link.location_1 == location.id || link.location_2 == location.id) {
           const loc1 = this.getLocationById(link.location_1);
           const loc2 = this.getLocationById(link.location_2);
-          if (loc1?.onMap && loc2?.onMap) {
+          if (loc1?.onMap && loc2?.onMap && link.line != null) {
             link.line.addTo(this.map);
           }
         }
@@ -892,7 +912,7 @@ export class MapComponent implements OnInit {
   }
 
   private generatePinIcon(colors: any) {
-    const size = '24px';
+    const size = '16px';
     const border = '0.1px solid #5c5c5c';
 
     if (colors.length === 1) {
@@ -901,10 +921,10 @@ export class MapComponent implements OnInit {
       width: ${size};
       height: ${size};
       display: block;
-      left: -11px;
-      top: -21px;
+      left: -4px;
+      top: -4px;
       position: relative;
-      border-radius: ${size} ${size} 0;
+      border-radius: ${size} ${size} ${size} ${size};
       transform: rotate(45deg);
       border: ${border};`;
     } else {
@@ -947,10 +967,10 @@ export class MapComponent implements OnInit {
       width: ${size};
       height: ${size};
       display: block;
-      left: -11px;
-      top: -21px;
+      left: -4px;
+      top: -4px;
       position: relative;
-      border-radius: 100% 100% 0;
+      border-radius: 100% 100% 100% 100%;
       transform: rotate(45deg);
       border: 0.1px solid #5c5c5c`;
     }
@@ -1101,7 +1121,9 @@ export class MapComponent implements OnInit {
 
     for (const link of this._links) {
       if (link.location_1 == location.id || link.location_2 == location.id) {
-        link.line.remove(this.map);
+        if (link.line != null) {
+          link.line.remove(this.map);
+        }
       }
     }
   }
@@ -1216,7 +1238,21 @@ export class MapComponent implements OnInit {
   }
 
   public onMenuCliked(event: any) {
-    this.insertMarkersByMenu(event.selectedTagsMenuId);
+    this.onMenuIdClicked(event.selectedTagsMenuId);
+  }
+
+  private onMenuIdClicked(menuId: number) {
+    const menu = this.getMenuById(menuId);
+    if (!menu) {
+      return;
+    }
+
+    this.insertMarkersByMenu(menuId, true);
+    this.menus.forEach(currentMenu => {
+      if (currentMenu.id != menuId && currentMenu.pinned) {
+        this.insertMarkersByMenu(currentMenu.id, false);
+      }
+    });
   }
 
   public onTagRemoval(event: any) {
