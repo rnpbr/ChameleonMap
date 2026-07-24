@@ -3,11 +3,14 @@ import json
         
 class MapData:
     def __init__(self):
-        self. tagRelatedTags =  []
+        self.tagRelatedTags = []
         self.tagRelatedLocations = []
+        self.menu_groups = []
+        self.menus = []
         self.locations = []
         self.tags = []
-        self.menus = []
+        self.links_groups = []
+        self.links = []
     def toJSON(self):
         return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, indent=4)
 
@@ -28,16 +31,20 @@ class MapDataDiff:
 
 class StoredDataType:
     def __init__(self):
-        self.tags = []
+        self.menu_groups = []
         self.menus = []
         self.locations = []
+        self.tags = []
+        self.links_groups = []
+        self.links = []
     def toJSON(self):
         return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, indent=4)
 
 class MenusType:
-    def __init__(self, id, name, hierarchy_level, active):
+    def __init__(self, id, name, group, hierarchy_level, active):
         self.id = id
         self.name = name
+        self.group = group  # FK to MenuGroup (id or None)
         self.hierarchy_level = hierarchy_level
         self.active = active
     def toJSON(self):
@@ -71,6 +78,7 @@ class EditedMenusType:
     def __init__(self, old, new):
         self.id = old.id
         self.name = old.name
+        self.group = EditedDataDiff(old.group, new.group)
         self.hierarchy_level = EditedDataDiff(old.hierarchy_level, new.hierarchy_level)
         self.active = EditedDataDiff(old.active, new.active)
     def toJSON(self):
@@ -97,5 +105,79 @@ class EditedTagsType:
         self.sidebar_content = EditedDataDiff(old.sidebar_content, new.sidebar_content)
         self.related_locations = EditedDataDiff(old.related_locations, new.related_locations)
         self.active = EditedDataDiff(old.active, new.active)
+    def toJSON(self):
+        return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, indent=4)
+
+
+class MenuGroupsType:
+    def __init__(self, id, name, simultaneous_context):
+        self.id = id
+        self.name = name
+        self.simultaneous_context = simultaneous_context
+    def toJSON(self):
+        return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, indent=4)
+
+
+class LinksGroupsType:
+    def __init__(self, id, name, parent_menu, links_color, opacity):
+        self.id = id
+        self.name = name
+        self.parent_menu = parent_menu
+        self.links_color = links_color if links_color and links_color[0] == '#' else '#' + (links_color or 'FF0000')
+        self.opacity = opacity
+    def toJSON(self):
+        return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, indent=4)
+
+
+class LinksType:
+    def __init__(self, id, name, location_1, location_2, links_group, curvature, weight, dashed, straight_link, invert_link, popup_description):
+        self.id = id
+        self.name = name
+        self.location_1 = location_1
+        self.location_2 = location_2
+        self.links_group = links_group
+        self.curvature = curvature
+        self.weight = weight
+        self.dashed = dashed
+        self.straight_link = straight_link
+        self.invert_link = invert_link
+        self.popup_description = popup_description
+    def toJSON(self):
+        return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, indent=4)
+
+
+class EditedMenuGroupsType:
+    def __init__(self, old, new):
+        self.id = old.id
+        self.name = old.name
+        self.simultaneous_context = EditedDataDiff(old.simultaneous_context, new.simultaneous_context)
+    def toJSON(self):
+        return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, indent=4)
+
+
+class EditedLinksGroupsType:
+    def __init__(self, old, new):
+        self.id = old.id
+        self.name = old.name
+        self.parent_menu = EditedDataDiff(old.parent_menu, new.parent_menu)
+        self.links_color = EditedDataDiff(old.links_color, new.links_color)
+        self.opacity = EditedDataDiff(old.opacity, new.opacity)
+    def toJSON(self):
+        return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, indent=4)
+
+
+class EditedLinksType:
+    def __init__(self, old, new):
+        self.id = old.id
+        self.name = old.name
+        self.location_1 = EditedDataDiff(old.location_1, new.location_1)
+        self.location_2 = EditedDataDiff(old.location_2, new.location_2)
+        self.links_group = EditedDataDiff(old.links_group, new.links_group)
+        self.curvature = EditedDataDiff(old.curvature, new.curvature)
+        self.weight = EditedDataDiff(old.weight, new.weight)
+        self.dashed = EditedDataDiff(old.dashed, new.dashed)
+        self.straight_link = EditedDataDiff(old.straight_link, new.straight_link)
+        self.invert_link = EditedDataDiff(old.invert_link, new.invert_link)
+        self.popup_description = EditedDataDiff(old.popup_description, new.popup_description)
     def toJSON(self):
         return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, indent=4)
