@@ -31,6 +31,8 @@ import { ATLASComponent } from './atlas/atlas.component';
 import { FooterComponent } from './footer/footer.component';
 import { TooltipComponent } from './tooltip/tooltip.component';
 import { ChameleonButtonComponent } from './chameleon-button/chameleon-button.component';
+import { MapDataService } from './map/map-data.service';
+import { PopupContentService } from './map/popup-content.service';
 
 @NgModule({
   declarations: [
@@ -65,7 +67,7 @@ import { ChameleonButtonComponent } from './chameleon-button/chameleon-button.co
     MatTableModule,
     AppRoutingModule
   ],
-  providers: [ApiService, EventEmitterService],
+  providers: [ApiService, EventEmitterService, MapDataService, PopupContentService],
   bootstrap: [AppComponent]
 })
 export class AppModule {}

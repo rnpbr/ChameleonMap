@@ -6,3 +6,7 @@ class AdministrationConfig(AppConfig):
     name = 'administration'
     verbose_name = "Map data"
 
+    def ready(self):
+        from administration.map_data.signals import connect_map_data_cache_signals
+        connect_map_data_cache_signals()
+
