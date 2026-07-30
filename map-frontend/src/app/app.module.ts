@@ -30,6 +30,9 @@ import { SubMapComponent } from './sub-map/sub-map.component';
 import { ATLASComponent } from './atlas/atlas.component';
 import { FooterComponent } from './footer/footer.component';
 import { TooltipComponent } from './tooltip/tooltip.component';
+import { LanguageChooserComponent } from './language-chooser/language-chooser.component';
+import { TranslateTitlePipe } from './translate-field.pipe';
+import { LanguageService } from './language.service';
 import { ChameleonButtonComponent } from './chameleon-button/chameleon-button.component';
 
 @NgModule({
@@ -50,6 +53,7 @@ import { ChameleonButtonComponent } from './chameleon-button/chameleon-button.co
     ATLASComponent,
     FooterComponent,
     TooltipComponent,
+    LanguageChooserComponent,
     ChameleonButtonComponent
   ],
   imports: [
@@ -63,9 +67,10 @@ import { ChameleonButtonComponent } from './chameleon-button/chameleon-button.co
     MatIconModule,
     ScrollingModule,
     MatTableModule,
-    AppRoutingModule
+    AppRoutingModule,
+    TranslateTitlePipe
   ],
-  providers: [ApiService, EventEmitterService],
+  providers: [ApiService, EventEmitterService, LanguageService],
   bootstrap: [AppComponent]
 })
 export class AppModule {}

@@ -4,7 +4,7 @@
             <mat-expansion-panel-header [expandedHeight]="'45px'" (click)="menuClick(menu)" class="menu-header" [ngClass]="{'pinned-header': menu.pinned === true, 'selected-menu-header': menu.id === selectedTagsMenuId}">
                 <mat-panel-title>
                     <div id="menu-name" class="menu-name">
-                        <p class="menu-text"> {{ capitalizeFirstLetter(menu.name) }}</p>
+                        <p style="display: inline-block;" class="menu-text">{{ capitalizeFirstLetter(menu | translateTitle) }}</p>
                     </div>                                        
                     <div class="menu-button-container">
                         <div class="menu-button">
@@ -35,8 +35,8 @@
     
                     <div id="tag-list" class="tag-list" *ngIf="tag.parent_menu === menu.id" (click)="invokeTagSidebar(tag)">
     
-                        <div id="tag-name" *ngIf="tag.dependenciesActive && tag.visibility" class="tag-name" >{{tag.name}}</div>
-                        <div *ngIf="!tag.visibility" class="tag-name tag-name-disabled">{{tag.name}}</div>
+                        <div id="tag-name" *ngIf="tag.dependenciesActive && tag.visibility" class="tag-name" >{{tag | translateTitle}}</div>                
+                        <div *ngIf="!tag.visibility" class="tag-name tag-name-disabled">{{tag | translateTitle}}</div>
     
                         <div id="tag-button" *ngIf="((selectedTagsMenuId===menu.id && tag.visibility) || tag.currentColor!==tag.color)" id="tag-color-icon" (click)="pinClick(tag, $event)" [ngStyle]="{'background-color': tag.currentColor}" ><span class="white-circle"></span></div>
                         <div *ngIf="!((selectedTagsMenuId===menu.id && tag.visibility) || tag.currentColor!==tag.color)" id="tag-color-icon" (click)="pinClick(tag, $event)" [ngStyle]="{'background-color': 'rgb(154, 154, 154)'}"><span class="white-circle"></span></div>
@@ -54,8 +54,8 @@
             <div *ngFor="let kmlShape of kmlShapes">
                 <div id="tag-list" class="tag-list" *ngIf="kmlShape.parent_menu === menu.id">
 
-                    <div *ngIf="kmlShape.visibility" id="tag-name" class="tag-name" >{{kmlShape.name}}</div>
-                    <div *ngIf="!kmlShape.visibility" class="tag-name tag-name-disabled">{{kmlShape.name}}</div>
+                    <div *ngIf="kmlShape.visibility" id="tag-name" class="tag-name" >{{kmlShape | translateTitle}}</div>
+                    <div *ngIf="!kmlShape.visibility" class="tag-name tag-name-disabled">{{kmlShape | translateTitle}}</div>
 
                     <div id="tag-button" *ngIf="((selectedTagsMenuId===menu.id && kmlShape.visibility) || kmlShape.currentColor!==kmlShape.links_color)" id="kml-color-icon" (click)="pinClick(kmlShape, $event)" [ngStyle]="{'background-color': kmlShape.currentColor}" ></div>
                     <div *ngIf="!((selectedTagsMenuId===menu.id && kmlShape.visibility) || kmlShape.currentColor!==kmlShape.links_color)" id="kml-color-icon" (click)="pinClick(kmlShape, $event)" [ngStyle]="{'background-color': 'rgb(154, 154, 154)'}"></div>
@@ -70,7 +70,7 @@
             </div>
             <div *ngFor="let linkGroup of linkGroups">    
                 <div class="tag-list" *ngIf="linkGroup.parent_menu === menu.id">
-                    <div class="tag-name" >{{linkGroup.name}}</div>
+                    <div class="tag-name" >{{linkGroup | translateTitle}}</div>
                     <div id="tag-button" [ngStyle]="{'background-color': linkGroup.links_color}" id="kml-color-icon"></div>
 
                     <mat-icon (click)="LGVisibilityClick(linkGroup, $event)">

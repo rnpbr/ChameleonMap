@@ -1,0 +1,19 @@
+#language-chooser-conteiner {
+    position: absolute;
+    z-index: 99999999999;
+    right: 10px;
+    top: 10px;
+    font-size: 25px;
+}
+
+#language-chooser-conteiner:hover {
+    cursor: pointer;
+}
+
+.language-icon{
+    
+}
+
+.language-icon:hover{
+    opacity: 0.5;
+}

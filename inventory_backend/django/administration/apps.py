@@ -6,4 +6,6 @@ class AdministrationConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'administration'
     verbose_name = _("Map data")
-
+    
+    def ready(self):
+        import administration.translateOnSavingSignal

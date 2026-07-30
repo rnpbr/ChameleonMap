@@ -112,6 +112,7 @@ TENANT_TYPES = {
         "APPS": [
             'unfold',
             'administration.apps.AdministrationConfig',
+            'tools.apps.AdministrationTools',
             'django.contrib.auth',
             'django.contrib.contenttypes',
             'inventory_backend.apps_overrides.TenantPermissionsConfig',

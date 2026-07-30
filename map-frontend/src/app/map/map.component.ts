@@ -40,6 +40,8 @@ export class MapComponent implements OnInit {
   private _links: Array<Link>;
   private _linksGroup: Array<LinksGroup>;
   private _kmlShapes: Array<KmlShape>;
+  private _currentLanguage: LanguageOption;
+  private _languageOptionsList: Array<string>;
   public mapSetting: any = null;
   public map: L.Map;
   private locationHeaderSize = 0;
@@ -155,6 +157,13 @@ export class MapComponent implements OnInit {
     this._kmlShapes = value;
   }
 
+  get languageOptionsList() {
+    return this._languageOptionsList;
+  }
+  set languageOptionsList(value) {
+    this._languageOptionsList = value;
+  }
+
   constructor(private api: ApiService) {
     this.checkOrientation();
   }
@@ -169,7 +178,8 @@ export class MapComponent implements OnInit {
       mapSettings: this.api.getSettings(),
       links: this.api.getLinks(),
       linksGroup: this.api.getLinkGroups(),
-      kmlShapes: this.api.getKmlShapes()
+      kmlShapes: this.api.getKmlShapes(),
+      languageOptionsList: this.api.getLanguageOptionsList()
     }).subscribe({
       next: (results) => {
         // Reuslts
@@ -204,6 +214,7 @@ export class MapComponent implements OnInit {
         // Menus Init
         this.menus.forEach(menu => {
           menu.expanded = this.menus.length < 3;
+          menu.visibleName = menu.name
           menu.pinned = false;
         });
 
@@ -211,10 +222,11 @@ export class MapComponent implements OnInit {
         this.tags = results.tags;
         this.tagRelationships = results.tagRelationships;
         this.mapSettings = results.mapSettings;
+        this._currentLanguage = this._mapSettings.default_content_language 
         this.links = results.links;
         this.linksGroup = results.linksGroup;
         this.kmlShapes = results.kmlShapes;
-  
+        this.languageOptionsList = results.languageOptionsList.languageOptions;
         // After all data is set, initialize the map
         this.initializeMap();
       },
@@ -1037,6 +1049,17 @@ export class MapComponent implements OnInit {
       }
     }
     return null;
+  }
+
+  private setMenuVisibleNameById(newName:string, menuId: number) {
+    let lengthOfMenus = this._menus.length
+    for(let localIndex = 0 ; localIndex < lengthOfMenus; localIndex++) {
+      if (this._menus[localIndex].id === menuId) {
+        this._menus[localIndex].visibleName = newName
+        return true;
+      }
+    }
+    return false;
   }
 
   private getMenuById(menuId: number) {
