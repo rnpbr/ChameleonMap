@@ -33,6 +33,7 @@ import { TooltipComponent } from './tooltip/tooltip.component';
 import { LanguageChooserComponent } from './language-chooser/language-chooser.component';
 import { TranslateTitlePipe } from './translate-field.pipe';
 import { LanguageService } from './language.service';
+import { ChameleonButtonComponent } from './chameleon-button/chameleon-button.component';
 
 @NgModule({
   declarations: [
@@ -52,7 +53,8 @@ import { LanguageService } from './language.service';
     ATLASComponent,
     FooterComponent,
     TooltipComponent,
-    LanguageChooserComponent
+    LanguageChooserComponent,
+    ChameleonButtonComponent
   ],
   imports: [
     BrowserModule,

@@ -1,10 +1,9 @@
 import {
   Component,
-  OnInit,
   Input,
   Output,
   EventEmitter,
-  ViewChild
+  ViewChild,
 } from '@angular/core';
 import { EventEmitterService } from '../event-emitter.service';
 import { TagSidebarComponent } from './tag-sidebar/tag-sidebar.component';
@@ -36,6 +35,7 @@ export class FilterMenuComponent {
   public _hasMenuGroupTabs: boolean;
   public currentBehaviorOfMultipleTagsVisibilityButton: TagsMenuButtonBehavior = TagsMenuButtonBehavior.CloseAllEyes;
   tagsMenuButtonBehavior = TagsMenuButtonBehavior;
+  public _linksActive: boolean;
 
   public activeMenus: Array<Menu>
 
@@ -67,6 +67,7 @@ export class FilterMenuComponent {
   }
   set tags(value) {
     this._tags = value;
+    this.updateAllMenuEyeBehaviors();
   }
 
   @Input()
@@ -75,6 +76,7 @@ export class FilterMenuComponent {
   }
   set linkGroups(value) {
     this._linkGroups = value;
+    this.updateAllMenuEyeBehaviors();
   }
 
   @Input()
@@ -83,6 +85,7 @@ export class FilterMenuComponent {
   }
   set kmlShapes(value) {
     this._kmlShapes = value;
+    this.updateAllMenuEyeBehaviors();
   }
 
   @Input()
@@ -165,16 +168,25 @@ export class FilterMenuComponent {
           }
         );
     }
+    var isChrome = navigator.userAgent.includes('Chrome');
+    if (isChrome == true){
+      const menufilter = document.querySelectorAll<HTMLElement>('.scrollbar-box');
+      for (let i = 0, len = menufilter.length; i < len; i++) {
+          menufilter[i].setAttribute('style', 'scrollbar-width: thin');
+        }
+    }
   }
 
   LGVisibilityClick(lg: any, event: any) {
     if (lg.visibility) {
       lg.visibility = false;
+      console.log(`${lg.name} visiblity is now ${lg.visibility}`)
       this.removeLinesByLinkGroup(lg);
     } else {
       lg.visibility = true;
       this.insertLinesByLinkGroup(lg);
     }
+    this.checkActiveMenuTagsVisibilityStatus(lg.parent_menu);
   }
 
   removeLinesByLinkGroup(lg: LinksGroup) {
@@ -193,37 +205,54 @@ export class FilterMenuComponent {
       }
       menu.expanded = true;
       this.selectedTagsMenuId = menu.id;
-      this.currentBehaviorOfMultipleTagsVisibilityButton = TagsMenuButtonBehavior.CloseAllEyes;
       this.menuCliked.emit({ selectedTagsMenuId: this.selectedTagsMenuId });
-      this.checkActiveMenuTagsVisibilityStatus()
+      this.checkActiveMenuTagsVisibilityStatus(menu.id)
     }
   }
 
   closeAllEyes(menu: Menu, item: any, event: any) {
+    event.stopPropagation();
+
     for (let i = 0; i < this._tags.length; i++) {
       if (this._tags[i].parent_menu == menu.id) {
         if (this._tags[i].visibility == true) {
-          this.visibilityClick(this._tags[i], event)
+          this.visibilityClick(this._tags[i], event);
         }
+      }
+    }
+
+    for (let linkGroup of this._linkGroups) {
+      if (linkGroup.parent_menu == menu.id) {
+        linkGroup.visibility = false;
+        this.removeLinesByLinkGroup(linkGroup);
       }
     }
 
     for (let shape of this._kmlShapes) {
       if (shape.parent_menu == menu.id) {
-        if (shape.visibility) {
+        if (shape.visibility == true) {
           this.kmlVisibilityClick(shape, event);
         }
       }
     }
 
-    this.currentBehaviorOfMultipleTagsVisibilityButton = TagsMenuButtonBehavior.OpenAllEyes;
+    menu.isEyeVisibilityOpen = false;
   }
 
   openAllEyes(menu: Menu, item: any, event: any) {
+    event.stopPropagation();
     for (let i = 0; i < this._tags.length; i++) {
       if (this._tags[i].parent_menu == menu.id) {
         if (this._tags[i].visibility == false) {
           this.visibilityClick(this._tags[i], event)
+        }
+      }
+    }
+
+    for (let linkGroup of this._linkGroups) {
+      if (linkGroup.parent_menu == menu.id) {
+        if (!linkGroup.visibility) {
+          this.LGVisibilityClick(linkGroup, event);
         }
       }
     }
@@ -236,22 +265,82 @@ export class FilterMenuComponent {
       }
     }
 
-    this.currentBehaviorOfMultipleTagsVisibilityButton = TagsMenuButtonBehavior.CloseAllEyes;
+    menu.isEyeVisibilityOpen = true;
   }
 
   menuSwitch(menu: Menu, event: any) {
     menu.expanded = !menu.expanded;
     event.stopPropagation();
   }
+  
+  onMenuPinClicked(menu: Menu, event: any) {
+    this.toggleMenuPin(menu, event);
+    this.specialMenuPinRules(menu, event);
+  }
+
+  private toggleMenuPin(menu: Menu, event: any) {
+    menu.pinned ? this.unpinMenuButtonClicked(menu, event): this.pinMenuButtonClicked(menu, event);
+  }
+
+  private specialMenuPinRules(selectedMenu: Menu, event: any) {
+    if (selectedMenu.name.includes("Ipê")) {
+      this._menus.forEach((menu) => {
+        if (menu.name.includes("Ipê") && selectedMenu.id != menu.id) {
+          this.toggleMenuPin(menu, event);
+          return;
+        }
+      })
+    }
+    else if (selectedMenu.name.includes("CNDs")) {
+      this._menus.forEach((menu) => {
+        if (menu.name.includes("CNDs") && selectedMenu.id != menu.id) {
+          this.toggleMenuPin(menu, event);
+          return;
+        }
+      })
+    } 
+
+  }
+
+  pinMenuButtonClicked(menu: Menu, event: any) {
+    this.pinMenu(menu)
+    this.tagSidebar.addPinnedMenu(menu)
+    this.menuCliked.emit({ selectedTagsMenuId: this.selectedTagsMenuId });
+    event.stopPropagation();
+  }
+
+  unpinMenuButtonClicked(menu: Menu, event: any) {
+    this.unpinMenu(menu);
+    this.tagSidebar.removePinnedMenu(menu);
+    this.menuCliked.emit({ selectedTagsMenuId: this.selectedTagsMenuId });
+    event.stopPropagation();
+  }
+
+  pinMenu(menu: Menu){
+    menu.pinned = true;
+  }
+
+  unpinMenu(menu: Menu){
+    menu.pinned = false;
+  }
+
+  sideBarUnpinMenuButtonClicked(menu: Menu){
+    this.unpinMenuButtonClicked(menu, menu);
+  }
 
   menuCollapse() {
     this.isCollapsed = !this.isCollapsed;
     const menufilter = document.querySelectorAll<HTMLElement>('.scrollbar-box');
+    var isChrome = navigator.userAgent.includes('Chrome');
     for (let i = 0, len = menufilter.length; i < len; i++) {
       if (this.isCollapsed) {
         menufilter[i].setAttribute('style', 'left: -312px;');
       } else {
-        menufilter[i].setAttribute('style', 'left: 15px;');
+        if (isChrome == true){
+          menufilter[i].setAttribute('style', 'left: 15px; scrollbar-width: thin;');
+        } else{
+          menufilter[i].setAttribute('style', 'left: 15px;');
+        }
       }
     }
   }
@@ -269,8 +358,7 @@ export class FilterMenuComponent {
       this.menuCliked.emit({ selectedTagsMenuId: this.selectedTagsMenuId });
     } else this.switchVisibility(tag);
 
-    if (tag.parent_menu === this.selectedTagsMenuId)
-      this.checkActiveMenuTagsVisibilityStatus()
+    this.checkActiveMenuTagsVisibilityStatus(tag.parent_menu)
   }
 
   kmlVisibilityClick(kmlShape: any, event: any) {
@@ -286,8 +374,7 @@ export class FilterMenuComponent {
         this.removeKmlShape(kmlShape)
     }
 
-    if (kmlShape.parent_menu === this.selectedTagsMenuId)
-      this.checkActiveMenuTagsVisibilityStatus()
+    this.checkActiveMenuTagsVisibilityStatus(kmlShape.parent_menu)
   }
 
   pinClick(tag: any, event: any) {
@@ -329,34 +416,40 @@ export class FilterMenuComponent {
     this.tagSidebar.selectTag(tag, _selectedLocations);
   }
 
-  checkActiveMenuTagsVisibilityStatus() {
-    if (!this.tags) { return }
+  checkActiveMenuTagsVisibilityStatus(menuId: number) {
+    if (!this._tags && !this._kmlShapes && !this._linkGroups) { return }
 
     let allItemsAreClosed: Boolean = true;
-    let allItemsAreOpened: Boolean = true;
 
-    this.tags.forEach(tag => {
-      if (tag.parent_menu === this._selectedTagsMenuId) {
+    this._tags?.forEach(tag => {
+      if (tag.parent_menu === menuId) {
         if (tag.visibility)
           allItemsAreClosed = false;
-        else
-          allItemsAreOpened = false;
       }
     });
 
-    this.kmlShapes.forEach(shape => {
-      if (shape.parent_menu === this._selectedTagsMenuId) {
-        if (shape.visibility)
+    this._kmlShapes?.forEach(shape => {
+      if (shape.parent_menu === menuId) {
+        if (shape.visibility || shape.visibility == undefined)
           allItemsAreClosed = false;
-        else
-          allItemsAreOpened = false;
       }
     });
 
-    if (allItemsAreClosed)
-      this.currentBehaviorOfMultipleTagsVisibilityButton = TagsMenuButtonBehavior.OpenAllEyes;
-    else if (allItemsAreOpened)
-      this.currentBehaviorOfMultipleTagsVisibilityButton = TagsMenuButtonBehavior.CloseAllEyes;
+    this._linkGroups?.forEach(linkGroup => {
+      if (linkGroup.parent_menu === menuId) {
+        console.log(`${linkGroup.name} visibility is ${linkGroup.visibility}`)
+        if (linkGroup.visibility)
+          allItemsAreClosed = false;
+      }
+    });
+
+    const menu = this.getMenuById(menuId);
+    if (menu) {
+      if (allItemsAreClosed)
+        menu.isEyeVisibilityOpen = false;
+      else
+        menu.isEyeVisibilityOpen = true;
+    }
   }
 
   switchVisibility(tag: any) {
@@ -418,9 +511,18 @@ export class FilterMenuComponent {
         let newSelectedMenu = this.getMenuById(this.selectedMenusByGroup[this._currentMenusPallete]) || activeMenus[0];
         this.menuClick(newSelectedMenu);
       }
+      this.updateAllMenuEyeBehaviors();
       return activeMenus;
     } else {
       return [];
+    }
+  }
+
+  updateAllMenuEyeBehaviors() {
+    if (this.activeMenus) {
+      this.activeMenus.forEach(menu => {
+        this.checkActiveMenuTagsVisibilityStatus(menu.id);
+      });
     }
   }
 

@@ -57,3 +57,35 @@
   font-size: 3rem;
   cursor: pointer;
 }
+
+.circular-button {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: none;
+  background-color: white;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  padding: 0;
+  cursor: pointer;
+  z-index: 1000; /* garantir que fique acima do mapa */
+}
+
+.circular-button img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.leaflet-control-zoom {
+  bottom: 100px !important; /* or adjust to your needs */
+  top: auto !important;
+}
+
+.leaflet-control-zoom {
+  top: 10px; /* move it a bit down from the top */
+}
+

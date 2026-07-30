@@ -53,7 +53,7 @@ body {
 
 ::-webkit-scrollbar-thumb:active {
     background: rgb(119, 119, 118);
-}
+}.mat-
 
 ::-webkit-scrollbar-track {
     background: transparent;
@@ -123,9 +123,11 @@ body {
 }
 
 .hover-icon {
-    border: 1px solid rgb(54, 54, 54) !important;
-    width: 26px !important;
-    height: 26px !important;
+    border: 0.1px solid rgb(54, 54, 54) !important;
+    width: 24px !important;
+    height: 24px !important;
+    top: -8px !important;
+    left: -8px !important;
 }
 
 
@@ -176,4 +178,9 @@ body {
 
 .mat-content-hide-toggle {
     margin-right: 0 !important;
+}
+
+.leaflet-control-zoom {
+    bottom: 45px !important;  
+    top: auto !important;  
 }

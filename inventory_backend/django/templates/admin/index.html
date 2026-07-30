@@ -2,9 +2,11 @@
 {% load importer_tags %}
 {% load get_managed_maps %}
 {% load get_current_tenant_name %}
+{% load i18n %}
 
 {% block content %}
 {{ block.super }}
+
 
 <!-- <div class="app-administration module">
     <div class="bg-base-50 mb-6 rounded-default p-3 dark:bg-base-800">
@@ -35,7 +37,7 @@
             <table class="border border-base-400/10 border-spacing-none border-separate rounded-default overflow-hidden shadow-xs w-full dark:border-base-800">
                 <caption class="font-semibold mb-3 text-base-900 text-left dark:text-base-100">
                     <a class="section" title="Models in the Permissions application">
-                        Your managed map instances
+                        {% trans "Your managed map instances" %}
                     </a>
                 </caption>
                 <tbody>
@@ -45,7 +47,7 @@
                     {% if curr_tenant == instance.name %}
                         <tr class="bg-gray-100 dark:bg-base-900 model-usertenantpermissions">
                             <th scope="row" class="font-normal p-3 text-left ">
-                                <span class="font-semibold">{{ instance.name }} (Current)</span>
+                                <span class="font-semibold">{{ instance.name }} ({% trans "Current" %})</span>
                             </th>
                             <td class="p-3 text-right">
                                 <div class="flex flex-row items-center ml-auto gap-4 justify-end">
@@ -60,7 +62,7 @@
                             </th>
                             <td class="p-3 text-right">
                                 <div class="flex flex-row items-center ml-auto gap-4 justify-end">
-                                    <a href="{{ instance.url }}" class="changelink">Manage instance</a>
+                                    <a href="{{ instance.url }}" class="changelink">{% trans "Manage instance" %}</a>
                                     <a href="{{ instance.url }}" class="changelink block leading-none text-base-400 transition-colors dark:text-base-500 " title="Go to instance">
                                         <span class="material-symbols-outlined">edit_location_alt</span>
                                     </a>
@@ -77,16 +79,16 @@
         <div class="bg-base-50 mb-6 rounded-default p-3 dark:bg-base-800">
             <table class="border border-base-400/10 border-spacing-none border-separate rounded-default overflow-hidden shadow-xs w-full dark:border-base-800">
                 <caption class="font-semibold mb-3 text-base-900 text-left dark:text-base-100">
-                    <a class="section" title="Import data from an API">Import data</a>
+                    <a class="section" title="Import data from an API">{% trans "Import data" %}</a>
                 </caption>
                 <tbody>
                     <tr class="model-menu bg-white dark:bg-base-900 model-usertenantpermissions">
                         <th scope="row" class="font-normal p-3 text-left">
-                            <a href="/import/netbox/" onclick="showSpinner()">Import data from Netbox</a>
+                            <a href="/import/netbox/" onclick="showSpinner()">{% trans "Import data from Netbox" %}</a>
                         </th>
                         <td class=" p-3 text-right">
                             <div class="flex flex-row items-center ml-auto gap-4 justify-end">
-                                <a href="/import/netbox/" onclick="showSpinner()">Import</a>
+                                <a href="/import/netbox/" onclick="showSpinner()">{% trans "Import" %}</a>
                                 <a href={{ instance.url }} class="changelink block leading-none text-base-400 transition-colors dark:text-base-500 " title="Import">
                                     <span class="material-symbols-outlined">input</span>
                                 </a>
@@ -102,7 +104,7 @@
 
 <div class="background-no-go" id="loading-bg"></div>
 <div class="spinner" id="spinner"></div>
-<div class="spinner-text" id="loading-text">Loading, please wait...</div>
+<div class="spinner-text" id="loading-text">{% trans "Loading, please wait..." %}</div>
 
 <script>
     function showSpinner() {

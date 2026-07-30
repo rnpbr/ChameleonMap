@@ -1,7 +1,6 @@
-<mat-accordion [multi]="true" [hideToggle]="true" class="scrollbar-box scrollbar-box-chrome">
-    <mat-expansion-panel [expanded]="false" [disabled]="true">
-
-        <mat-expansion-panel-header [expandedHeight]="'45px'" style="background: rgba(168, 177, 189, 0.3); width: 100%; margin-left: -25px;">
+<mat-accordion *ngIf="tabs.length > 0" [multi]="true" [hideToggle]="true" class="scrollbar-box scrollbar-box-chrome">
+    <mat-expansion-panel [expanded]="false" [disabled]="true" style="width: 300px;">
+        <mat-expansion-panel-header [expandedHeight]="'45px'" style="background: rgba(168, 177, 189, 0.3); width: auto; padding-right: 0;margin-left: -25px;" class="solver">
             <mat-panel-title id="menu-groups-tabs">
                 <div class="menu-name">
                     <!-- <a *ngFor="let tab of tabs" class="button" (click)="onTabClick(tab)" [ngClass]="{'dark': _currentMenu == tab}">{{tab | translateTitle}}</a> -->

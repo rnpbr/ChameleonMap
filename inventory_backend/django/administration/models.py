@@ -1,6 +1,7 @@
 from django.db import models
 from django.db.models.deletion import SET_NULL
 from django.core.validators import MaxValueValidator, MinValueValidator, FileExtensionValidator
+from django.utils.translation import gettext_lazy as _
 from colorfield.fields import ColorField
 from tinymce.models import HTMLField
 from .models_constraints import StringConstraints
@@ -42,7 +43,8 @@ class MenuGroup(models.Model):
        
     class Meta:
         db_table = 'menugroup'
-        verbose_name_plural = "    Menu Groups" 
+        verbose_name = _("Menu Group")
+        verbose_name_plural = _("Menu Groups")
 
     def __str__(self):
         return self.name
@@ -50,15 +52,16 @@ class MenuGroup(models.Model):
 class Menu(models.Model):
     name = models.CharField(max_length=StringConstraints.ELEMENT_TITLE_SIZE)
     translatable = models.BooleanField(default=True)
-    group = models.ForeignKey('MenuGroup', null=True, on_delete=models.SET_NULL)
+    group = models.ForeignKey('MenuGroup', null=True, on_delete=models.SET_NULL, verbose_name=_("group"))
     hierarchy_level = models.IntegerField(default=0, help_text="Menus with the same number are considered siblings. Menus with lower numbers are considered parents of the ones with higher numbers. For example, a menu with the number 0 is considered parent of menus with the number 1.")
-    active = models.BooleanField(default=True)
+    active = models.BooleanField(default=True, verbose_name=_("active"))
     name_translations = GenericRelation(NameTranslation)
 
     class Meta:
         db_table = 'menu'
         ordering = ['hierarchy_level']
-        verbose_name_plural = "    Menus" 
+        verbose_name = _("Menu")
+        verbose_name_plural = _("Menus")
 
     def __str__(self):
         return self.name
@@ -66,33 +69,34 @@ class Menu(models.Model):
 class Tag(models.Model):
     name = models.CharField(max_length=2000)
     translatable = models.BooleanField(default=True)
-    related_tags = models.ManyToManyField('Tag', blank=True, through='Tag_relationship')
-    related_locations = models.ManyToManyField('Location', blank=True)
-    parent_menu = models.ForeignKey('Menu', null=True, on_delete=models.SET_NULL)
-    color = ColorField(default='#FF0000')
-    description = HTMLField(null=True, blank=SET_NULL, verbose_name="Popup content")
-    sidebar_content = HTMLField(help_text="<b style='font-size: 0.85rem'>* Leave blank to use default template</b>", null=True, blank=SET_NULL)
-    overlayed_popup_content = HTMLField(help_text="<b style='font-size: 0.85rem'>* This text will be displayed on 'show more info' popup</b>", null=True, blank=SET_NULL)
-    active = models.BooleanField(default=True)
+    related_tags = models.ManyToManyField('Tag', blank=True, through='Tag_relationship', verbose_name=_("related tags"))
+    related_locations = models.ManyToManyField('Location', blank=True, verbose_name=_("related locations"))
+    parent_menu = models.ForeignKey('Menu', null=True, on_delete=models.SET_NULL, verbose_name=_("parent menu"))
+    color = ColorField(default='#FF0000', verbose_name=_("color"))
+    description = HTMLField(null=True, blank=SET_NULL, verbose_name=_("Popup content"))
+    sidebar_content = HTMLField(help_text=_("<b style='font-size: 0.85rem'>* Leave blank to use default template</b>"), null=True, blank=SET_NULL, verbose_name=_("sidebar content"))
+    overlayed_popup_content = HTMLField(help_text=_("<b style='font-size: 0.85rem'>* This text will be displayed on 'show more info' popup</b>"), null=True, blank=SET_NULL, verbose_name=_("overlayed popup content"))
+    active = models.BooleanField(default=True, verbose_name=_("active"))
     name_translations = GenericRelation(NameTranslation)
 
     class Meta:
         db_table = 'tag'
         ordering = ['name']
-        verbose_name_plural = "  Tags" 
+        verbose_name = _("Tag")
+        verbose_name_plural = _("Tags")
 
     def __str__(self):
         return self.name
 
 class Tag_relationship(models.Model):
-    child_tag = models.ForeignKey('Tag', null=True, on_delete=models.CASCADE, related_name="child_tag")
-    parent_tag = models.ForeignKey('Tag', null=True, on_delete=models.CASCADE, related_name="parent_tag")
-    cluster_id = models.IntegerField(null=True, blank=SET_NULL, default=1,
-        help_text="Tag clusters are group of parent tags from the tag. To a cluster id be active, all tags in that id must be active. The child tag will be active if at least one of the cluster ids is active.")
+    child_tag = models.ForeignKey('Tag', null=True, on_delete=models.CASCADE, related_name="child_tag", verbose_name=_("child tag"))
+    parent_tag = models.ForeignKey('Tag', null=True, on_delete=models.CASCADE, related_name="parent_tag", verbose_name=_("parent tag"))
+    cluster_id = models.IntegerField(null=True, blank=SET_NULL, default=1, verbose_name=_("cluster ID"),
+        help_text=_("Tag clusters are group of parent tags from the tag. To a cluster id be active, all tags in that id must be active. The child tag will be active if at least one of the cluster ids is active."))
 
     class Meta:
-        verbose_name = "Tag to tag relation"
-        verbose_name_plural = "Tag to tag relationships"
+        verbose_name = _("Tag to tag relation")
+        verbose_name_plural = _("Tag to tag relationships")
         db_table = 'tag_relationship'
         ordering = ['child_tag']
 
@@ -102,17 +106,18 @@ class Tag_relationship(models.Model):
 class Location(models.Model):
     name = models.CharField(max_length=2000)
     translatable = models.BooleanField(default=True)
-    description = HTMLField(null=True, blank=SET_NULL)
-    latitude = models.DecimalField(max_digits=24, decimal_places=20, validators=[MinValueValidator(-90), MaxValueValidator(90)])
-    longitude = models.DecimalField(max_digits=24, decimal_places=20, validators=[MinValueValidator(-180), MaxValueValidator(180)])
-    overlayed_popup_content = HTMLField(help_text="<b style='font-size: 0.85rem'>* This text will be displayed on 'show more info' popup</b>", null=True, blank=SET_NULL)
-    active = models.BooleanField(default=True)
+    description = HTMLField(null=True, blank=SET_NULL, verbose_name=_("description"))
+    latitude = models.DecimalField(max_digits=24, decimal_places=20, verbose_name=_("latitude"), validators=[MinValueValidator(-90), MaxValueValidator(90)])
+    longitude = models.DecimalField(max_digits=24, decimal_places=20, verbose_name=_("longitude"), validators=[MinValueValidator(-180), MaxValueValidator(180)])
+    overlayed_popup_content = HTMLField(help_text=_("<b style='font-size: 0.85rem'>* This text will be displayed on 'show more info' popup</b>"), null=True, blank=SET_NULL, verbose_name=_("overlayed popup content"))
+    active = models.BooleanField(default=True, verbose_name=_("active"))
     name_translation = GenericRelation(NameTranslation)
 
     class Meta:
         db_table = 'location'
         ordering = ['name']
-        verbose_name_plural = "   Locations" 
+        verbose_name = _("Location")
+        verbose_name_plural = _("Locations")
 
     def __str__(self):
         return self.name
@@ -120,10 +125,10 @@ class Location(models.Model):
 class Kml_shape(models.Model):
     name = models.CharField(max_length=25)
     translatable = models.BooleanField(default=True)
-    parent_menu = models.ForeignKey('Menu', null=True, on_delete=models.SET_NULL)
-    links_color = ColorField(default='#FF0000')
-    opacity = models.DecimalField(default=0.6, max_digits=4, decimal_places=3, validators=[MinValueValidator(0), MaxValueValidator(1)],    help_text="Opacity of the link. Min(0)-Max(1)")
-    kml_file = models.FileField(upload_to='uploads/', help_text="Upload a custom KML file (max 30Mb).", validators=[FileExtensionValidator(['kml'])])
+    parent_menu = models.ForeignKey('Menu', null=True, on_delete=models.SET_NULL, verbose_name=_("parent menu"))
+    links_color = ColorField(default='#FF0000', verbose_name=_("links color"))
+    opacity = models.DecimalField(default=0.6, max_digits=4, decimal_places=3, validators=[MinValueValidator(0), MaxValueValidator(1)], verbose_name=_("opacity"), help_text=_("Opacity of the link. Min(0)-Max(1)"))
+    kml_file = models.FileField(upload_to='uploads/', help_text=_("Upload a custom KML file (max 30Mb)."), verbose_name=_("KML file"), validators=[FileExtensionValidator(['kml'])])
     name_translation = GenericRelation(NameTranslation)
     
     def user_directory_path(instance, filename):
@@ -131,85 +136,91 @@ class Kml_shape(models.Model):
     
     class Meta:
         ordering = ['name']
-        verbose_name = "KML Shape"
-        verbose_name_plural = "KML Shapes"
+        verbose_name = _("KML Shape")
+        verbose_name_plural = _("KML Shapes")
         db_table = 'kml_shapes'
 
 class Links_group(models.Model):
     name = models.CharField(max_length=25)
     translatable = models.BooleanField(default=True)
-    links_color = ColorField(default='#FF0000')
-    opacity = models.DecimalField(default=0.6, max_digits=4, decimal_places=3, validators=[MinValueValidator(0), MaxValueValidator(1)],    help_text="Opacity of the link. Min(0)-Max(1)")
-    sidebar_content = HTMLField(null=True, blank=SET_NULL)
-    parent_menu = models.ForeignKey('Menu', null=True, on_delete=models.SET_NULL)
+    links_color = ColorField(default='#FF0000', verbose_name=_("links color"))
+    opacity = models.DecimalField(default=0.6, max_digits=4, decimal_places=3, validators=[MinValueValidator(0), MaxValueValidator(1)], verbose_name=_("opacity"), help_text=_("Opacity of the link. Min(0)-Max(1)"))
+    sidebar_content = HTMLField(null=True, blank=SET_NULL, verbose_name=_("sidebar content"))
+    parent_menu = models.ForeignKey('Menu', null=True, on_delete=models.SET_NULL, verbose_name=_("parent menu"))
     name_translations = GenericRelation(NameTranslation)
 
     class Meta:
         ordering = ['name']
-        verbose_name = "Links group"
-        verbose_name_plural = "Links groups"
+        verbose_name = _("Links group")
+        verbose_name_plural = _("Links groups")
         db_table = 'links_group'
 
     def __str__(self):
         return self.name
 
 class Link(models.Model):
-    display_name = models.CharField(max_length=25)
+    display_name = models.CharField(max_length=25, verbose_name=_("display name"))
     translatable = models.BooleanField(default=True)
-    popup_description = HTMLField(null=True, blank=SET_NULL)
+    popup_description = HTMLField(null=True, blank=SET_NULL, verbose_name=_("popup description"))
     curvature = models.DecimalField(default=2.0, max_digits=4, decimal_places=3, validators=[MinValueValidator(1), MaxValueValidator(4)],
-    help_text="This field controls how curved the link will appear in the front-end. The higher the number, the less the link will be curved. Min(1)-Max(4). Accept decimal values.")
-    weight = models.IntegerField(null=True, default=3,
-    help_text="This field controls the weight of the link line. The higher the number, the wider the line.")
-    dashed = models.BooleanField(default=False, help_text="This field, when active, will make the link stroke dashed.")
-    straight_link = models.BooleanField(default=False, help_text="This field, when active, will make the link line straight.")
-    location_1 = models.ForeignKey('Location', null=True, on_delete=models.CASCADE, related_name="location_1")
-    location_2 = models.ForeignKey('Location', null=True, on_delete=models.CASCADE, related_name="location_2")
-    links_group = models.ForeignKey('Links_group', null=True, on_delete=models.SET_NULL)
-    invert_link = models.BooleanField(default=False, help_text="This field, when active, will invert the curvature of the link.")
+    verbose_name=_("curvature"), help_text=_("This field controls how curved the link will appear in the front-end. The higher the number, the less the link will be curved. Min(1)-Max(4). Accept decimal values."))
+    weight = models.IntegerField(null=True, default=3, verbose_name=_("weight"), help_text=_("This field controls the weight of the link line. The higher the number, the wider the line."))
+    dashed = models.BooleanField(default=False, verbose_name=_("dashed"), help_text=_("This field, when active, will make the link stroke dashed."))
+    straight_link = models.BooleanField(default=False, verbose_name=_("straight link"), help_text=_("This field, when active, will make the link line straight."))
+    location_1 = models.ForeignKey('Location', null=True, on_delete=models.CASCADE, related_name="location_1", verbose_name=_("location 1"))
+    location_2 = models.ForeignKey('Location', null=True, on_delete=models.CASCADE, related_name="location_2", verbose_name=_("location 2"))
+    links_group = models.ForeignKey('Links_group', null=True, on_delete=models.SET_NULL, verbose_name=_("links group"))
+    invert_link = models.BooleanField(default=False, verbose_name=_("invert link"), help_text=_("This field, when active, will invert the curvature of the link."))
     name_translations = GenericRelation(NameTranslation)
-
     class Meta:
         db_table = 'link'
+        verbose_name = _("Link")
+        verbose_name_plural = _("Links")
 
 class Map_configuration(models.Model):
-    map_name = models.CharField(max_length=25)
+    map_name = models.CharField(max_length=25, verbose_name=_("map name"))
     map_style = models.CharField(
         max_length=15,
-        choices = [("d","Default (gray colored)"), ("b","Blue colored")],
+        choices = [("d", _("Default (gray colored)")), ("b", _("Blue colored"))],
         default="Default (gray colored)",
+        verbose_name=_("map style"),
     )
     inherit_children_tag_locations = models.BooleanField(
         default=False, 
-        help_text="When this field is enabled, a tag that is parent from another tags will inherit all locations from the children that was not previously declared on the parent. If instead you want to manually declare the locations for all tags, we suggest to keep this field disabled.",
+        verbose_name=_("inherit children tag locations"),
+        help_text=_("When this field is enabled, a tag that is parent from another tags will inherit all locations from the children that was not previously declared on the parent. If instead you want to manually declare the locations for all tags, we suggest to keep this field disabled."),
     )
     cluster_close_tags = models.BooleanField(
         default=True, 
-        help_text="When this field is enabled, tags located very close to each other will be grouped in clusters.",
+        verbose_name=_("cluster close tags"),
+        help_text=_("When this field is enabled, tags located very close to each other will be grouped in clusters."),
     )
-    initial_zoom_level = models.PositiveIntegerField(default=0, validators=[MinValueValidator(0), MaxValueValidator(13)], help_text="Please insert a value from 0 to 13 (max zoom).")
-    initial_latitude = models.DecimalField(max_digits=24, decimal_places=20, default=0.000, validators=[MinValueValidator(-90), MaxValueValidator(90)])
-    initial_longitude = models.DecimalField(max_digits=24, decimal_places=20, default=0.000, validators=[MinValueValidator(-180), MaxValueValidator(180)])
+    initial_zoom_level = models.PositiveIntegerField(default=0, validators=[MinValueValidator(0), MaxValueValidator(13)], verbose_name=_("initial zoom level"), help_text=_("Please insert a value from 0 to 13 (max zoom)."))
+    initial_latitude = models.DecimalField(max_digits=24, decimal_places=20, default=0.000, verbose_name=_("initial latitude"), validators=[MinValueValidator(-90), MaxValueValidator(90)])
+    initial_longitude = models.DecimalField(max_digits=24, decimal_places=20, default=0.000, verbose_name=_("initial longitude"), validators=[MinValueValidator(-180), MaxValueValidator(180)])
     link_feature = models.BooleanField(
         default=False, 
-        help_text="When this field is enabled, the link feature will be displayed on the front-end.",
+        verbose_name=_("link feature"),
+        help_text=_("When this field is enabled, the link feature will be displayed on the front-end."),
     )
     hide_menu_group_when_unique = models.BooleanField(
         default=True, 
-        help_text="When there is only one Menu Group active, hide the menu groups tabs",
+        verbose_name=_("hide menu group when unique"),
+        help_text=_("When there is only one Menu Group active, hide the menu groups tabs"),
     )
 
-    footer_file = models.ImageField(upload_to='uploads/', blank=True, help_text="Upload a custom footer file.")
+    footer_file = models.ImageField(upload_to='uploads/', blank=True, verbose_name=_("footer file"), help_text=_("Upload a custom footer file."))
     default_content_language = models.CharField(
         max_length = StringConstraints.LANGUAGE_CODE_MAX_CHAR_NUMBER,
         choices = LanguageCode.choices,
         default = LanguageCode.PORTUGUESE_BR,
-        verbose_name = "Default content language"
+        verbose_name = _("Default content language")
         )
     automatic_translation_languages = models.ManyToManyField(
         'clients.LanguageOption', 
         blank = True,
-        help_text= "After the elementios creation, an automatic translation will be added for each selected language."        
+        verbose_name = _("automatic translation languages"),
+        help_text = _("After the elementios creation, an automatic translation will be added for each selected language.")        
     )
     
     def user_directory_path(instance, filename):
@@ -219,9 +230,9 @@ class Map_configuration(models.Model):
         return [LanguageCode[k] for k in self.automatic_translation_languages if k in LanguageCode]
 
     class Meta:
-        verbose_name = "Map Settings"
-        verbose_name_plural = "Map Settings"
+        verbose_name = _("Map Settings")
+        verbose_name_plural = _("Map Settings")
         db_table = 'map_config'
 
     def __str__(self):
-            return "'"+self.map_name + "' Map Settings"
+            return "'"+self.map_name + "' " + str(_("Map Settings"))

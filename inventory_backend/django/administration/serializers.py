@@ -63,12 +63,21 @@ class Links_groupSerializer(TranslatableTitleElement, serializers.ModelSerialize
         model = Links_group
         fields = ['id', 'name', 'links_color', 'opacity', 'sidebar_content', 'parent_menu', 'translations']
 
+class Kml_shapeSerializer(serializers.ModelSerializer):
+    kml_file = serializers.SerializerMethodField()
+
 class Kml_shapeSerializer(TranslatableTitleElement, serializers.ModelSerializer):
     translations = serializers.SerializerMethodField()
         
     class Meta:
         model = Kml_shape
         fields = ['id', 'name', 'parent_menu', 'links_color', 'opacity', 'kml_file', 'translations']
+
+    def get_kml_file(self, obj):
+        if obj.kml_file:
+            # Returns only the relative path
+            return obj.kml_file.url  
+        return None
 
 class Map_configurationSerializer(serializers.ModelSerializer):
 

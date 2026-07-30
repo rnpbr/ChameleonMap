@@ -1,5 +1,6 @@
 {% load static %}
 {% load importer_tags %}
+{% load i18n %}
 
 <head>
     <meta charset="UTF-8">
@@ -7,16 +8,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" type="text/css" href="{% static 'import/css/diff.css' %}" media="screen" />
     <script src="https://use.fontawesome.com/195a536412.js"></script>
-    <title>Diff page</title>
+    <title>{% trans "Diff page" %}</title>
 </head>
 
 <body>
     <header>
         <div id="page-info">
-            <a href="/admin/" style="color: white; text-decoration: none;">Map Administration</a>
+            <a href="/admin/" style="color: white; text-decoration: none;">{% trans "Map Administration" %}</a>
         </div>
         <div id="system-info">
-            Merge imported data
+            {% trans "Merge imported data" %}
         </div>
     </header>
     <div id="form-frame">

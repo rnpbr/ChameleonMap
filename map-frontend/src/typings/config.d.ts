@@ -16,6 +16,8 @@ declare global {
     readonly hierarchy_level: number;
     readonly active: boolean;
     expanded: boolean;
+    pinned: boolean;
+    isEyeVisibilityOpen?: boolean;
   }
 
   export interface Tag {
@@ -43,13 +45,13 @@ declare global {
     readonly latitude: number;
     readonly longitude: number;
     readonly description: string;
-    readonly overlayed_popup_content: string;
     readonly active: boolean;
-
+    
     onMap: boolean;
     activeColors: Array<string>;
     locationMarker: any;
     popup: string;
+    overlayed_popup_content: string;
     /*  containedTags: Array<{tag: Tag, activeOnMap: boolean}>; */
   }
 

@@ -1,4 +1,4 @@
-import { TagContentType } from '@angular/compiler';
+import { parseHostBindings, STRING_TYPE, TagContentType } from '@angular/compiler';
 import {
   Component,
   OnInit,
@@ -13,11 +13,14 @@ import {
 import * as L from 'leaflet';
 import 'leaflet-responsive-popup';
 import '@elfalem/leaflet-curve';
+import { combineLatest, of } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { ApiService } from '../api.service';
 import { OverlayedPopupComponent } from '../overlayed-popup/overlayed-popup.component';
 import { forkJoin } from 'rxjs';
 import { kml } from '@tmcw/togeojson';
 import { TooltipComponent } from '../tooltip/tooltip.component';
+import { ChameleonButtonComponent } from '../chameleon-button/chameleon-button.component';
 
 @Component({
   selector: 'app-map',
@@ -59,7 +62,6 @@ export class MapComponent implements OnInit {
   public defaultMenuId: number;
 
   public footerUrl = ""
-
   public linksFeatureOn = false;
   showRotateMessage = false;
   
@@ -180,25 +182,42 @@ export class MapComponent implements OnInit {
       languageOptionsList: this.api.getLanguageOptionsList()
     }).subscribe({
       next: (results) => {
+        // Reuslts
         this.menugroups = results.menugroups.sort((a: MenuGroup, b: MenuGroup) => a.id - b.id);
-
-        if (this.menugroups.length > 0) {
-          this.currentMenuGroup = this.menugroups[0].name;
-        }
-  
         this.menus = results.menus;
+        
+        // Menu Groups Init
+        let initialGroupMenu: MenuGroup;
+        if (this.menugroups.length > 0) {
+          initialGroupMenu = this.menugroups[0]
+          this.currentMenuGroup = initialGroupMenu.name;
+          
+          this.menugroups.forEach( menuGroup => {
+            const firstMenuInsideGroup = this.menus.find(menu => menu.group === menuGroup.id);
+            if(firstMenuInsideGroup)
+              this.selectedMenusByGroup[menuGroup.name] == firstMenuInsideGroup.id;
+          })
+          
+          
+          if(initialGroupMenu){
+            const firstMenu = this.menus.find(menu => menu.group === initialGroupMenu.id);
+            if(firstMenu){
+              this.defaultMenuId = this.selectedMenu = firstMenu.id
+            }else{
+              this.defaultMenuId = this.selectedMenu = 0
+            }
+          }else{
+            this.defaultMenuId = this.selectedMenu = 0
+          }
+        }
+
+        // Menus Init
         this.menus.forEach(menu => {
           menu.expanded = this.menus.length < 3;
           menu.visibleName = menu.name
+          menu.pinned = false;
         });
-        this.menus.forEach(menu => {
-          if (menu.group == this.menugroups[0].id) {
-            this.selectedMenu = menu.id;
-            this.defaultMenuId = menu.id;
-            return;
-          }
-        });
-  
+
         this.locations = results.locations;
         this.tags = results.tags;
         this.tagRelationships = results.tagRelationships;
@@ -309,7 +328,8 @@ export class MapComponent implements OnInit {
     }
     let inCurrentMenuGroup = menu_group.name == this.currentMenuGroup;
     let shouldLoadSimultaneously = !inCurrentMenuGroup && this.isMenuSimultaneousAndSelectedInItsMenuGroup(parent_menu.id, menu_group);
-    return inCurrentMenu || shouldLoadSimultaneously;
+    let isKmlShapeMenuPinned = parent_menu.pinned
+    return inCurrentMenu || shouldLoadSimultaneously || isKmlShapeMenuPinned;
   }
 
   private isMenuSimultaneousAndSelectedInItsMenuGroup(menu_id: number, menu_group: MenuGroup | undefined = undefined) {
@@ -370,8 +390,10 @@ export class MapComponent implements OnInit {
         const loc2 = this.getLocationById(link.location_2);
         const linkgroup = this.getLinksGroupById(link.links_group);
         if (linkgroup == undefined) return;
+        let parentMenu = this.getMenuById(linkgroup.parent_menu);
+        let isMenuVisible = parentMenu?.id == this.selectedMenu || parentMenu?.pinned;
         let isSimultaneous = this.isMenuSimultaneousAndSelectedInItsMenuGroup(linkgroup.parent_menu);
-        if (linkgroup.parent_menu == this.selectedMenu || isSimultaneous){
+        if (isMenuVisible || isSimultaneous){
           if (loc1 && loc2) {
             linkgroup.visibility = true;
             let pointA;
@@ -382,7 +404,7 @@ export class MapComponent implements OnInit {
             pointB = values[1];
   
             const pointList = [pointA, pointB];
-            if (isSimultaneous || (loc1.onMap && loc2.onMap)) {
+            if (loc1.onMap && loc2.onMap) {
               const latlngs = [];
   
               const latlng1 = [pointA.lat, pointA.lng],
@@ -405,7 +427,6 @@ export class MapComponent implements OnInit {
               const midpointLatLng = [midpointY, midpointX];
   
               latlngs.push(latlng1, midpointLatLng, latlng2);
-  
               const pathOptions = {
                 color: linkgroup.links_color,
                 weight: link.weight,
@@ -413,11 +434,15 @@ export class MapComponent implements OnInit {
                 smoothFactor: 1,
                 stroke: true,
                 dashArray:'',
-                dashOffset: ''
+                dashOffset: '',
+                lineCap: "round" as 'butt' | 'round' | 'square',
               };
               if(link.dashed){
-                pathOptions.dashArray = '10, 10';
+                pathOptions.dashArray = '3,3';
                 pathOptions.dashOffset = '10';
+                pathOptions.weight = 10;
+                pathOptions.smoothFactor = 0;
+                pathOptions.lineCap = "butt" as 'butt' | 'round' | 'square';
               }
               if(link.straight_link){
                 link.line = new L.Polyline([pointA, pointB], pathOptions);
@@ -453,7 +478,8 @@ export class MapComponent implements OnInit {
       ],
       zoom: this.mapSetting.initial_zoom_level + 3,
       // zoom: this.mapSetting.initial_zoom_level + 5,
-      zoomControl: false
+      zoomControl: false,
+      attributionControl: false
     });
 
     this.map.on('zoom', () => {
@@ -607,7 +633,7 @@ export class MapComponent implements OnInit {
         }
       });
       this.getFirstMenuId();
-      this.insertMarkersByMenu(this.defaultMenuId);
+      this.insertMarkersByMenu(this.defaultMenuId, true)
       if (typeof this.mapSetting.map_name === 'string')
         document.title = this.mapSetting.map_name;
       if (this.menus && this.locations && this.mapSettings)
@@ -694,20 +720,21 @@ export class MapComponent implements OnInit {
     return undefined;
   }
 
-  private insertMarkersByMenu(selectedTagsMenuId: number) {
+  private insertMarkersByMenu(selectedTagsMenuId: number, reset: boolean) {
     if (!this._locations || !this._tags) {
       return
     }
-
     let selectedMenu = this.getMenuById(this.selectedMenu);
+
     if (!selectedMenu) {
       return
     }
-    let selectedMenuGroup = this.getMenuGroup(selectedMenu.group)
 
-    this.resetMarkers();
+    if(reset){
+      this.resetMarkers();
+      this.selectedMenu = selectedTagsMenuId;
+    }
 
-    this.selectedMenu = selectedTagsMenuId;
     const menuHierarchy = this.getMenuById(selectedTagsMenuId)?.hierarchy_level;
     const otherMenuTags = this._tags.filter((currentTag: Tag) => {
       const currentTagHierarchy = this.getMenuById(
@@ -743,12 +770,12 @@ export class MapComponent implements OnInit {
             if (location.active) {
               const tagMenu = this.getMenuById(tag.parent_menu);
               if (tagMenu) {
-                if (tagMenu.hierarchy_level > 1) {
-                  // if (allOtherMenuLocations.includes(location.id)) {
+                if(reset){
                   this.insertLocationOnMap(location, tag.currentColor);
-                  // }
-                } else {
-                  this.insertLocationOnMap(location, tag.currentColor);
+                }else{
+                  if(selectedTagsMenuId === tag.parent_menu){
+                    this.insertLocationOnMap(location, tag.currentColor);
+                  }
                 }
               }
             }
@@ -902,7 +929,7 @@ export class MapComponent implements OnInit {
   }
 
   private generatePinIcon(colors: any) {
-    const size = '24px';
+    const size = '16px';
     const border = '0.1px solid #5c5c5c';
 
     if (colors.length === 1) {
@@ -911,10 +938,10 @@ export class MapComponent implements OnInit {
       width: ${size};
       height: ${size};
       display: block;
-      left: -11px;
-      top: -21px;
+      left: -4px;
+      top: -4px;
       position: relative;
-      border-radius: ${size} ${size} 0;
+      border-radius: ${size} ${size} ${size} ${size};
       transform: rotate(45deg);
       border: ${border};`;
     } else {
@@ -957,20 +984,22 @@ export class MapComponent implements OnInit {
       width: ${size};
       height: ${size};
       display: block;
-      left: -11px;
-      top: -21px;
+      left: -4px;
+      top: -4px;
       position: relative;
-      border-radius: 100% 100% 0;
+      border-radius: 100% 100% 100% 100%;
       transform: rotate(45deg);
       border: 0.1px solid #5c5c5c`;
     }
 
+    var style = 'style="height: 11px; width: 11px; background-color: white; border-radius: 50%; display: flex; margin-left: 20%; margin-top: 20%;"'
+
     const icon = L.divIcon({
       className: 'custom-pin',
-      html: `<span style="${markerHtmlStyles}"><span style="height: 11px; width: 11px; background-color: white; border-radius: 50%; display: flex; margin-left: 20%; margin-top: 20%;"></span></span>`
+      html: `<span style="${markerHtmlStyles}"><span ></span></span>`
     });
 
-    return icon;
+    return icon; 
   }
 
   private getMaxLocationId() {
@@ -1122,7 +1151,8 @@ export class MapComponent implements OnInit {
 
     for (const link of this._links) {
       if (link.location_1 == location.id || link.location_2 == location.id) {
-        link.line.remove(this.map);
+        if (link.line != null)
+          link.line.remove(this.map);
       }
     }
   }
@@ -1237,7 +1267,49 @@ export class MapComponent implements OnInit {
   }
 
   public onMenuCliked(event: any) {
-    this.insertMarkersByMenu(event.selectedTagsMenuId);
+    this.onMenuIdClicked(event.selectedTagsMenuId)
+  }
+
+  private onMenuIdClicked(menuId: number) {
+    let menu = this.getMenuById(menuId);
+
+    if (!menu) return
+
+    this.specialMenuClickRules(menu);
+    this.insertMarkersByMenu(menuId, true);
+    this.menus.forEach(menu => {
+      if(menu.id != menuId){
+        if(menu.pinned){
+          this.insertMarkersByMenu(menu.id, false);
+        }
+      }
+    })
+  }
+
+  private specialMenuClickRules(selectedMenu: Menu) {
+    if (selectedMenu.name.includes("Ipê")) {
+      this._menus.forEach((menu) => {
+        if (menu.name.includes("Ipê") && selectedMenu.id != menu.id) {
+          let menuGroup = this.getMenuGroup(menu.group)
+          if (!menuGroup) return;
+          this.selectedMenusByGroup[menuGroup.name] = menu.id;
+          this.insertMarkersByMenu(menu.id, true);
+          return;
+        }
+      })
+    }
+    else if (selectedMenu.name.includes("CNDs")) {
+      this._menus.forEach((menu) => {
+        if (menu.name.includes("CNDs") && selectedMenu.id != menu.id) {
+          let menuGroup = this.getMenuGroup(menu.group)
+          if (!menuGroup) return;
+          this.selectedMenusByGroup[menuGroup.name] = menu.id;
+          this.insertMarkersByMenu(menu.id, true);
+          return;
+        }
+      })
+    } 
+
   }
 
   public onTagRemoval(event: any) {
@@ -1281,6 +1353,72 @@ export class MapComponent implements OnInit {
 
   closeMessage() {
     this.showRotateMessage = false;
+  }
+
+  public aboutUsButtonClick() {
+    let popupContent: string =  `
+      <div style="
+        position: relative;
+        font-family: Arial, sans-serif;
+        padding: 40px 20px 20px 20px;
+        max-width: 90%%;
+        border: 4px solid transparent;
+        border-radius: 15px;
+        background: linear-gradient(white, white) padding-box,
+                    linear-gradient(135deg, #00f9ff, #00ff94, #fff200, #ff005d, #a100ff) border-box;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      ">
+
+        <!-- Logo in the top-left corner of the frame -->
+        <img src="/assets/chameleonMapLogo-transparent.png" alt="ChameleonMap Logo"
+            style="position: absolute; top: -30px; left: -30px; height: 80px; z-index: 1; background: white; border-radius: 50%; padding: 5px; box-shadow: 0 2px 6px rgba(0,0,0,0.2);">
+
+        <!-- Main content -->
+        <p style="text-align: center;">
+          <strong>ChameleonMap ®</strong> is a pioneering open-source system born from the collaboration between the Informatics Institute of the Federal University of Rio Grande do Sul (INF-UFRGS) and the Brazilian National Research and Education Network (RNP). 
+          Designed to represent complex and dynamic topologies, it adapts and evolves like its namesake, the chameleon, offering an interactive mapping solution driven by geolocated data.
+        </p>
+
+        <p style="text-align: center;">
+          With its remarkable adaptability, ChameleonMap is suited for a wide range of applications — from visualizing computer networks to analyzing socio-economic infrastructures. Its modular design makes it a powerful and customizable tool across diverse domains. This collaborative development effort has resulted in a system that balances technical sophistication with ease of use. ChameleonMap is both intuitive for end-users and robust enough for administrators, making it an accessible and efficient solution for dynamic topology visualization.
+        </p>
+
+        <!-- Authors and Logos using Table -->
+        <table style="display: flex; width: 100%; margin-top: 15px; vertical-align: middle;">
+          <tr>
+            <!-- Logos -->
+            <td style="width: 50%; border: 1px solid #ccc; vertical-align: middle">
+              <img src="/assets/inf-logo.svg" alt="Logo INF-UFRGS" style="width: 25%; margin: 5px; vertical-align: middle;">
+              <img src="/assets/rnp-logo.png" alt="Logo RNP" style="width: 25%; margin: 5px; vertical-align: middle;"><br>
+            </td>
+            
+            <!-- Authors -->
+            <td style="width: 50%; padding: 10px; border: 1px solid #ccc; text-align: center; vertical-align: middle;">
+              <p><strong>Authors:</strong><br>
+                Eduardo Peretto<br>
+                Gabriel Vassoler<br>
+                Gustavo Hermínio de Araújo<br>
+                Leonardo Lauryel Batista dos Santos<br>
+                Prof. Lisandro Zambenedetti Granville<br>
+                Prof. Luciano Paschoal Gaspary<br>
+                Manoel Narciso Reis Soares Filho
+              </p>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Footer -->
+        <hr style="margin: 30px auto; width: 60%;">
+        <footer style="text-align: center; font-size: 0.9em;">
+          <p>
+            <strong><a href="https://github.com/seu-usuario/seu-repositorio" target="_blank">ChameleonMap</a> ®</strong><br>
+            Powered by <a href="https://leafletjs.com/" target="_blank">Leaflet</a> and <a href="https://www.openstreetmap.org/" target="_blank">OpenStreetMap</a>
+          </p>
+        </footer>
+      </div>
+    `
+    
+    this.overlayedPopup.activateWithPersonalizedContent(popupContent, "About This Map")
   }
 }
 

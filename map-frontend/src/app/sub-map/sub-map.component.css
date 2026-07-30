@@ -21,12 +21,19 @@
   }
   
   #sub-map {
-    height: 100%;
+    width: 100%;
     border-radius: 5px;
     border-top-left-radius: 0px ;
     border-top-right-radius: 0px ;
     z-index: 7775;
     background: white;
+
+    display: flex;
+    justify-content: baseline;  
+    align-items: center;     
+    flex-direction: column;
+    padding: 20px;
+    box-sizing: border-box;
   }
 
   .intern-sub-popup{

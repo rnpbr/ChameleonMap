@@ -71,6 +71,11 @@ export class SubMapComponent implements OnInit {
     // console.log(this._keeper.overlayed_popup_content)
     this.popup_content.nativeElement.innerHTML = `<div style='height: 1000px'>${this._keeper.overlayed_popup_content}</div>`;
   }
+
+
+  public setContentDirectly(content: string){
+    this.popup_content.nativeElement.innerHTML = `<div style='width:100%;'>${content}</div>`;
+  }
     
     
   private initSubMapPropertiesValues() {

@@ -9,6 +9,10 @@ mat-panel-title {
   margin-right: 0 !important;
 }
 
+.solver ::ng-deep .mat-content-hide-toggle {
+      margin-right: 0 !important;
+}
+
 .mat-icon {
   font-size: 17px;
   position:absolute;
