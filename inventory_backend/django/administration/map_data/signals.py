@@ -29,7 +29,8 @@ MAP_DATA_MODELS = (
 
 
 def _invalidate_map_data_cache(**kwargs):
-    invalidate_map_data_cache(connection.schema_name)
+    # schema_name exists under django-tenants; single-tenant falls back to 'public'.
+    invalidate_map_data_cache(getattr(connection, 'schema_name', None))
 
 
 def connect_map_data_cache_signals():

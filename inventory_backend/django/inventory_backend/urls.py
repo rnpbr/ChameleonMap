@@ -30,6 +30,7 @@ if not settings.ENABLE_MULTITENANT:
         Tag_relationshipViewSet,
         Map_configurationViewSet,
     )
+    from administration.map_data.views import MapDataAPIView
 
     router = routers.DefaultRouter()
     router.register('menugroup', MenuGroupViewSet)
@@ -44,7 +45,9 @@ if not settings.ENABLE_MULTITENANT:
 
     urlpatterns = [
         path('admin/', admin.site.urls),
+        path('i18n/', include('django.conf.urls.i18n')),
         path('api-auth/', include('rest_framework.urls')),
+        path('map-data/', MapDataAPIView.as_view()),
         path('', include(router.urls)),
         path('import/', include("importer.urls")),
         path('atlas/', include("atlas_builder.urls")),
