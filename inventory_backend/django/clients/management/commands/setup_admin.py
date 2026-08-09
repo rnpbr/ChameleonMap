@@ -1,6 +1,7 @@
 from django.core.management.base import BaseCommand
 from clients.models import Client, Domain
 from django.contrib.auth import get_user_model
+from django.conf import settings
 from django_tenants.utils import (
     get_public_schema_name,
     get_tenant_domain_model,
@@ -12,6 +13,10 @@ class Command(BaseCommand):
     help = "Creates tenant and admin user if they do not already exist."
 
     def handle(self, *args, **options):
+        if not settings.ENABLE_MULTITENANT:
+            self.stdout.write(self.style.WARNING("Multitenancy is disabled; skipping setup_admin."))
+            return
+
         if Client.objects.filter(schema_name='public').exists():
             self.stdout.write(self.style.WARNING("Tenant 'admin' already exists."))
             return

@@ -16,6 +16,8 @@ services:
     
   nginx_ssl:
     build: ./nginx_ssl
+    env_file:
+      - ./env/.env.prod
     ports:
       - "${NGINX_PORT:-443}:443"
       - "${NGINX_PORT:-80}:80"
