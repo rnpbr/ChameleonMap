@@ -27,6 +27,14 @@ POSTGRES_PASSWORD=postgres
 PGADMIN_DEFAULT_EMAIL=admin@gmail.com
 PGADMIN_DEFAULT_PASSWORD=admin
 
+# Email config
+EMAIL_HOST=
+EMAIL_PORT=
+EMAIL_USE_TLS=True
+EMAIL_HOST_USER=
+EMAIL_HOST_PASSWORD=
+DEFAULT_FROM_EMAIL=
+
 # The domain name or IP address or host name at which this instance will be accessed
 # The default values below are suitable for a local installation for development
 DJANGO_ALLOWED_HOSTS=localhost web 127.0.0.1 [::1] nginx 172.17.0.1

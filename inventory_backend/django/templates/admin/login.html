@@ -1,0 +1,17 @@
+{% extends "admin/login.html" %}
+
+{% block content %}
+    {# Keeps the original content of the login form #}
+    {{ block.super }}
+
+    {# Adds a custom footer with a link for password reset #}
+    <div class="text-center mt-6">
+        <p>
+            <a href="{% url 'password_reset' %}" 
+                class="text-sm text-blue-600 hover:text-blue-800 underline transition-colors duration-200">
+                    First Access or Forgot Password?
+            </a>
+        </p>
+    </div>
+{% endblock %}
+
