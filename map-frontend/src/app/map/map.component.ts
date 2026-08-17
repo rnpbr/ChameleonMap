@@ -206,15 +206,17 @@ export class MapComponent implements OnInit {
     }
 
     this.menus = store.menus;
+    let defaultMenuSet = false;
     this.menus.forEach((menu) => {
       menu.expanded = this.menus.length < 3;
       menu.pinned = false;
-      if (menu.group == this.menugroups[0]?.id) {
+      if (menu.group == this.menugroups[0]?.id && !defaultMenuSet) {
         this.selectedMenu = menu.id;
         this.defaultMenuId = menu.id;
+        defaultMenuSet = true;
       }
     });
-
+        
     this.menugroups.forEach((menuGroup) => {
       const firstMenuInsideGroup = this.menus.find((menu) => menu.group === menuGroup.id);
       if (firstMenuInsideGroup) {
@@ -624,7 +626,6 @@ export class MapComponent implements OnInit {
           tag.visibility = true;
         }
       });
-      this.getFirstMenuId();
       this.loadProfiler.timeSync('map.load.insertMarkersByMenu', () => {
         this.insertMarkersByMenu(this.defaultMenuId, true);
       });
