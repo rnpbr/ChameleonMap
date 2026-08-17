@@ -31,7 +31,7 @@ else:
 
 
 class MenuGroupAdmin(BaseModelAdmin):
-    list_display = ("name",)
+    list_display = ("name","simultaneous_context")
 
 
 class MenuAdmin(BaseModelAdmin):
@@ -68,14 +68,14 @@ class LinkAdmin(BaseModelAdmin):
 
 
 class Links_groupAdmin(BaseModelAdmin):
-    list_display = ("name",)
-    list_filter = ("name",)
+    list_display = ("name","parent_menu")
+    list_filter = ("name","parent_menu")
     search_fields = ['name']
 
 
 class Kml_shapeAdmin(BaseModelAdmin):
-    list_display = ("name",)
-    list_filter = ("name",)
+    list_display = ("name","parent_menu")
+    list_filter = ("name","parent_menu")
     search_fields = ['name']
 
 
