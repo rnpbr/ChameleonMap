@@ -1,7 +1,7 @@
-<mat-accordion [multi]="true" [hideToggle]="true" class="scrollbar-box scrollbar-box-chrome" [ngClass]="{'has-tabs': _hasMenuGroupTabs }">
+<mat-accordion [multi]="true" [hideToggle]="true" class="scrollbar-box scrollbar-box-chrome" [ngClass]="{'has-tabs': _hasMenuGroupTabs}">
     <mat-expansion-panel *ngFor="let menu of activeMenus" [expanded]="true" [disabled]="true">
         <div>
-            <mat-expansion-panel-header [expandedHeight]="'45px'" (click)="menuClick(menu)" class="menu-header" [class.selected-menu-header]="selectedTagsMenuId==menu.id" [ngClass]="{'pinned-header': menu.pinned === true}">
+            <mat-expansion-panel-header [expandedHeight]="'45px'" (click)="menuClick(menu)" class="menu-header" [ngClass]="{'pinned-header': menu.pinned === true, 'selected-menu-header': selectedTagsMenuId==menu.id}">
                 <mat-panel-title>
                     <div class="menu-name">
                         <p style="display: inline-block;" class="menu-text">{{ capitalizeFirstLetter(menu.name) }}</p>
