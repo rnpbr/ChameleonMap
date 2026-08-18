@@ -105,26 +105,30 @@ mat-expansion-panel  {
   color:gray;
 }
 
-.tag-color-icon {
+.marker-item-icon {
   width: 13px;
-  height: 13px;
   margin-bottom: 3px;
   position: absolute;
+}
+.marker-item-icon:hover {
+  width:14px;
+}
+
+.kml-item-icon {
+  height: 5px;
+}
+
+.kml-item-icon:hover {
+  height: 6px;
+}
+
+.tag-item-icon {
   border-radius: 100% 100% 0;
   transform: rotate(45deg);
-  border: 1px solid #FFFFFF;
+  height: 13px;
 }
 
-.kml-color-icon {
-  width: 13px;
-  height: 2px;
-  margin-bottom: 3px;
-  position: absolute;
-  border: 1px solid #FFFFFF;
-}
-
-.tag-color-icon:hover {
-  width:14px;
+.tag-item-icon:hover {
   height: 14px;
 }
 
