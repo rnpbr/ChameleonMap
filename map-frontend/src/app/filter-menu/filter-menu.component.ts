@@ -7,7 +7,6 @@ import {
   ViewChild
 } from '@angular/core';
 import { EventEmitterService } from '../event-emitter.service';
-import { TagSidebarComponent } from './tag-sidebar/tag-sidebar.component';
 import { PinnedMenusSidebarComponent } from './pinned-menus-sidebar/pinned-menus-sidebar.component';
 
 enum TagsMenuButtonBehavior {
@@ -21,7 +20,6 @@ enum TagsMenuButtonBehavior {
   styleUrls: ['./filter-menu.component.css']
 })
 export class FilterMenuComponent {
-  @ViewChild(TagSidebarComponent) tagSidebar: TagSidebarComponent;
   @ViewChild(PinnedMenusSidebarComponent) pinnedMenusSidebar: PinnedMenusSidebarComponent;
 
   get hasPinnedMenus(): boolean {
@@ -457,15 +455,6 @@ export class FilterMenuComponent {
       }
     }
     return null;
-  }
-
-  invokeTagSidebar(tag: Tag) {
-    const _selectedLocations = Array<Location>();
-    tag.related_locations.forEach((location_id: number) => {
-      const location: any = this.getLocationById(location_id);
-      _selectedLocations.push(location);
-    });
-    this.tagSidebar.selectTag(tag, _selectedLocations);
   }
 
   checkActiveMenuTagsVisibilityStatus(menuId: number) {
