@@ -42,8 +42,7 @@ export class FilterMenuComponent {
   public _hasMenuGroupTabs: boolean;
   public currentBehaviorOfMultipleTagsVisibilityButton: TagsMenuButtonBehavior = TagsMenuButtonBehavior.CloseAllEyes;
   tagsMenuButtonBehavior = TagsMenuButtonBehavior;
-
-  public activeMenus: Array<Menu>
+  public activeMenus: Array<Menu>;
 
   @Input()
   get menugroups() {
@@ -164,6 +163,12 @@ export class FilterMenuComponent {
 
   @Output()
   shapeReactivated = new EventEmitter();
+
+  get mapMarkers(): Array<MapMarkerType>{
+   let markers: Array<MapMarkerType> = [];
+   markers = markers.concat(this.tags).concat(this.linkGroups).concat(this.kmlShapes); 
+   return markers;
+  }
 
   constructor(private eventEmitterService: EventEmitterService) { }
 
@@ -317,10 +322,86 @@ export class FilterMenuComponent {
     }
   }
 
-  visibilityClick(tag: any, event: any) {
-    // Added in need for the sidebar button not to open
-    event.stopPropagation();
 
+  getMarkerType(marker: MapMarkerType): string{
+    let type: string = 'undefined';
+    if(marker){
+      if('geojson' in marker){
+        type = 'KmlLayerDto';
+      }else if('kml_file' in marker){
+        type = 'KmlShape';
+      }else if('links_color' in marker && !('geojson' in marker)){
+        type = 'LinksGroup';
+      }else if('child_tags' in marker){
+        type = 'Tag';
+      }
+    }
+
+    return type;
+  }
+
+  getMarkerColor(marker: MapMarkerType){
+    let color = 'rgb(154, 154, 154)'
+
+    if(this.isMarkerTag(marker)){
+      color = marker.color;
+    }else if(this.isMarkerKmlLayerDto(marker) || this.isMarkerLinksGroup(marker)){ 
+      color = marker.links_color
+    }
+
+    return color;
+  }
+  getMarkerCurrentColor(marker: MapMarkerType){
+    let color = 'rgb(154, 154, 154)'
+
+    if(this.isMarkerTag(marker)){
+      color = marker.currentColor;
+    }else if(this.isMarkerKmlLayerDto(marker)){
+      color = marker.currentColor;
+    }else if(this.isMarkerLinksGroup(marker)){
+      color = marker.currentColor
+    }
+
+    return color;
+  }
+
+  isMarkerTag(marker: MapMarkerType): marker is Tag{
+    return this.getMarkerType(marker) == 'Tag';
+  }
+  isMarkerLinksGroup(marker: MapMarkerType): marker is LinksGroup{
+    return this.getMarkerType(marker) == 'LinksGroup';
+  }
+  isMarkerKmlLayerDto(marker: MapMarkerType): marker is KmlLayerDto{
+    return this.getMarkerType(marker) == 'KmlLayerDto';
+  }
+
+  isMarkerActive(marker: MapMarkerType): boolean{
+    let activity: boolean = true;
+    if(this.isMarkerTag(marker)){
+      activity = marker.active && marker.dependenciesActive;
+    }
+
+    return activity;
+  }
+
+  onMarkerToogleVisibilityButtonClick(marker: MapMarkerType, event: any){
+    if(typeof marker === "object"){
+      event.stopPropagation();
+      switch(this.getMarkerType(marker)){
+        case 'Tag':
+          this.visibilityClick(marker, event);
+          break;
+        case 'KmlLayerDto':
+          this.kmlVisibilityClick(marker, event);      
+          break;
+        case 'LinksGroup':
+          this.LGVisibilityClick(marker, event);
+          break;
+      }
+    }
+  }
+
+  visibilityClick(tag: any, event: any) {
     if (tag.parent_menu !== this.selectedTagsMenuId) {
       const beforeState = this.selectedTagsMenuId;
       this.selectedTagsMenuId = tag.parent_menu;
@@ -335,9 +416,6 @@ export class FilterMenuComponent {
   }
 
   kmlVisibilityClick(kmlShape: any, event: any) {
-    // Added in need for the sidebar button not to open
-    event.stopPropagation();
-
     kmlShape.visibility = !kmlShape.visibility;
 
     if (kmlShape.parent_menu === this.selectedTagsMenuId) {
@@ -351,14 +429,14 @@ export class FilterMenuComponent {
       this.checkActiveMenuTagsVisibilityStatus(kmlShape.parent_menu);
   }
 
-  pinClick(tag: any, event: any) {
-    // Added in need for the sidebar button not to open
+  pinClick(marker: any, event: any) {
     event.stopPropagation();
-
-    if (tag.currentColor === tag.color) {
-      tag.currentColor = '#AFBAC4';
+    let color = this.getMarkerColor(marker);
+    let currentColor = this.getMarkerCurrentColor(marker);
+    if (currentColor === color) {
+      marker.currentColor = '#AFBAC4';
     } else {
-      tag.currentColor = tag.color;
+      marker.currentColor = color;
     }
     this.menuCliked.emit({ selectedTagsMenuId: this.selectedTagsMenuId });
   }

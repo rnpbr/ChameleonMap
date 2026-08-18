@@ -97,7 +97,7 @@ mat-expansion-panel  {
     color:gray;
   }
   
-  #tag-color-icon {
+  .tag-color-icon {
     width: 13px;
     height: 2px;
     margin-bottom: 3px;
@@ -105,7 +105,7 @@ mat-expansion-panel  {
     border: 1px solid #FFFFFF;
   }
   
-  #tag-color-icon:hover {
+  .tag-color-icon:hover {
     width:14px;
     height: 4px;
   }

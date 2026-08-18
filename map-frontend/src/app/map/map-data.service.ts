@@ -75,6 +75,7 @@ export class MapDataService {
     const linksGroups = bundle.links_groups.map((group) => ({
       ...group,
       visibility: false,
+      currentColor: group.links_color,
     }));
 
     const kmlLayers = bundle.kml_layers.map((layer) => ({

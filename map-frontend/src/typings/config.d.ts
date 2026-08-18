@@ -87,6 +87,7 @@ declare global {
     readonly opacity: number;
     readonly parent_menu: number;
     visibility: boolean;
+    currentColor: string;
   }
 
   export interface KmlShape {
@@ -99,4 +100,7 @@ declare global {
     visibility: boolean;
     currentColor: string;
   }
+  
+  export type MapMarkerType = Tag | KmlLayerDto | KmlShape | LinksGroup;
 }
+
