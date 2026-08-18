@@ -70,6 +70,7 @@ mat-expansion-panel  {
 .menu-text {
   color: black !important;
   padding-right: 10px;
+  display: inline-block;
 }
 
 .menu-text-position {
