@@ -144,13 +144,8 @@ mat-expansion-panel  {
 
 .eye {
   margin-top: 3px;
-}
-.eye-off {
   width: 19px;
   height: 19px;
-  margin-left: -1px;
-  fill: currentColor;
-  overflow: hidden;
 }
 
 .scrollbar-box {

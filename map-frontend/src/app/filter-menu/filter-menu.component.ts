@@ -8,6 +8,8 @@ import {
 } from '@angular/core';
 import { EventEmitterService } from '../event-emitter.service';
 import { PinnedMenusSidebarComponent } from './pinned-menus-sidebar/pinned-menus-sidebar.component';
+import { MatIconRegistry } from '@angular/material/icon';
+import { DomSanitizer } from '@angular/platform-browser';
 
 enum TagsMenuButtonBehavior {
   CloseAllEyes,
@@ -168,7 +170,12 @@ export class FilterMenuComponent {
    return markers;
   }
 
-  constructor(private eventEmitterService: EventEmitterService) { }
+  constructor(private eventEmitterService: EventEmitterService, private matIconRegistry: MatIconRegistry, private domSanitizer: DomSanitizer) { 
+    this.matIconRegistry.addSvgIcon(
+      'eye-off',
+      this.domSanitizer.bypassSecurityTrustResourceUrl('assets/icons/eye-off.svg')
+    );
+  }
 
   ngOnInit() {
     if (this.eventEmitterService.subsVar == undefined) {
