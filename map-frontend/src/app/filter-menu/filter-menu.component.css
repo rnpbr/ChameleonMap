@@ -142,8 +142,13 @@ mat-expansion-panel  {
   margin-top: 25%;
 }
 
+
 .eye {
-  margin-top: 3px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.eye mat-icon{
   width: 19px;
   height: 19px;
 }
@@ -172,7 +177,6 @@ mat-expansion-panel  {
     width: 285px;
   }
 }
-
 
 .has-tabs{
   top: 75px;
