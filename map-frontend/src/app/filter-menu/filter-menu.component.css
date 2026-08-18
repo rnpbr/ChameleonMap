@@ -14,9 +14,6 @@ mat-expansion-panel  {
 .mat-side{
   font-size: 30px;
   position: relative !important;
-	margin-top: 10px;
-  padding-right: 5px;
-  padding-bottom: 5px;
   transition: all 0.5s;
   cursor: pointer;
 }
@@ -240,9 +237,10 @@ mat-expansion-panel  {
 }
 
 #menu-button-expand{
-  display: inline;
-  vertical-align: middle;
+  display: flex;
   font-size: 40px;
+  align-items: center;
+  justify-content: center;
 }
 
 #menu-button-lock-all{
