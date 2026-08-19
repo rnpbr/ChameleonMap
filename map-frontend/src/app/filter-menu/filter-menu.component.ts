@@ -284,23 +284,23 @@ export class FilterMenuComponent {
     event.stopPropagation();
   }
 
-  onMenuPinClicked(menu: Menu, event: any) {
+  onMenuLockClicked(menu: Menu, event: any) {
     event.stopPropagation();
     if (menu.pinned) {
-      this.unpinMenuButtonClicked(menu, event);
+      this.unlockMenuButtonClicked(menu, event);
     } else {
-      this.pinMenuButtonClicked(menu, event);
+      this.lockMenuButtonClicked(menu, event);
     }
   }
 
-  pinMenuButtonClicked(menu: Menu, event: any) {
+  lockMenuButtonClicked(menu: Menu, event: any) {
     menu.pinned = true;
     this.pinnedMenusSidebar?.addPinnedMenu(menu);
     this.menuCliked.emit({ selectedTagsMenuId: this.selectedTagsMenuId });
     event.stopPropagation();
   }
 
-  unpinMenuButtonClicked(menu: Menu, event: any) {
+  unlockMenuButtonClicked(menu: Menu, event: any) {
     menu.pinned = false;
     this.pinnedMenusSidebar?.removePinnedMenu(menu);
     this.menuCliked.emit({ selectedTagsMenuId: this.selectedTagsMenuId });
@@ -308,10 +308,10 @@ export class FilterMenuComponent {
   }
 
   sideBarUnpinMenuButtonClicked(menu: Menu) {
-    this.unpinMenuButtonClicked(menu, {} as Event);
+    this.unlockMenuButtonClicked(menu, {} as Event);
   }
 
-  onPinnedMenuSelected(menu: Menu) {
+  onLockedMenuSelected(menu: Menu) {
     this.menuClick(menu);
   }
 

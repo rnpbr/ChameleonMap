@@ -14,7 +14,7 @@
                             <ng-template #elseThenBehaviorIsOpenAllEyes>
                                 <mat-icon id="menu-button-open-all" (click)="openAllEyes(menu, $event.target, $event)" class="mat-side noselect svg-icon" svgIcon="eye-off"></mat-icon>
                             </ng-template>
-                            <mat-icon id="menu-button-lock-all" (click)="onMenuPinClicked(menu, $event)" class="mat-side noselect">
+                            <mat-icon id="menu-button-lock-all" (click)="onMenuLockClicked(menu, $event)" class="mat-side noselect">
                                 {{menu.pinned ? 'lock_open' : 'lock'}}
                             </mat-icon>
                             <mat-icon id="menu-button-expand" (click)="menuSwitch(menu, $event)" class="mat-side noselect" [ngClass]="{'mat-side-rot': menu.expanded}">keyboard_arrow_down</mat-icon>
@@ -52,6 +52,6 @@
     <app-pinned-menus-sidebar
         [capitalizeFirstLetter]="capitalizeFirstLetter.bind(this)"
         (unpinMenuEmitter)="sideBarUnpinMenuButtonClicked($event)"
-        (selectMenuEmitter)="onPinnedMenuSelected($event)">
+        (selectMenuEmitter)="onLockedMenuSelected($event)">
     </app-pinned-menus-sidebar>
 </div>
