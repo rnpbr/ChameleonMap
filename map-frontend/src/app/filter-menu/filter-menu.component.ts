@@ -166,11 +166,14 @@ export class FilterMenuComponent {
 
   get mapMarkers(): Array<MapMarkerType>{
    let markers: Array<MapMarkerType> = [];
-   markers = markers.concat(this.tags).concat(this.linkGroups).concat(this.kmlShapes); 
+   markers = markers.concat(this.tags).concat(this.linkGroups).concat(this.kmlShapes);
    return markers;
   }
 
-  constructor(private eventEmitterService: EventEmitterService, private matIconRegistry: MatIconRegistry, private domSanitizer: DomSanitizer) { 
+  @Output()
+  tagFocus = new EventEmitter();
+
+  constructor(private eventEmitterService: EventEmitterService, private matIconRegistry: MatIconRegistry, private domSanitizer: DomSanitizer) {
     this.matIconRegistry.addSvgIcon(
       'eye-off',
       this.domSanitizer.bypassSecurityTrustResourceUrl('assets/icons/eye-off.svg')
@@ -462,6 +465,16 @@ export class FilterMenuComponent {
       }
     }
     return null;
+  }
+
+  focusTagOnMap(marker: MapMarkerType) {
+    if (!this.isMarkerTag(marker)) return;
+    if (!marker.visibility) return;
+
+    const locations = marker.related_locations
+      .map((location_id: number) => this.getLocationById(location_id))
+      .filter((location: Location | null): location is Location => location != null);
+    this.tagFocus.emit({ locations });
   }
 
   checkActiveMenuTagsVisibilityStatus(menuId: number) {

@@ -27,8 +27,8 @@
         <div *ngIf="menu.expanded" class="menu-body">
             <div *ngFor="let marker of mapMarkers">
                 <div *ngIf="isMarkerActive(marker)">
-                    <div id="tag-list" class="tag-list" *ngIf="marker.parent_menu === menu.id">    
-                        <div id="tag-name" *ngIf="marker.visibility" class="tag-name" >{{marker.name}}</div>
+                    <div id="tag-list" class="tag-list" *ngIf="marker.parent_menu === menu.id">
+                        <div id="tag-name" *ngIf="marker.visibility" class="tag-name" (click)="focusTagOnMap(marker)">{{marker.name}}</div>
                         <div *ngIf="!marker.visibility" class="tag-name tag-name-disabled">{{marker.name}}</div>
                         <div id="tag-button" class="marker-item-icon" [ngClass]="{'tag-item-icon':isMarkerTag(marker), 'kml-item-icon': !isMarkerTag(marker)}" (click)="pinClick(marker, $event)" [ngStyle]="{'background-color': ((selectedTagsMenuId===menu.id && marker.visibility) || marker.currentColor!==getMarkerColor(marker)) ? marker.currentColor : 'rgb(154, 154, 154)'}" >
                             <span *ngIf="isMarkerTag(marker);" class="white-circle"></span>

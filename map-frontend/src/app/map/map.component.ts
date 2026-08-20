@@ -1261,6 +1261,47 @@ export class MapComponent implements OnInit {
     this.currentMenuGroup = event.clickedMenu;
   }
 
+  public onTagFocus(event: any) {
+    this.focusMapOnLocations(event.locations);
+  }
+
+  private getFilterMenuOverlapWidth(): number {
+    const filterMenuPanel = document.querySelector('#app-filter-menu .scrollbar-box') as HTMLElement;
+    const mapContainer = document.getElementById('map');
+    if (!filterMenuPanel || !mapContainer) return 0;
+
+    const overlap = Math.max(0, filterMenuPanel.getBoundingClientRect().right);
+    const mapWidth = mapContainer.getBoundingClientRect().width;
+    // On narrow (mobile) screens the panel can cover most of the viewport;
+    // never reserve more than half the map so there's always room to focus into.
+    return Math.min(overlap, mapWidth * 0.5);
+  }
+
+  private focusMapOnLocations(locations: Array<Location>) {
+    if (!locations || locations.length === 0) return;
+
+    const leftPadding = this.getFilterMenuOverlapWidth() + 20;
+
+    if (locations.length === 1) {
+      const zoom = 16;
+      const location = locations[0];
+      const targetPoint = this.map
+        .project([location.latitude, location.longitude], zoom)
+        .subtract([leftPadding / 2, 0]);
+      const targetCenter = this.map.unproject(targetPoint, zoom);
+      this.map.flyTo(targetCenter, zoom);
+    } else {
+      const bounds = L.latLngBounds(
+        locations.map((location): L.LatLngTuple => [location.latitude, location.longitude])
+      );
+      this.map.flyToBounds(bounds, {
+        paddingTopLeft: [leftPadding, 20],
+        paddingBottomRight: [20, 20],
+        maxZoom: 16
+      });
+    }
+  }
+
   public showHowToHelpMessage(id: number) {
     this.overlayedPopup.activateByLocation(this.getLocationById(id))
   }
