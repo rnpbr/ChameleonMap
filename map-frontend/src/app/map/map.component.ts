@@ -1261,8 +1261,67 @@ export class MapComponent implements OnInit {
     this.currentMenuGroup = event.clickedMenu;
   }
 
-  public onTagFocus(event: any) {
-    this.focusMapOnLocations(event.locations);
+  public onMarkerFocus(marker: MapMarkerType) {
+    if (!marker || !marker.visibility) return;
+    if (!this.map) return;
+
+    if (this.isTag(marker)) {
+      this.focusMapOnLocations(this.resolveTagLocations(marker));
+    } else if (this.isLinksGroup(marker)) {
+      this.focusMapOnLocations(this.resolveLinkGroupLocations(marker));
+    } else if (this.isKml(marker)) {
+      this.focusMapOnKml(marker);
+    }
+  }
+
+  private isTag(marker: MapMarkerType): marker is Tag {
+    return 'related_locations' in marker;
+  }
+
+  private isLinksGroup(marker: MapMarkerType): marker is LinksGroup {
+    return 'links_color' in marker && !('geojson' in marker);
+  }
+
+  private isKml(marker: MapMarkerType): marker is KmlLayerDto {
+    return 'geojson' in marker;
+  }
+
+  private resolveTagLocations(tag: Tag): Array<Location> {
+    return tag.related_locations
+      .map((locationId: number) => this.getLocationById(locationId))
+      .filter(
+        (location: Location | null): location is Location =>
+          location != null && location.onMap
+      );
+  }
+
+  private resolveLinkGroupLocations(linkGroup: LinksGroup): Array<Location> {
+    const locationsById = new Map<number, Location>();
+    (this._links ?? []).forEach((link: Link) => {
+      if (link.links_group !== linkGroup.id) return;
+      if (!link.line || !this.map.hasLayer(link.line)) return;
+
+      const location1 = this.getLocationById(link.location_1);
+      const location2 = this.getLocationById(link.location_2);
+      if (location1) locationsById.set(location1.id, location1);
+      if (location2) locationsById.set(location2.id, location2);
+    });
+    return Array.from(locationsById.values());
+  }
+
+  private focusMapOnKml(kml: KmlLayerDto) {
+    const layer = this.kmlLayers[kml.id] as L.GeoJSON | undefined;
+    if (!layer || !this.map.hasLayer(layer)) return;
+
+    const bounds = layer.getBounds();
+    if (!bounds.isValid()) return;
+
+    const leftPadding = this.getFilterMenuOverlapWidth() + 20;
+    this.map.flyToBounds(bounds, {
+      paddingTopLeft: [leftPadding, 20],
+      paddingBottomRight: [20, 20],
+      maxZoom: 16
+    });
   }
 
   private getFilterMenuOverlapWidth(): number {

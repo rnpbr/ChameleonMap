@@ -171,7 +171,7 @@ export class FilterMenuComponent {
   }
 
   @Output()
-  tagFocus = new EventEmitter();
+  markerFocus = new EventEmitter<MapMarkerType>();
 
   constructor(private eventEmitterService: EventEmitterService, private matIconRegistry: MatIconRegistry, private domSanitizer: DomSanitizer) {
     this.matIconRegistry.addSvgIcon(
@@ -383,6 +383,21 @@ export class FilterMenuComponent {
     return this.getMarkerType(marker) == 'KmlLayerDto';
   }
 
+  getMarkerIconClass(marker: MapMarkerType): string {
+    if (this.isMarkerTag(marker)) return 'tag-item-icon';
+    if (this.isMarkerLinksGroup(marker)) return 'links-item-icon';
+    return '';
+  }
+
+  getMarkerDisplayColor(marker: MapMarkerType): string {
+    const isSelectedAndVisible =
+      this.selectedTagsMenuId === marker.parent_menu && marker.visibility;
+    const hasCustomColor = marker.currentColor !== this.getMarkerColor(marker);
+    return isSelectedAndVisible || hasCustomColor
+      ? marker.currentColor
+      : 'rgb(154, 154, 154)';
+  }
+
   isMarkerActive(marker: MapMarkerType): boolean{
     let activity: boolean = true;
     if(this.isMarkerTag(marker)){
@@ -449,15 +464,6 @@ export class FilterMenuComponent {
     this.menuCliked.emit({ selectedTagsMenuId: this.selectedTagsMenuId });
   }
 
-  getLocationById(location_id: number) {
-    for (const location of this._locations) {
-      if (location.id === location_id) {
-        return location;
-      }
-    }
-    return null;
-  }
-
   getMenuById(id: number) {
     for (const menu of this._menus) {
       if (menu.id === id) {
@@ -467,14 +473,9 @@ export class FilterMenuComponent {
     return null;
   }
 
-  focusTagOnMap(marker: MapMarkerType) {
-    if (!this.isMarkerTag(marker)) return;
-    if (!marker.visibility) return;
-
-    const locations = marker.related_locations
-      .map((location_id: number) => this.getLocationById(location_id))
-      .filter((location: Location | null): location is Location => location != null);
-    this.tagFocus.emit({ locations });
+  focusMarkerOnMap(marker: MapMarkerType) {
+    if (!marker || !marker.visibility) return;
+    this.markerFocus.emit(marker);
   }
 
   checkActiveMenuTagsVisibilityStatus(menuId: number) {
