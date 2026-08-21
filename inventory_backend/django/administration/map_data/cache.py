@@ -4,6 +4,7 @@ from django.db import connection
 from . import MAP_DATA_VERSION
 from .builder import build_map_data
 
+MAP_DATA_CACHE_TIMEOUT = 60 * 60 * 24  # 24h
 
 def current_schema_name(schema_name=None):
     if schema_name:
@@ -25,4 +26,4 @@ def get_map_data(schema_name=None):
     def _build():
         return build_map_data()
 
-    return cache.get_or_set(key, _build, timeout=None)
+    return cache.get_or_set(key, _build, timeout=MAP_DATA_CACHE_TIMEOUT)
