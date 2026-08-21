@@ -1,19 +1,26 @@
-# Foco do Mapa ao Clicar em um Item do Menu — ChameleonMap Frontend
+# Foco do Mapa ao Clicar em um Menu ou Item — ChameleonMap Frontend
 
 ## Visão Geral
 
-No menu de filtros (`app-filter-menu`), cada item pode ser uma **tag**, um **grupo de links** ou um **KML**. Ao clicar no **nome** do item, o mapa se move/dá zoom automaticamente para enquadrar os elementos relacionados a ele que estão **visíveis no mapa**:
+No menu de filtros (`app-filter-menu`), há dois níveis de foco:
 
-- **Tag**: foca nas *locations* relacionadas que estão no mapa.
-- **Grupo de links**: foca nas locations dos *links* do grupo que estão desenhados no mapa.
-- **KML**: foca nos limites (*bounds*) da camada KML, se ela estiver carregada no mapa.
+1. **Foco no item** — cada item pode ser uma **tag**, um **grupo de links** ou um **KML**. Ao clicar no **nome** do item, o mapa se move/dá zoom automaticamente para enquadrar os elementos relacionados a ele que estão **visíveis no mapa**:
 
-O enquadramento segue as mesmas regras já existentes:
+   - **Tag**: foca nas *locations* relacionadas que estão no mapa.
+   - **Grupo de links**: foca nas locations dos *links* do grupo que estão desenhados no mapa.
+   - **KML**: foca nos limites (*bounds*) da camada KML, se ela estiver carregada no mapa.
+
+2. **Foco no menu** — ao clicar no **nome do menu**:
+
+   - **1º clique**: apenas seleciona o menu.
+   - **2º clique** (menu já selecionado): foca em **todos** os elementos visíveis do menu (locations, links e KMLs).
+
+O enquadramento segue as mesmas regras:
 
 - **1 ponto**: o mapa centraliza e dá zoom (`flyTo`).
 - **Vários pontos/área**: o mapa ajusta o zoom/posição para enquadrar tudo (`flyToBounds`).
 
-Nenhuma sidebar de detalhes é aberta nesse clique — o clique no nome é usado exclusivamente para focar o mapa.
+Nenhuma sidebar de detalhes é aberta nesses cliques — o clique no nome é usado exclusivamente para selecionar/focar o mapa.
 
 ---
 
@@ -26,29 +33,30 @@ app-map (MapComponent)
  ├─ owns: this.map (instância L.Map do Leaflet)
  ├─ owns: this.locations, this.links, this.kmlLayers
  └─ <app-filter-menu> (FilterMenuComponent)
-      ├─ [tags]="tags"          (Input)
-      ├─ [linkGroups]="linksGroup" (Input)
-      ├─ [kmlShapes]="kmlShapes"   (Input)
-      ├─ [locations]="locations"   (Input)
-      └─ (markerFocus)="onMarkerFocus($event)"  ← Output
+      ├─ [tags], [linkGroups], [kmlShapes], [locations]  (Inputs)
+      ├─ (markerFocus)="onMarkerFocus($event)"           ← foco no item
+      └─ (menuFocus)="onMenuFocus($event)"               ← foco no menu
 ```
 
 ### Arquivos alterados
 
 | Arquivo | Mudança |
 |---|---|
-| `map-frontend/src/app/filter-menu/filter-menu.component.html` | `(click)="focusMarkerOnMap(marker)"` no nome de qualquer item visível + ícone `layers` para KML |
-| `map-frontend/src/app/filter-menu/filter-menu.component.ts` | `@Output() markerFocus`, `focusMarkerOnMap`, `getMarkerIconClass`, `getMarkerDisplayColor` |
-| `map-frontend/src/app/map/map.component.html` | binding `(markerFocus)="onMarkerFocus($event)"` no `<app-filter-menu>` |
-| `map-frontend/src/app/map/map.component.ts` | `onMarkerFocus`, `resolveTagLocations`, `resolveLinkGroupLocations`, `focusMapOnKml`, `focusMapOnLocations`, `getFilterMenuOverlapWidth` |
+| `map-frontend/src/app/map/map-behavior.ts` | type guards compartilhados `isTag`, `isLinksGroup`, `isKml` |
+| `map-frontend/src/app/filter-menu/filter-menu.component.html` | `(click)` no nome do item e no nome do menu + ícone `layers` para KML |
+| `map-frontend/src/app/filter-menu/filter-menu.component.ts` | `@Output() markerFocus`/`menuFocus`, `focusMarkerOnMap`, `onMenuNameClick`, `getMarkerIconClass`, `getMarkerDisplayColor` |
+| `map-frontend/src/app/map/map.component.html` | bindings `(markerFocus)` e `(menuFocus)` |
+| `map-frontend/src/app/map/map.component.ts` | `onMarkerFocus`, `onMenuFocus`, resolvers, helpers de voo e `getFilterMenuOverlapWidth` |
 
 ---
 
 ## Como Foi Implementado
 
-### 1. `FilterMenuComponent` emite o item clicado
+### 1. `FilterMenuComponent` emite o clique
 
-O menu não resolve mais as locations (isso agora é responsabilidade do `MapComponent`, que detém todos os dados). O clique apenas emite o item (`Tag | LinksGroup | KmlLayerDto`):
+O menu não resolve mais as locations (isso agora é responsabilidade do `MapComponent`, que detém todos os dados). Há dois handlers:
+
+**Item** — emite o item clicado (`Tag | LinksGroup | KmlLayerDto`):
 
 ```ts
 // filter-menu.component.ts
@@ -63,7 +71,25 @@ focusMarkerOnMap(marker: MapMarkerType) {
 
 No template, o nome de qualquer item visível é um `<button>` clicável; itens com `visibility === false` são renderizados como texto desabilitado (sem handler).
 
-> **Regra de visibilidade**: o clique só foca se o item está com o "olho aberto" (`marker.visibility === true`). Além disso, o `MapComponent` filtra novamente para considerar apenas os elementos **de fato renderizados no mapa** (ver seção 2).
+**Menu** — seleciona no primeiro clique e foca no segundo:
+
+```ts
+@Output()
+menuFocus = new EventEmitter<Menu>();
+
+onMenuNameClick(menu: Menu, event: Event) {
+  event.stopPropagation();
+
+  if (this.selectedTagsMenuId === menu.id) {
+    this.menuFocus.emit(menu);
+    return;
+  }
+
+  this.menuClick(menu);
+}
+```
+
+> **Regra de visibilidade**: o foco (de item ou menu) considera apenas os elementos **de fato renderizados no mapa** — o `MapComponent` filtra por `onMap`/`hasLayer` (ver seções seguintes).
 
 ### 2. `MapComponent` resolve e foca por tipo
 
@@ -73,28 +99,29 @@ public onMarkerFocus(marker: MapMarkerType) {
   if (!marker || !marker.visibility) return;
   if (!this.map) return;
 
-  if (this.isTag(marker)) {
+  if (isTag(marker)) {
     this.focusMapOnLocations(this.resolveTagLocations(marker));
-  } else if (this.isLinksGroup(marker)) {
+  } else if (isLinksGroup(marker)) {
     this.focusMapOnLocations(this.resolveLinkGroupLocations(marker));
-  } else if (this.isKml(marker)) {
+  } else if (isKml(marker)) {
     this.focusMapOnKml(marker);
   }
 }
 ```
 
-Os type guards diferenciam os três tipos:
+Os type guards que diferenciam os três tipos ficam em `map-behavior.ts` (fonte única, compartilhada com o `FilterMenuComponent`):
 
 ```ts
-private isTag(marker: MapMarkerType): marker is Tag {
+// map-behavior.ts
+export function isTag(marker: MapMarkerType): marker is Tag {
   return 'related_locations' in marker;
 }
 
-private isLinksGroup(marker: MapMarkerType): marker is LinksGroup {
-  return 'links_color' in marker && !('geojson' in marker);
+export function isLinksGroup(marker: MapMarkerType): marker is LinksGroup {
+  return 'links_color' in marker && !('geojson' in marker) && !('kml_file' in marker);
 }
 
-private isKml(marker: MapMarkerType): marker is KmlLayerDto {
+export function isKml(marker: MapMarkerType): marker is KmlLayerDto {
   return 'geojson' in marker;
 }
 ```
@@ -136,52 +163,100 @@ Um link é considerado visível quando sua linha (`link.line`) está adicionada 
 
 ```ts
 private focusMapOnKml(kml: KmlLayerDto) {
+  const bounds = this.getVisibleKmlBounds(kml);
+  if (!bounds) return;
+
+  this.flyToBoundsWithPadding(bounds);
+}
+
+private getVisibleKmlBounds(kml: KmlLayerDto): L.LatLngBounds | null {
   const layer = this.kmlLayers[kml.id] as L.GeoJSON | undefined;
-  if (!layer || !this.map.hasLayer(layer)) return;
+  if (!layer || !this.map.hasLayer(layer)) return null;
 
   const bounds = layer.getBounds();
-  if (!bounds.isValid()) return;
-
-  const leftPadding = this.getFilterMenuOverlapWidth() + 20;
-  this.map.flyToBounds(bounds, {
-    paddingTopLeft: [leftPadding, 20],
-    paddingBottomRight: [20, 20],
-    maxZoom: 16
-  });
+  return bounds.isValid() ? bounds : null;
 }
 ```
 
-Só foca se a camada KML estiver no mapa (`this.map.hasLayer(layer)`).
+Só foca se a camada KML estiver no mapa (`this.map.hasLayer(layer)`). `getVisibleKmlBounds` é reutilizado também pelo foco de menu.
 
-### 3. `MapComponent` move o mapa (Leaflet)
+### 3. `MapComponent` foca no menu
+
+Ao clicar no nome do menu (2º clique, quando já selecionado), o `MapComponent` junta tudo o que está visível naquele menu:
+
+```ts
+public onMenuFocus(menu: Menu) {
+  if (!menu || !this.map) return;
+
+  const locations = this.resolveMenuLocations(menu);
+  const kmlBounds = this.resolveMenuKmlBounds(menu);
+
+  if (locations.length === 0 && kmlBounds.length === 0) return;
+
+  if (locations.length === 1 && kmlBounds.length === 0) {
+    this.focusMapOnSingleLocation(locations[0]);
+    return;
+  }
+
+  const bounds = L.latLngBounds([]);
+  locations.forEach((location) => bounds.extend([location.latitude, location.longitude]));
+  kmlBounds.forEach((kmlBound) => bounds.extend(kmlBound));
+
+  this.flyToBoundsWithPadding(bounds);
+}
+```
+
+- `resolveMenuLocations(menu)`: junta as locations visíveis (`onMap`) das tags do menu + as locations dos links visíveis (`hasLayer(link.line)`) dos grupos de links do menu, deduplicadas.
+- `resolveMenuKmlBounds(menu)`: bounds das camadas KML do menu que estão no mapa (via `getVisibleKmlBounds`).
+
+### 4. `MapComponent` move o mapa (Leaflet)
+
+A lógica de voo é dividida em helpers reutilizados por item e por menu:
 
 ```ts
 private focusMapOnLocations(locations: Array<Location>) {
   if (!locations || locations.length === 0) return;
 
-  const leftPadding = this.getFilterMenuOverlapWidth() + 20;
-
   if (locations.length === 1) {
-    // flyTo não aceita padding, então deslocamos o ponto de destino
-    // manualmente em espaço de pixels antes de converter de volta pra lat/lng.
-    const zoom = 16;
-    const location = locations[0];
-    const targetPoint = this.map
-      .project([location.latitude, location.longitude], zoom)
-      .subtract([leftPadding / 2, 0]);
-    const targetCenter = this.map.unproject(targetPoint, zoom);
-    this.map.flyTo(targetCenter, zoom);
-  } else {
-    const bounds = L.latLngBounds(
-      locations.map((location): L.LatLngTuple => [location.latitude, location.longitude])
-    );
-    this.map.flyToBounds(bounds, {
-      paddingTopLeft: [leftPadding, 20],
-      paddingBottomRight: [20, 20],
-      maxZoom: 16
-    });
+    this.focusMapOnSingleLocation(locations[0]);
+    return;
   }
+
+  const bounds = L.latLngBounds(
+    locations.map((location): L.LatLngTuple => [location.latitude, location.longitude])
+  );
+  this.flyToBoundsWithPadding(bounds);
 }
+
+private focusMapOnSingleLocation(location: Location) {
+  // flyTo não aceita padding, então deslocamos o ponto de destino
+  // manualmente em espaço de pixels antes de converter de volta pra lat/lng.
+  const zoom = MapComponent.FOCUS_ZOOM;
+  const leftPadding = this.getFilterMenuOverlapWidth() + MapComponent.FOCUS_PADDING;
+  const targetPoint = this.map
+    .project([location.latitude, location.longitude], zoom)
+    .subtract([leftPadding / 2, 0]);
+  const targetCenter = this.map.unproject(targetPoint, zoom);
+  this.map.flyTo(targetCenter, zoom);
+}
+
+private flyToBoundsWithPadding(bounds: L.LatLngBounds) {
+  if (!bounds.isValid()) return;
+
+  const leftPadding = this.getFilterMenuOverlapWidth() + MapComponent.FOCUS_PADDING;
+  this.map.flyToBounds(bounds, {
+    paddingTopLeft: [leftPadding, MapComponent.FOCUS_PADDING],
+    paddingBottomRight: [MapComponent.FOCUS_PADDING, MapComponent.FOCUS_PADDING],
+    maxZoom: MapComponent.FOCUS_ZOOM
+  });
+}
+```
+
+Os valores fixos são constantes da classe:
+
+```ts
+private static readonly FOCUS_ZOOM = 16;
+private static readonly FOCUS_PADDING = 20;
 ```
 
 ---
@@ -261,6 +336,6 @@ Por isso o `Math.min(overlap, mapWidth * 0.5)` limita o padding reservado a **no
 ## Limitações Conhecidas / Possíveis Melhorias Futuras
 
 - `getFilterMenuOverlapWidth()` não é recalculado em `resize`/`orientationchange` — só é lido no momento do clique, o que é suficiente pro caso de uso atual (o valor é sempre atual no instante do clique).
-- O zoom fixo de `16` para foco em location única e como `maxZoom` do `flyToBounds` é um valor arbitrário; pode ser ajustado caso o produto queira um comportamento diferente por tipo de item.
+- O zoom fixo (`MapComponent.FOCUS_ZOOM = 16`, usado no foco de location única e como `maxZoom` do `flyToBounds`) e o padding fixo (`MapComponent.FOCUS_PADDING = 20`) são valores arbitrários; podem ser ajustados caso o produto queira um comportamento diferente por tipo de item.
 - O foco de um **grupo de links** enquadra as *locations* dos links visíveis (não os bounds das linhas em si). Para links retos entre locations isso é equivalente; para links muito curvos, os bounds reais da linha podem exceder os das locations — nesse caso seria possível usar `link.line.getBounds()`.
 - `TagSidebarComponent` existe no código (declarado em `app.module.ts`), mas atualmente não é renderizado em nenhum template — no futuro, se for ligado ao clique do item, poderia ganhar uma lista de elementos clicáveis, cada um com seu próprio "foco no mapa" individual, reaproveitando `onMarkerFocus`.

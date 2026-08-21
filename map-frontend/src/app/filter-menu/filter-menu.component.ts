@@ -10,6 +10,7 @@ import { EventEmitterService } from '../event-emitter.service';
 import { PinnedMenusSidebarComponent } from './pinned-menus-sidebar/pinned-menus-sidebar.component';
 import { MatIconRegistry } from '@angular/material/icon';
 import { DomSanitizer } from '@angular/platform-browser';
+import { isKml, isLinksGroup, isTag } from '../map/map-behavior';
 
 enum TagsMenuButtonBehavior {
   CloseAllEyes,
@@ -173,6 +174,9 @@ export class FilterMenuComponent {
   @Output()
   markerFocus = new EventEmitter<MapMarkerType>();
 
+  @Output()
+  menuFocus = new EventEmitter<Menu>();
+
   constructor(private eventEmitterService: EventEmitterService, private matIconRegistry: MatIconRegistry, private domSanitizer: DomSanitizer) {
     this.matIconRegistry.addSvgIcon(
       'eye-off',
@@ -221,6 +225,17 @@ export class FilterMenuComponent {
       this.menuCliked.emit({ selectedTagsMenuId: this.selectedTagsMenuId });
       this.checkActiveMenuTagsVisibilityStatus(menu.id);
     }
+  }
+
+  onMenuNameClick(menu: Menu, event: Event) {
+    event.stopPropagation();
+
+    if (this.selectedTagsMenuId === menu.id) {
+      this.menuFocus.emit(menu);
+      return;
+    }
+
+    this.menuClick(menu);
   }
 
   closeAllEyes(menu: Menu, item: any, event: any) {
@@ -332,20 +347,12 @@ export class FilterMenuComponent {
 
 
   getMarkerType(marker: MapMarkerType): string{
-    let type: string = 'undefined';
-    if(marker){
-      if('geojson' in marker){
-        type = 'KmlLayerDto';
-      }else if('kml_file' in marker){
-        type = 'KmlShape';
-      }else if('links_color' in marker && !('geojson' in marker)){
-        type = 'LinksGroup';
-      }else if('child_tags' in marker){
-        type = 'Tag';
-      }
-    }
-
-    return type;
+    if (!marker) return 'undefined';
+    if (isKml(marker)) return 'KmlLayerDto';
+    if ('kml_file' in marker) return 'KmlShape';
+    if (isLinksGroup(marker)) return 'LinksGroup';
+    if (isTag(marker)) return 'Tag';
+    return 'undefined';
   }
 
   getMarkerColor(marker: MapMarkerType){
@@ -374,13 +381,13 @@ export class FilterMenuComponent {
   }
 
   isMarkerTag(marker: MapMarkerType): marker is Tag{
-    return this.getMarkerType(marker) == 'Tag';
+    return isTag(marker);
   }
   isMarkerLinksGroup(marker: MapMarkerType): marker is LinksGroup{
-    return this.getMarkerType(marker) == 'LinksGroup';
+    return isLinksGroup(marker);
   }
   isMarkerKmlLayerDto(marker: MapMarkerType): marker is KmlLayerDto{
-    return this.getMarkerType(marker) == 'KmlLayerDto';
+    return isKml(marker);
   }
 
   getMarkerIconClass(marker: MapMarkerType): string {

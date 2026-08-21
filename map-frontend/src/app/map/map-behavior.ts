@@ -242,3 +242,15 @@ export function shouldShowTagForMenu(
 export function buildEntityIndex<T extends { id: number }>(items: T[]): Map<number, T> {
   return new Map(items.map((item) => [item.id, item]));
 }
+
+export function isTag(marker: MapMarkerType): marker is Tag {
+  return 'related_locations' in marker;
+}
+
+export function isLinksGroup(marker: MapMarkerType): marker is LinksGroup {
+  return 'links_color' in marker && !('geojson' in marker) && !('kml_file' in marker);
+}
+
+export function isKml(marker: MapMarkerType): marker is KmlLayerDto {
+  return 'geojson' in marker;
+}

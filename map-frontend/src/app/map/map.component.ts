@@ -22,8 +22,11 @@ import { runBatchedWork, BatchSchedulerHandle } from './map-interaction-schedule
 import {
   buildEntityIndex,
   isAnyClusterActive,
+  isKml,
   isLinkEligible,
+  isLinksGroup,
   isMenuSimultaneousAndSelected,
+  isTag,
   shouldShowTagForMenu
 } from './map-behavior';
 
@@ -91,6 +94,8 @@ export class MapComponent implements OnInit {
 
   private static readonly MARKER_INTERACTION_CHUNK = 200;
   private static readonly LINK_INTERACTION_CHUNK = 100;
+  private static readonly FOCUS_ZOOM = 16;
+  private static readonly FOCUS_PADDING = 20;
 
   @HostListener('document:click', ['$event'])
   clickout(event: any) {
@@ -1265,25 +1270,33 @@ export class MapComponent implements OnInit {
     if (!marker || !marker.visibility) return;
     if (!this.map) return;
 
-    if (this.isTag(marker)) {
+    if (isTag(marker)) {
       this.focusMapOnLocations(this.resolveTagLocations(marker));
-    } else if (this.isLinksGroup(marker)) {
+    } else if (isLinksGroup(marker)) {
       this.focusMapOnLocations(this.resolveLinkGroupLocations(marker));
-    } else if (this.isKml(marker)) {
+    } else if (isKml(marker)) {
       this.focusMapOnKml(marker);
     }
   }
 
-  private isTag(marker: MapMarkerType): marker is Tag {
-    return 'related_locations' in marker;
-  }
+  public onMenuFocus(menu: Menu) {
+    if (!menu || !this.map) return;
 
-  private isLinksGroup(marker: MapMarkerType): marker is LinksGroup {
-    return 'links_color' in marker && !('geojson' in marker);
-  }
+    const locations = this.resolveMenuLocations(menu);
+    const kmlBounds = this.resolveMenuKmlBounds(menu);
 
-  private isKml(marker: MapMarkerType): marker is KmlLayerDto {
-    return 'geojson' in marker;
+    if (locations.length === 0 && kmlBounds.length === 0) return;
+
+    if (locations.length === 1 && kmlBounds.length === 0) {
+      this.focusMapOnSingleLocation(locations[0]);
+      return;
+    }
+
+    const bounds = L.latLngBounds([]);
+    locations.forEach((location) => bounds.extend([location.latitude, location.longitude]));
+    kmlBounds.forEach((kmlBound) => bounds.extend(kmlBound));
+
+    this.flyToBoundsWithPadding(bounds);
   }
 
   private resolveTagLocations(tag: Tag): Array<Location> {
@@ -1310,18 +1323,84 @@ export class MapComponent implements OnInit {
   }
 
   private focusMapOnKml(kml: KmlLayerDto) {
+    const bounds = this.getVisibleKmlBounds(kml);
+    if (!bounds) return;
+
+    this.flyToBoundsWithPadding(bounds);
+  }
+
+  private getVisibleKmlBounds(kml: KmlLayerDto): L.LatLngBounds | null {
     const layer = this.kmlLayers[kml.id] as L.GeoJSON | undefined;
-    if (!layer || !this.map.hasLayer(layer)) return;
+    if (!layer || !this.map.hasLayer(layer)) return null;
 
     const bounds = layer.getBounds();
+    return bounds.isValid() ? bounds : null;
+  }
+
+  private resolveMenuLocations(menu: Menu): Array<Location> {
+    const locationsById = new Map<number, Location>();
+
+    (this._tags ?? []).forEach((tag) => {
+      if (tag.parent_menu !== menu.id) return;
+      this.resolveTagLocations(tag).forEach((location) => locationsById.set(location.id, location));
+    });
+
+    (this._linksGroup ?? []).forEach((linkGroup) => {
+      if (linkGroup.parent_menu !== menu.id) return;
+      this.resolveLinkGroupLocations(linkGroup).forEach((location) => locationsById.set(location.id, location));
+    });
+
+    return Array.from(locationsById.values());
+  }
+
+  private resolveMenuKmlBounds(menu: Menu): Array<L.LatLngBounds> {
+    const kmlBounds: Array<L.LatLngBounds> = [];
+
+    (this._kmlShapes ?? []).forEach((kml) => {
+      if (kml.parent_menu !== menu.id) return;
+
+      const bounds = this.getVisibleKmlBounds(kml);
+      if (bounds) {
+        kmlBounds.push(bounds);
+      }
+    });
+
+    return kmlBounds;
+  }
+
+  private focusMapOnSingleLocation(location: Location) {
+    const zoom = MapComponent.FOCUS_ZOOM;
+    const leftPadding = this.getFilterMenuOverlapWidth() + MapComponent.FOCUS_PADDING;
+    const targetPoint = this.map
+      .project([location.latitude, location.longitude], zoom)
+      .subtract([leftPadding / 2, 0]);
+    const targetCenter = this.map.unproject(targetPoint, zoom);
+    this.map.flyTo(targetCenter, zoom);
+  }
+
+  private flyToBoundsWithPadding(bounds: L.LatLngBounds) {
     if (!bounds.isValid()) return;
 
-    const leftPadding = this.getFilterMenuOverlapWidth() + 20;
+    const leftPadding = this.getFilterMenuOverlapWidth() + MapComponent.FOCUS_PADDING;
     this.map.flyToBounds(bounds, {
-      paddingTopLeft: [leftPadding, 20],
-      paddingBottomRight: [20, 20],
-      maxZoom: 16
+      paddingTopLeft: [leftPadding, MapComponent.FOCUS_PADDING],
+      paddingBottomRight: [MapComponent.FOCUS_PADDING, MapComponent.FOCUS_PADDING],
+      maxZoom: MapComponent.FOCUS_ZOOM
     });
+  }
+
+  private focusMapOnLocations(locations: Array<Location>) {
+    if (!locations || locations.length === 0) return;
+
+    if (locations.length === 1) {
+      this.focusMapOnSingleLocation(locations[0]);
+      return;
+    }
+
+    const bounds = L.latLngBounds(
+      locations.map((location): L.LatLngTuple => [location.latitude, location.longitude])
+    );
+    this.flyToBoundsWithPadding(bounds);
   }
 
   private getFilterMenuOverlapWidth(): number {
@@ -1334,31 +1413,6 @@ export class MapComponent implements OnInit {
     // On narrow (mobile) screens the panel can cover most of the viewport;
     // never reserve more than half the map so there's always room to focus into.
     return Math.min(overlap, mapWidth * 0.5);
-  }
-
-  private focusMapOnLocations(locations: Array<Location>) {
-    if (!locations || locations.length === 0) return;
-
-    const leftPadding = this.getFilterMenuOverlapWidth() + 20;
-
-    if (locations.length === 1) {
-      const zoom = 16;
-      const location = locations[0];
-      const targetPoint = this.map
-        .project([location.latitude, location.longitude], zoom)
-        .subtract([leftPadding / 2, 0]);
-      const targetCenter = this.map.unproject(targetPoint, zoom);
-      this.map.flyTo(targetCenter, zoom);
-    } else {
-      const bounds = L.latLngBounds(
-        locations.map((location): L.LatLngTuple => [location.latitude, location.longitude])
-      );
-      this.map.flyToBounds(bounds, {
-        paddingTopLeft: [leftPadding, 20],
-        paddingBottomRight: [20, 20],
-        maxZoom: 16
-      });
-    }
   }
 
   public showHowToHelpMessage(id: number) {

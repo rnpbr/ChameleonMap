@@ -3,7 +3,7 @@
         <div>
             <mat-expansion-panel-header [expandedHeight]="'45px'" (click)="menuClick(menu)" class="menu-header" [ngClass]="{'pinned-header': menu.pinned === true, 'selected-menu-header': selectedTagsMenuId==menu.id}">
                 <mat-panel-title>
-                    <div class="menu-name">
+                    <div class="menu-name" (click)="onMenuNameClick(menu, $event)">
                         <p class="menu-text">{{ capitalizeFirstLetter(menu.name) }}</p>
                     </div>
                     <div class="menu-button-container">
