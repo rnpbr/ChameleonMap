@@ -171,9 +171,11 @@ export class FilterMenuComponent {
    return markers;
   }
 
+  /** Emitted when an item name is clicked, so the map can focus its elements. */
   @Output()
   markerFocus = new EventEmitter<MapMarkerType>();
 
+  /** Emitted when a menu name is clicked while the menu is already selected. */
   @Output()
   menuFocus = new EventEmitter<Menu>();
 
@@ -227,6 +229,10 @@ export class FilterMenuComponent {
     }
   }
 
+  /**
+   * Handles a click on a menu name: selects the menu on the first click and
+   * emits {@link menuFocus} when the menu is already selected.
+   */
   onMenuNameClick(menu: Menu, event: Event) {
     event.stopPropagation();
 
@@ -390,12 +396,17 @@ export class FilterMenuComponent {
     return isKml(marker);
   }
 
+  /** Returns the CSS class for the marker icon (pin, line or KML layers icon). */
   getMarkerIconClass(marker: MapMarkerType): string {
     if (this.isMarkerTag(marker)) return 'tag-item-icon';
     if (this.isMarkerLinksGroup(marker)) return 'links-item-icon';
     return '';
   }
 
+  /**
+   * Returns the color shown for a marker icon: its current color when selected
+   * and visible (or pinned), otherwise the default gray.
+   */
   getMarkerDisplayColor(marker: MapMarkerType): string {
     const isSelectedAndVisible =
       this.selectedTagsMenuId === marker.parent_menu && marker.visibility;
@@ -480,6 +491,7 @@ export class FilterMenuComponent {
     return null;
   }
 
+  /** Emits the clicked item so the map can focus its visible elements. */
   focusMarkerOnMap(marker: MapMarkerType) {
     if (!marker || !marker.visibility) return;
     this.markerFocus.emit(marker);

@@ -1266,6 +1266,10 @@ export class MapComponent implements OnInit {
     this.currentMenuGroup = event.clickedMenu;
   }
 
+  /**
+   * Handles an item click on the filter menu and focuses the map on its elements.
+   * Only elements actually rendered on the map are considered.
+   */
   public onMarkerFocus(marker: MapMarkerType) {
     if (!marker || !marker.visibility) return;
     if (!this.map) return;
@@ -1279,6 +1283,10 @@ export class MapComponent implements OnInit {
     }
   }
 
+  /**
+   * Handles a menu name click (second click, when already selected) and focuses
+   * the map on every visible element of the menu: locations, links and KMLs.
+   */
   public onMenuFocus(menu: Menu) {
     if (!menu || !this.map) return;
 
@@ -1299,6 +1307,7 @@ export class MapComponent implements OnInit {
     this.flyToBoundsWithPadding(bounds);
   }
 
+  /** Returns the locations of a tag that are currently on the map. */
   private resolveTagLocations(tag: Tag): Array<Location> {
     return tag.related_locations
       .map((locationId: number) => this.getLocationById(locationId))
@@ -1308,6 +1317,10 @@ export class MapComponent implements OnInit {
       );
   }
 
+  /**
+   * Returns the locations spanned by the links of a group that are currently
+   * drawn on the map, deduplicated by id.
+   */
   private resolveLinkGroupLocations(linkGroup: LinksGroup): Array<Location> {
     const locationsById = new Map<number, Location>();
     (this._links ?? []).forEach((link: Link) => {
@@ -1322,6 +1335,7 @@ export class MapComponent implements OnInit {
     return Array.from(locationsById.values());
   }
 
+  /** Focuses the map on a KML layer bounds, when the layer is loaded on the map. */
   private focusMapOnKml(kml: KmlLayerDto) {
     const bounds = this.getVisibleKmlBounds(kml);
     if (!bounds) return;
@@ -1329,6 +1343,7 @@ export class MapComponent implements OnInit {
     this.flyToBoundsWithPadding(bounds);
   }
 
+  /** Returns the bounds of a KML layer, or null when it is not loaded or empty. */
   private getVisibleKmlBounds(kml: KmlLayerDto): L.LatLngBounds | null {
     const layer = this.kmlLayers[kml.id] as L.GeoJSON | undefined;
     if (!layer || !this.map.hasLayer(layer)) return null;
@@ -1337,6 +1352,10 @@ export class MapComponent implements OnInit {
     return bounds.isValid() ? bounds : null;
   }
 
+  /**
+   * Collects every visible location of a menu (from its tags and the links of
+   * its link groups), deduplicated by id.
+   */
   private resolveMenuLocations(menu: Menu): Array<Location> {
     const locationsById = new Map<number, Location>();
 
@@ -1353,6 +1372,7 @@ export class MapComponent implements OnInit {
     return Array.from(locationsById.values());
   }
 
+  /** Returns the bounds of every KML layer of a menu that is loaded on the map. */
   private resolveMenuKmlBounds(menu: Menu): Array<L.LatLngBounds> {
     const kmlBounds: Array<L.LatLngBounds> = [];
 
@@ -1368,6 +1388,11 @@ export class MapComponent implements OnInit {
     return kmlBounds;
   }
 
+  /**
+   * Flies to a single location. `flyTo` does not accept padding, so the target
+   * point is shifted in pixel space before converting back to lat/lng, keeping
+   * the marker centered on the visible area instead of behind the filter menu.
+   */
   private focusMapOnSingleLocation(location: Location) {
     const zoom = MapComponent.FOCUS_ZOOM;
     const leftPadding = this.getFilterMenuOverlapWidth() + MapComponent.FOCUS_PADDING;
@@ -1378,6 +1403,7 @@ export class MapComponent implements OnInit {
     this.map.flyTo(targetCenter, zoom);
   }
 
+  /** Flies to bounds, reserving left padding for the filter menu overlay. */
   private flyToBoundsWithPadding(bounds: L.LatLngBounds) {
     if (!bounds.isValid()) return;
 
@@ -1389,6 +1415,7 @@ export class MapComponent implements OnInit {
     });
   }
 
+  /** Focuses the map on a set of locations (single point or combined bounds). */
   private focusMapOnLocations(locations: Array<Location>) {
     if (!locations || locations.length === 0) return;
 

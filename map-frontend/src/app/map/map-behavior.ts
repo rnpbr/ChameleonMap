@@ -243,14 +243,17 @@ export function buildEntityIndex<T extends { id: number }>(items: T[]): Map<numb
   return new Map(items.map((item) => [item.id, item]));
 }
 
+/** Returns true for a tag, the only marker type carrying `related_locations`. */
 export function isTag(marker: MapMarkerType): marker is Tag {
   return 'related_locations' in marker;
 }
 
+/** Returns true for a link group (has `links_color` but is neither a KML layer nor a KML shape). */
 export function isLinksGroup(marker: MapMarkerType): marker is LinksGroup {
   return 'links_color' in marker && !('geojson' in marker) && !('kml_file' in marker);
 }
 
+/** Returns true for a KML layer, the only marker type carrying GeoJSON. */
 export function isKml(marker: MapMarkerType): marker is KmlLayerDto {
   return 'geojson' in marker;
 }
