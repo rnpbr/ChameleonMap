@@ -22,8 +22,11 @@ import { runBatchedWork, BatchSchedulerHandle } from './map-interaction-schedule
 import {
   buildEntityIndex,
   isAnyClusterActive,
+  isKml,
   isLinkEligible,
+  isLinksGroup,
   isMenuSimultaneousAndSelected,
+  isTag,
   shouldShowTagForMenu
 } from './map-behavior';
 
@@ -91,6 +94,8 @@ export class MapComponent implements OnInit {
 
   private static readonly MARKER_INTERACTION_CHUNK = 200;
   private static readonly LINK_INTERACTION_CHUNK = 100;
+  private static readonly FOCUS_ZOOM = 16;
+  private static readonly FOCUS_PADDING = 20;
 
   @HostListener('document:click', ['$event'])
   clickout(event: any) {
@@ -1259,6 +1264,182 @@ export class MapComponent implements OnInit {
 
   public onButtonClicked(event: any) {
     this.currentMenuGroup = event.clickedMenu;
+  }
+
+  /**
+   * Handles an item click on the filter menu and focuses the map on its elements.
+   * Only elements actually rendered on the map are considered.
+   */
+  public onMarkerFocus(marker: MapMarkerType) {
+    if (!marker || !marker.visibility) return;
+    if (!this.map) return;
+
+    if (isTag(marker)) {
+      this.focusMapOnLocations(this.resolveTagLocations(marker));
+    } else if (isLinksGroup(marker)) {
+      this.focusMapOnLocations(this.resolveLinkGroupLocations(marker));
+    } else if (isKml(marker)) {
+      this.focusMapOnKml(marker);
+    }
+  }
+
+  /**
+   * Handles a menu name click (second click, when already selected) and focuses
+   * the map on every visible element of the menu: locations, links and KMLs.
+   */
+  public onMenuFocus(menu: Menu) {
+    if (!menu || !this.map) return;
+
+    const locations = this.resolveMenuLocations(menu);
+    const kmlBounds = this.resolveMenuKmlBounds(menu);
+
+    if (locations.length === 0 && kmlBounds.length === 0) return;
+
+    if (locations.length === 1 && kmlBounds.length === 0) {
+      this.focusMapOnSingleLocation(locations[0]);
+      return;
+    }
+
+    const bounds = L.latLngBounds([]);
+    locations.forEach((location) => bounds.extend([location.latitude, location.longitude]));
+    kmlBounds.forEach((kmlBound) => bounds.extend(kmlBound));
+
+    this.flyToBoundsWithPadding(bounds);
+  }
+
+  /** Returns the locations of a tag that are currently on the map. */
+  private resolveTagLocations(tag: Tag): Array<Location> {
+    return tag.related_locations
+      .map((locationId: number) => this.getLocationById(locationId))
+      .filter(
+        (location: Location | null): location is Location =>
+          location != null && location.onMap
+      );
+  }
+
+  /**
+   * Returns the locations spanned by the links of a group that are currently
+   * drawn on the map, deduplicated by id.
+   */
+  private resolveLinkGroupLocations(linkGroup: LinksGroup): Array<Location> {
+    const locationsById = new Map<number, Location>();
+    (this._links ?? []).forEach((link: Link) => {
+      if (link.links_group !== linkGroup.id) return;
+      if (!link.line || !this.map.hasLayer(link.line)) return;
+
+      const location1 = this.getLocationById(link.location_1);
+      const location2 = this.getLocationById(link.location_2);
+      if (location1) locationsById.set(location1.id, location1);
+      if (location2) locationsById.set(location2.id, location2);
+    });
+    return Array.from(locationsById.values());
+  }
+
+  /** Focuses the map on a KML layer bounds, when the layer is loaded on the map. */
+  private focusMapOnKml(kml: KmlLayerDto) {
+    const bounds = this.getVisibleKmlBounds(kml);
+    if (!bounds) return;
+
+    this.flyToBoundsWithPadding(bounds);
+  }
+
+  /** Returns the bounds of a KML layer, or null when it is not loaded or empty. */
+  private getVisibleKmlBounds(kml: KmlLayerDto): L.LatLngBounds | null {
+    const layer = this.kmlLayers[kml.id] as L.GeoJSON | undefined;
+    if (!layer || !this.map.hasLayer(layer)) return null;
+
+    const bounds = layer.getBounds();
+    return bounds.isValid() ? bounds : null;
+  }
+
+  /**
+   * Collects every visible location of a menu (from its tags and the links of
+   * its link groups), deduplicated by id.
+   */
+  private resolveMenuLocations(menu: Menu): Array<Location> {
+    const locationsById = new Map<number, Location>();
+
+    (this._tags ?? []).forEach((tag) => {
+      if (tag.parent_menu !== menu.id) return;
+      this.resolveTagLocations(tag).forEach((location) => locationsById.set(location.id, location));
+    });
+
+    (this._linksGroup ?? []).forEach((linkGroup) => {
+      if (linkGroup.parent_menu !== menu.id) return;
+      this.resolveLinkGroupLocations(linkGroup).forEach((location) => locationsById.set(location.id, location));
+    });
+
+    return Array.from(locationsById.values());
+  }
+
+  /** Returns the bounds of every KML layer of a menu that is loaded on the map. */
+  private resolveMenuKmlBounds(menu: Menu): Array<L.LatLngBounds> {
+    const kmlBounds: Array<L.LatLngBounds> = [];
+
+    (this._kmlShapes ?? []).forEach((kml) => {
+      if (kml.parent_menu !== menu.id) return;
+
+      const bounds = this.getVisibleKmlBounds(kml);
+      if (bounds) {
+        kmlBounds.push(bounds);
+      }
+    });
+
+    return kmlBounds;
+  }
+
+  /**
+   * Flies to a single location. `flyTo` does not accept padding, so the target
+   * point is shifted in pixel space before converting back to lat/lng, keeping
+   * the marker centered on the visible area instead of behind the filter menu.
+   */
+  private focusMapOnSingleLocation(location: Location) {
+    const zoom = MapComponent.FOCUS_ZOOM;
+    const leftPadding = this.getFilterMenuOverlapWidth() + MapComponent.FOCUS_PADDING;
+    const targetPoint = this.map
+      .project([location.latitude, location.longitude], zoom)
+      .subtract([leftPadding / 2, 0]);
+    const targetCenter = this.map.unproject(targetPoint, zoom);
+    this.map.flyTo(targetCenter, zoom);
+  }
+
+  /** Flies to bounds, reserving left padding for the filter menu overlay. */
+  private flyToBoundsWithPadding(bounds: L.LatLngBounds) {
+    if (!bounds.isValid()) return;
+
+    const leftPadding = this.getFilterMenuOverlapWidth() + MapComponent.FOCUS_PADDING;
+    this.map.flyToBounds(bounds, {
+      paddingTopLeft: [leftPadding, MapComponent.FOCUS_PADDING],
+      paddingBottomRight: [MapComponent.FOCUS_PADDING, MapComponent.FOCUS_PADDING],
+      maxZoom: MapComponent.FOCUS_ZOOM
+    });
+  }
+
+  /** Focuses the map on a set of locations (single point or combined bounds). */
+  private focusMapOnLocations(locations: Array<Location>) {
+    if (!locations || locations.length === 0) return;
+
+    if (locations.length === 1) {
+      this.focusMapOnSingleLocation(locations[0]);
+      return;
+    }
+
+    const bounds = L.latLngBounds(
+      locations.map((location): L.LatLngTuple => [location.latitude, location.longitude])
+    );
+    this.flyToBoundsWithPadding(bounds);
+  }
+
+  private getFilterMenuOverlapWidth(): number {
+    const filterMenuPanel = document.querySelector('#app-filter-menu .scrollbar-box') as HTMLElement;
+    const mapContainer = document.getElementById('map');
+    if (!filterMenuPanel || !mapContainer) return 0;
+
+    const overlap = Math.max(0, filterMenuPanel.getBoundingClientRect().right);
+    const mapWidth = mapContainer.getBoundingClientRect().width;
+    // On narrow (mobile) screens the panel can cover most of the viewport;
+    // never reserve more than half the map so there's always room to focus into.
+    return Math.min(overlap, mapWidth * 0.5);
   }
 
   public showHowToHelpMessage(id: number) {

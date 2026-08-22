@@ -101,6 +101,20 @@ mat-expansion-panel  {
   color:rgb(0, 0, 0);
 }
 
+.tag-name-button {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tag-name-button:focus-visible {
+  outline: 2px solid RoyalBlue;
+  outline-offset: 2px;
+}
+
 .tag-name-disabled {
   color:gray;
 }
@@ -114,12 +128,28 @@ mat-expansion-panel  {
   width:14px;
 }
 
-.kml-item-icon {
+/* Links group: a horizontal line */
+.links-item-icon {
   height: 5px;
 }
 
-.kml-item-icon:hover {
+.links-item-icon:hover {
   height: 6px;
+}
+
+/* KML: Material Icon "layers" */
+.kml-layer-icon {
+  position: static;
+  width: 13px;
+  height: 13px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.kml-layer-icon:hover {
+  font-size: 14px;
+  width: 14px;
+  height: 14px;
 }
 
 .tag-item-icon {

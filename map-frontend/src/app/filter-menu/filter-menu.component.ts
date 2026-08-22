@@ -10,6 +10,7 @@ import { EventEmitterService } from '../event-emitter.service';
 import { PinnedMenusSidebarComponent } from './pinned-menus-sidebar/pinned-menus-sidebar.component';
 import { MatIconRegistry } from '@angular/material/icon';
 import { DomSanitizer } from '@angular/platform-browser';
+import { isKml, isLinksGroup, isTag } from '../map/map-behavior';
 
 enum TagsMenuButtonBehavior {
   CloseAllEyes,
@@ -166,11 +167,19 @@ export class FilterMenuComponent {
 
   get mapMarkers(): Array<MapMarkerType>{
    let markers: Array<MapMarkerType> = [];
-   markers = markers.concat(this.tags).concat(this.linkGroups).concat(this.kmlShapes); 
+   markers = markers.concat(this.tags).concat(this.linkGroups).concat(this.kmlShapes);
    return markers;
   }
 
-  constructor(private eventEmitterService: EventEmitterService, private matIconRegistry: MatIconRegistry, private domSanitizer: DomSanitizer) { 
+  /** Emitted when an item name is clicked, so the map can focus its elements. */
+  @Output()
+  markerFocus = new EventEmitter<MapMarkerType>();
+
+  /** Emitted when a menu name is clicked while the menu is already selected. */
+  @Output()
+  menuFocus = new EventEmitter<Menu>();
+
+  constructor(private eventEmitterService: EventEmitterService, private matIconRegistry: MatIconRegistry, private domSanitizer: DomSanitizer) {
     this.matIconRegistry.addSvgIcon(
       'eye-off',
       this.domSanitizer.bypassSecurityTrustResourceUrl('assets/icons/eye-off.svg')
@@ -218,6 +227,21 @@ export class FilterMenuComponent {
       this.menuCliked.emit({ selectedTagsMenuId: this.selectedTagsMenuId });
       this.checkActiveMenuTagsVisibilityStatus(menu.id);
     }
+  }
+
+  /**
+   * Handles a click on a menu name: selects the menu on the first click and
+   * emits {@link menuFocus} when the menu is already selected.
+   */
+  onMenuNameClick(menu: Menu, event: Event) {
+    event.stopPropagation();
+
+    if (this.selectedTagsMenuId === menu.id) {
+      this.menuFocus.emit(menu);
+      return;
+    }
+
+    this.menuClick(menu);
   }
 
   closeAllEyes(menu: Menu, item: any, event: any) {
@@ -329,20 +353,12 @@ export class FilterMenuComponent {
 
 
   getMarkerType(marker: MapMarkerType): string{
-    let type: string = 'undefined';
-    if(marker){
-      if('geojson' in marker){
-        type = 'KmlLayerDto';
-      }else if('kml_file' in marker){
-        type = 'KmlShape';
-      }else if('links_color' in marker && !('geojson' in marker)){
-        type = 'LinksGroup';
-      }else if('child_tags' in marker){
-        type = 'Tag';
-      }
-    }
-
-    return type;
+    if (!marker) return 'undefined';
+    if (isKml(marker)) return 'KmlLayerDto';
+    if ('kml_file' in marker) return 'KmlShape';
+    if (isLinksGroup(marker)) return 'LinksGroup';
+    if (isTag(marker)) return 'Tag';
+    return 'undefined';
   }
 
   getMarkerColor(marker: MapMarkerType){
@@ -371,13 +387,33 @@ export class FilterMenuComponent {
   }
 
   isMarkerTag(marker: MapMarkerType): marker is Tag{
-    return this.getMarkerType(marker) == 'Tag';
+    return isTag(marker);
   }
   isMarkerLinksGroup(marker: MapMarkerType): marker is LinksGroup{
-    return this.getMarkerType(marker) == 'LinksGroup';
+    return isLinksGroup(marker);
   }
   isMarkerKmlLayerDto(marker: MapMarkerType): marker is KmlLayerDto{
-    return this.getMarkerType(marker) == 'KmlLayerDto';
+    return isKml(marker);
+  }
+
+  /** Returns the CSS class for the marker icon (pin, line or KML layers icon). */
+  getMarkerIconClass(marker: MapMarkerType): string {
+    if (this.isMarkerTag(marker)) return 'tag-item-icon';
+    if (this.isMarkerLinksGroup(marker)) return 'links-item-icon';
+    return '';
+  }
+
+  /**
+   * Returns the color shown for a marker icon: its current color when selected
+   * and visible (or pinned), otherwise the default gray.
+   */
+  getMarkerDisplayColor(marker: MapMarkerType): string {
+    const isSelectedAndVisible =
+      this.selectedTagsMenuId === marker.parent_menu && marker.visibility;
+    const hasCustomColor = marker.currentColor !== this.getMarkerColor(marker);
+    return isSelectedAndVisible || hasCustomColor
+      ? marker.currentColor
+      : 'rgb(154, 154, 154)';
   }
 
   isMarkerActive(marker: MapMarkerType): boolean{
@@ -446,15 +482,6 @@ export class FilterMenuComponent {
     this.menuCliked.emit({ selectedTagsMenuId: this.selectedTagsMenuId });
   }
 
-  getLocationById(location_id: number) {
-    for (const location of this._locations) {
-      if (location.id === location_id) {
-        return location;
-      }
-    }
-    return null;
-  }
-
   getMenuById(id: number) {
     for (const menu of this._menus) {
       if (menu.id === id) {
@@ -462,6 +489,12 @@ export class FilterMenuComponent {
       }
     }
     return null;
+  }
+
+  /** Emits the clicked item so the map can focus its visible elements. */
+  focusMarkerOnMap(marker: MapMarkerType) {
+    if (!marker || !marker.visibility) return;
+    this.markerFocus.emit(marker);
   }
 
   checkActiveMenuTagsVisibilityStatus(menuId: number) {
