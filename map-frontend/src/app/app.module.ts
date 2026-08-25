@@ -34,6 +34,9 @@ import { TooltipComponent } from './tooltip/tooltip.component';
 import { ChameleonButtonComponent } from './chameleon-button/chameleon-button.component';
 import { MapDataService } from './map/map-data.service';
 import { PopupContentService } from './map/popup-content.service';
+import { LanguageChooserComponent } from './language-chooser/language-chooser.component';
+import { TranslateTitlePipe } from './translate-field.pipe';
+import { LanguageService } from './language.service';
 
 @NgModule({
   declarations: [
@@ -54,6 +57,7 @@ import { PopupContentService } from './map/popup-content.service';
     ATLASComponent,
     FooterComponent,
     TooltipComponent,
+    LanguageChooserComponent,
     ChameleonButtonComponent
   ],
   imports: [
@@ -67,9 +71,10 @@ import { PopupContentService } from './map/popup-content.service';
     MatIconModule,
     ScrollingModule,
     MatTableModule,
-    AppRoutingModule
+    AppRoutingModule,
+    TranslateTitlePipe
   ],
-  providers: [ApiService, EventEmitterService, MapDataService, PopupContentService],
+  providers: [ApiService, EventEmitterService, MapDataService, PopupContentService, LanguageService],
   bootstrap: [AppComponent]
 })
 export class AppModule {}

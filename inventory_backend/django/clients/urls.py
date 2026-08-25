@@ -18,6 +18,7 @@ router.register(
 router.register(
     'menu', MenuViewSet
 )
+
 router.register(
     'tag', TagViewSet
 )
@@ -40,8 +41,8 @@ router.register(
     'settings', Map_configurationViewSet
 )
 
-
 urlpatterns = [
+    path('tools/', include("tools.urls")),
     path('admin/', tenant_admin_site.urls),
     path('i18n/', include('django.conf.urls.i18n')),
     path('api-auth/', include('rest_framework.urls')),
@@ -49,6 +50,7 @@ urlpatterns = [
     path('', include(router.urls)),
     path('import/', include("importer.urls")),
     path('atlas/', include("atlas_builder.urls")),
+    path('language-options/', ListLanguageOptions.as_view()),
     *password_reset_patterns,
 ]
 

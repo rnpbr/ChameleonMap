@@ -50,3 +50,18 @@ services:
       - ./map-frontend:/usr/src/app
     expose:
       - 4200
+
+  translator:
+    image: libretranslate/libretranslate:latest
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    env_file:
+      - ./env/.env.dev
+    environment:
+      - LT_LOAD_ONLY=en,pt,es,ko,de
+      - LT_THREADS=4
+      - LT_CHAR_LIMIT=5000
+    volumes:
+      - lt_models:/home/libretranslate/.local 
+    

@@ -63,6 +63,8 @@ ADMINISTRATION_APP = 'administration.apps.AdministrationConfig'
 
 CLIENTS_APP = 'clients'
 
+TOOLS_APP = 'tools.apps.AdministrationTools'
+
 TENANT_PERMISSIONS_APP = 'inventory_backend.apps_overrides.TenantPermissionsConfig'
 
 SHARED_MIDDLEWARE = [
@@ -189,6 +191,7 @@ if ENABLE_MULTITENANT:
             "APPS": [
                 UNFOLD_APP,
                 ADMINISTRATION_APP,
+                TOOLS_APP,
                 'django.contrib.auth',
                 'django.contrib.contenttypes',
                 TENANT_PERMISSIONS_APP,

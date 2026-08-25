@@ -1,0 +1,257 @@
+{% extends "admin/base_site.html" %}
+{% load get_languages %}
+{% block content_title %}
+  <h1>Generate translations for all elements</h1>
+{% endblock %}
+
+{% block content %}
+<div id = "gentranslations-page">
+
+  <div id = "gentranslations-form" class = "gentranslations-form">
+    <form method="POST" action="{% url 'tenant_admin:generate_translations' %}">
+      <div class="gentranslations-language-selector">
+        {% csrf_token %}
+        <label id="gentranslations-language-selector-label" for="gentranslations-targetLanguage">
+          Target Language
+        </label>
+        <select id="gentranslations-language-selector-box" name="targetLanguage">
+          {% getLanguageOptions as languageOptions %}
+          {% for language in languageOptions %}
+          {% getLanguageLabelFromCode language as languageLabel %}
+          <option value="{{ language }}">{{ languageLabel }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      
+      <button id = "gentranslations-button" type = "submit">
+        <div id = "gentranslations-button-icon">🌐</div>
+        <div id = "gentranslations-button-text">Generate Translations</div>      
+      </button>     
+    </form>
+  </div>
+  <div id = "gentranslations-info-text">
+    ℹ: Elements that already contain translation for target language will be skipped.
+  </div>
+
+  <div id = "gentranslations-loading-animation">
+    <div id = "gentranslations-loading-animation-globe">
+      🌐
+    </div>
+    <div id = "gentranslations-loading-animation-chameleon">
+      <img id = "gentranslations-loading-animation-chameleon-image" src = "https://i.imgur.com/65Yiw9X.png">
+    </div>
+    <div id = "gentranslations-loading-animation-text">
+      <div class = "gentranslations-loading-animation-text-content" id = "gentranslations-loading-animation-text-label">
+        Translating
+      </div>
+      <div class = "gentranslations-loading-animation-text-content" id = "gentranslations-loading-animation-text-point-1">
+        .
+      </div>
+      <div class = "gentranslations-loading-animation-text-content" id = "gentranslations-loading-animation-text-point-2">
+        .
+      </div>
+      <div class = "gentranslations-loading-animation-text-content" id = "gentranslations-loading-animation-text-point-3">
+        .
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const loadingAnimation = document.getElementById('gentranslations-loading-animation')
+  loadingAnimation.style.visibility = 'hidden'
+  
+  setTimeout(() => {
+    const loadingAnimationChameleon = document.getElementById('gentranslations-loading-animation-chameleon')
+    const loadingAnimationGlobe = document.getElementById('gentranslations-loading-animation-globe')
+    const heightGlobe = loadingAnimationGlobe.getBoundingClientRect().height;
+    const heightChameleon = loadingAnimationChameleon.getBoundingClientRect().height;
+
+    loadingAnimationChameleon.style.bottom = `${(heightGlobe+heightChameleon)/2.0}px`
+  }, 2);
+  
+  document.querySelector('#gentranslations-form form').addEventListener('submit', () => {
+      const generateTranslationsPage = document.getElementById('gentranslations-page')
+      const generateTranslationsButton = document.getElementById('gentranslations-button')
+      const generateTranslationsButtonIcon = document.getElementById('gentranslations-button-icon')
+      const generateTranslationsButtonText = document.getElementById('gentranslations-button-text')
+      const loadingAnimation = document.getElementById('gentranslations-loading-animation')
+      const formContainer = document.getElementById('gentranslations-form')
+      
+      loadingAnimation.style.visibility = 'visible'
+      formContainer.style.pointerEvents = "none"
+      formContainer.classList.toggle("blocked")
+      generateTranslationsPage.style.cursor = "progress"
+  });
+</script>
+
+<style>
+  .gentranslations-language-selector{
+    display: inline-block;
+  }
+  #gentranslations-language-selector-box{
+    cursor: pointer;
+  }
+  #gentranslations-language-selector-label{
+    font-size: .8125rem;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+  }
+
+  #gentranslations-button{
+    cursor: pointer;
+    font-size: .9375rem;
+    font-weight: 600;
+    display: inline-block;
+    vertical-align: middle;
+    border-color: #f9fafb;
+    border-width: 2px;
+    border-radius: 10px;
+    padding-right: 5px;
+    transition: transform 1s;
+  }
+  #gentranslations-button:hover  { 
+    opacity: .88; 
+  }
+  #gentranslations-button:active { 
+    transform: scale(.97); 
+  }
+  #gentranslations-button-icon {
+    font-size: 2rem;
+    display: inline;
+    vertical-align: center;
+  }
+  #gentranslations-button-text {
+    display: inline;
+    vertical-align: center;
+  }
+
+  #gentranslations-loading-animation{
+    position: absolute;
+    top: 50vh;
+    left: 50vw;
+    min-width: min-content;
+  }  
+  #gentranslations-loading-animation-globe{
+    position: relative;
+    font-size: 5rem;
+    display: grid;
+    place-items: center;
+    filter: drop-shadow(0 0 10px rgba(80,180,255,0.7));
+    animation: pulse 2.5s linear infinite;
+    z-index:1000;
+  }
+  #gentranslations-loading-animation-chameleon{
+    position: relative;
+    display: grid;
+    place-items: center;
+    animation: orbitate 2s linear infinite;
+  }
+  #gentranslations-loading-animation-chameleon-image{
+    height: 2rem;
+  }
+  
+  .gentranslations-loading-animation-text-content{
+    display: inline;
+    font-weight: 900;
+  }
+  #gentranslations-loading-animation-text{
+    min-width: min-content;
+    white-space: nowrap;
+  }
+  #gentranslations-loading-animation-text-label{
+    animation: fade 1s infinite alternate;
+  }
+  #gentranslations-loading-animation-text-point-1{
+    animation: blink50 1s infinite alternate;
+  }  
+  #gentranslations-loading-animation-text-point-2{
+    animation: blink70 1s infinite alternate;
+  }
+  #gentranslations-loading-animation-text-point-3{
+    animation: blink90 1s infinite alternate;
+  }
+
+  #gentranslations-info-text{
+    line-height: 1.625;
+    font-size: 0.75rem;
+    margin-top: 0.50rem;
+    font-style: italic;
+  }
+
+  @keyframes orbitate{
+    from{
+      transform: rotate(0deg) translateY(4.5rem) rotate(0deg) scale(1);
+    }
+    50%{
+      transform: rotate(180deg) translateY(4.2rem) rotate(-180deg) scale(0.5);
+    }
+    to{
+      transform: rotate(360deg) translateY(4.5rem) rotate(-360deg) scale(1);
+    }
+  }
+
+  @keyframes pulse{
+    0%,100%{
+      transform: scale(1)
+    }
+    50%{
+      transform: scale(1.08)
+    }
+  }
+  @keyframes fade{
+    from{
+      opacity: 1;
+    }
+    to{
+      opacity: 0.7;
+    }
+  }
+
+  @keyframes blink50{
+    from{
+      opacity: 0;
+    }
+    50%{
+      opacity: 1;
+    }
+    to{
+      opacity: 1;
+    }
+  }
+  @keyframes blink70{
+    from{
+      opacity: 0;
+    }
+    70%{
+      opacity: 1;
+    }
+    to{
+      opacity: 1;
+    }
+  }
+  @keyframes blink90{
+    from{
+      opacity: 0;
+    }
+    90%{
+      opacity: 1;
+    }
+    to{
+      opacity: 1;
+    }
+  }
+
+  .translation-header {
+    display: flex;
+    gap: 1rem;
+  }  
+  
+  .blocked{
+    filter: grayscale(100%);
+    opacity: 0.8;
+  }
+</style>
+
+{% endblock %}

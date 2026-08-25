@@ -56,5 +56,9 @@ export class ApiService {
 
   getKmlShapes() {
     return this.http.get<KmlShape[]>('/kmlshape/');
+  }  
+  
+  getLanguageOptionsList(){
+    return this.http.get<{ languageOptions: string[] }>('/language-options/')
   }
 }

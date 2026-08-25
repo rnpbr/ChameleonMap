@@ -10,12 +10,15 @@ from administration.models import (
     MenuGroup,
     Tag,
     Tag_relationship,
+    NameTranslation,
 )
 
 from . import MAP_DATA_VERSION
 from .inheritance import apply_inherited_locations
 from .kml_geojson import convert_kml_file_to_geojson, serialize_geojson
 from .popups import build_location_popups
+from collections import defaultdict
+from django.contrib.contenttypes.models import ContentType
 
 
 def _decimal_to_float(value):
@@ -38,6 +41,7 @@ def _serialize_settings(config):
         'link_feature': config.link_feature,
         'hide_menu_group_when_unique': config.hide_menu_group_when_unique,
         'footer_file': footer_file,
+        'default_content_language': config.default_content_language
     }
 
 
@@ -70,13 +74,33 @@ def _build_tag_graph(tags, relationships):
         if child:
             child['parent_tags'].append(relation_dict)
 
+def _build_translations_lookup():
+    lookup = defaultdict(list)
+    translations = NameTranslation.objects.all().values('content_type_id', 'object_id', 'language_code', 'name')
+    for t in translations:
+        lookup[(t['content_type_id'], str(t['object_id']))].append({
+            'language_code': t['language_code'],
+            'name': t['name']
+        })
+    return lookup
+
 
 def build_map_data():
+    translations_lookup = _build_translations_lookup()
+
+    def _get_content_type_id(element):
+        return ContentType.objects.get_for_model(element.__class__).id
+
+    def _get_translations(element):
+        element_content_type_id = _get_content_type_id(element)
+        return translations_lookup.get((element_content_type_id, str(element.id)), [])
+
     menu_groups = [
         {
             'id': group.id,
             'name': group.name,
             'simultaneous_context': group.simultaneous_context,
+            'translations': _get_translations(group)
         }
         for group in MenuGroup.objects.all().order_by('id')
     ]
@@ -88,6 +112,7 @@ def build_map_data():
             'group': menu.group_id,
             'hierarchy_level': menu.hierarchy_level,
             'active': menu.active,
+            'translations': _get_translations(menu)
         }
         for menu in Menu.objects.select_related('group').order_by('hierarchy_level', 'id')
     ]
@@ -102,6 +127,7 @@ def build_map_data():
             'longitude': _decimal_to_float(location.longitude),
             'overlayed_popup_content': location.overlayed_popup_content or '',
             'active': location.active,
+            'translations': _get_translations(location)
         }
         for location in Location.objects.all().order_by('name', 'id')
     ]
@@ -120,6 +146,7 @@ def build_map_data():
             'overlayed_popup_content': tag.overlayed_popup_content or '',
             'child_tags': [],
             'parent_tags': [],
+            'translations': _get_translations(tag)
         }
         for tag in tag_queryset
     ]
@@ -134,6 +161,20 @@ def build_map_data():
     inherit_enabled = bool(settings and settings.inherit_children_tag_locations)
     apply_inherited_locations(tags, menus_by_id, inherit_enabled)
 
+    default_language = getattr(settings, 'default_content_language', None) if settings else None
+    
+    language_options = list(
+        NameTranslation.objects
+        .values_list('language_code', flat=True)
+        .distinct()
+    )
+
+    if default_language:
+        if default_language in language_options:
+            language_options.remove(default_language)
+        language_options.insert(0, default_language)
+
+
     location_popups = build_location_popups(locations, tags)
 
     links_groups = [
@@ -144,6 +185,7 @@ def build_map_data():
             'sidebar_content': group.sidebar_content or '',
             'opacity': _decimal_to_float(group.opacity),
             'parent_menu': group.parent_menu_id,
+            'translations': _get_translations(group)
         }
         for group in Links_group.objects.select_related('parent_menu').order_by('name', 'id')
     ]
@@ -161,6 +203,7 @@ def build_map_data():
             'straight_link': link.straight_link,
             'dashed': link.dashed,
             'weight': link.weight,
+            'translations': _get_translations(link)
         }
         for link in Link.objects.select_related(
             'location_1', 'location_2', 'links_group'
@@ -177,6 +220,7 @@ def build_map_data():
             'links_color': shape.links_color,
             'opacity': _decimal_to_float(shape.opacity),
             'geojson': geojson,
+            'translations': _get_translations(shape)
         })
 
     return {
@@ -190,4 +234,5 @@ def build_map_data():
         'links_groups': links_groups,
         'kml_layers': kml_layers,
         'location_popups': location_popups,
+        'language_options': language_options,
     }

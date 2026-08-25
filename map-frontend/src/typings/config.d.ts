@@ -11,6 +11,7 @@ declare global {
   export interface Menu {
     readonly id: number;
     readonly name: string;
+    visibleName: string;
     readonly group: number;
     readonly hierarchy_level: number;
     readonly active: boolean;
@@ -102,5 +103,11 @@ declare global {
   }
   
   export type MapMarkerType = Tag | KmlLayerDto | KmlShape | LinksGroup;
+
+  export interface LanguageOption {
+    code: string;
+    flag: string;
+    name: string;
+  }
 }
 

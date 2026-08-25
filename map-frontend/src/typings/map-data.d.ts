@@ -28,6 +28,7 @@ declare global {
     readonly link_feature: boolean;
     readonly hide_menu_group_when_unique: boolean;
     readonly footer_file: string;
+    readonly default_content_language: LanguageOption;
   }
 
   export interface KmlLayerDto {
@@ -52,5 +53,7 @@ declare global {
     readonly links_groups: LinksGroup[];
     readonly kml_layers: KmlLayerDto[];
     readonly location_popups: Record<string, LocationPopupDto>;
+    readonly language_options: string[];
+    readonly current_language: LanguageOption;
   }
 }

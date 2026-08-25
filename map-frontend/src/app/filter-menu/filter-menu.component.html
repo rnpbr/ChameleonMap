@@ -3,8 +3,8 @@
         <div>
             <mat-expansion-panel-header [expandedHeight]="'45px'" (click)="menuClick(menu)" class="menu-header" [ngClass]="{'pinned-header': menu.pinned === true, 'selected-menu-header': selectedTagsMenuId==menu.id}">
                 <mat-panel-title>
-                    <div class="menu-name" (click)="onMenuNameClick(menu, $event)">
-                        <p class="menu-text">{{ capitalizeFirstLetter(menu.name) }}</p>
+                    <div class="menu-name">
+                        <p class="menu-text">{{ capitalizeFirstLetter(menu | translateTitle) }}</p>
                     </div>
                     <div class="menu-button-container">
                         <div class="menu-button">
@@ -27,10 +27,10 @@
         <div *ngIf="menu.expanded" class="menu-body">
             <div *ngFor="let marker of mapMarkers">
                 <div *ngIf="isMarkerActive(marker)">
-                    <div id="tag-list" class="tag-list" *ngIf="marker.parent_menu === menu.id">
-                        <button id="tag-name" *ngIf="marker.visibility" type="button" class="tag-name tag-name-button" (click)="focusMarkerOnMap(marker)">{{marker.name}}</button>
-                        <div *ngIf="!marker.visibility" class="tag-name tag-name-disabled">{{marker.name}}</div>
-                        <div id="tag-button" *ngIf="!isMarkerKmlLayerDto(marker)" class="marker-item-icon" [ngClass]="getMarkerIconClass(marker)" (click)="pinClick(marker, $event)" [ngStyle]="{'background-color': getMarkerDisplayColor(marker)}">
+                    <div id="tag-list" class="tag-list" *ngIf="marker.parent_menu === menu.id">    
+                        <div id="tag-name" *ngIf="marker.visibility" class="tag-name" >{{marker  | translateTitle}}</div>
+                        <div *ngIf="!marker.visibility" class="tag-name tag-name-disabled">{{marker  | translateTitle}}</div>
+                        <div id="tag-button" class="marker-item-icon" [ngClass]="{'tag-item-icon':isMarkerTag(marker), 'kml-item-icon': !isMarkerTag(marker)}" (click)="pinClick(marker, $event)" [ngStyle]="{'background-color': ((selectedTagsMenuId===menu.id && marker.visibility) || marker.currentColor!==getMarkerColor(marker)) ? marker.currentColor : 'rgb(154, 154, 154)'}" >
                             <span *ngIf="isMarkerTag(marker);" class="white-circle"></span>
                         </div>
                         <div id="tag-button" *ngIf="isMarkerKmlLayerDto(marker)" class="marker-item-icon" (click)="pinClick(marker, $event)">
@@ -58,3 +58,4 @@
         (selectMenuEmitter)="onLockedMenuSelected($event)">
     </app-pinned-menus-sidebar>
 </div>
+<!-- <app-tag-sidebar [capitalizeFirstLetter]="capitalizeFirstLetter" (unpinMenuEmitter)="sideBarUnpinMenuButtonClicked($event)"></app-tag-sidebar> -->

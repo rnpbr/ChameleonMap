@@ -20,6 +20,7 @@ export interface MapDataStore {
   menusById: Map<number, Menu>;
   menuGroupsById: Map<number, MenuGroup>;
   linksGroupsById: Map<number, LinksGroup>;
+  languageOptionsList: string[];
 }
 
 @Injectable()
@@ -88,8 +89,10 @@ export class MapDataService {
       ...link,
       line: null,
       interactionsAttached: false,
-    }));
+    }));    
 
+    const settings = bundle.settings;
+ 
     const store: MapDataStore = {
       bundle,
       menuGroups: bundle.menu_groups,
@@ -99,12 +102,13 @@ export class MapDataService {
       links,
       linksGroups,
       kmlLayers,
-      settings: bundle.settings,
+      settings,
       locationsById: buildEntityIndex(locations),
       tagsById: buildEntityIndex(tags),
       menusById: buildEntityIndex(menus),
       menuGroupsById: buildEntityIndex(bundle.menu_groups),
       linksGroupsById: buildEntityIndex(linksGroups),
+      languageOptionsList: bundle.language_options ?? [],
     };
 
     return store;

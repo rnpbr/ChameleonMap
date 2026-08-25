@@ -39,3 +39,4 @@ services:
 volumes:
     postgres_data:
     static_volume:
+    lt_models:

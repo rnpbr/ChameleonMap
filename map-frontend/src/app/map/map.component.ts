@@ -48,6 +48,8 @@ export class MapComponent implements OnInit {
   private _links: Array<Link>;
   private _linksGroup: Array<LinksGroup>;
   private _kmlShapes: Array<KmlLayerDto>;
+  private _currentLanguage: LanguageOption;
+  private _languageOptionsList: Array<string>;
   public mapSetting: any = null;
   public map: L.Map;
   private mapLoaded = false;
@@ -67,7 +69,6 @@ export class MapComponent implements OnInit {
   public defaultMenuId: number;
 
   public footerUrl = ""
-
   public linksFeatureOn = false;
   showRotateMessage = false;
   
@@ -179,6 +180,20 @@ export class MapComponent implements OnInit {
   set kmlShapes(value) {
     this._kmlShapes = value;
   }
+   
+  get languageOptionsList() {
+    return this._languageOptionsList;
+  }
+  set languageOptionsList(value) {
+    this._languageOptionsList = value;
+  }   
+
+  get currentLanguage() {
+    return this._currentLanguage;
+  }
+  set currentLanguage(value) {
+    this._currentLanguage = value;
+  }
 
   constructor(
     private mapDataService: MapDataService,
@@ -236,6 +251,8 @@ export class MapComponent implements OnInit {
     this.links = store.links;
     this.linksGroup = store.linksGroups;
     this.kmlShapes = store.kmlLayers;
+    this.languageOptionsList = store.languageOptionsList;
+    this.currentLanguage = this.mapSettings.default_content_language;
   }
 
   private initializeMap(): void {
@@ -655,8 +672,8 @@ export class MapComponent implements OnInit {
     if (!this._locations || !this._tags) {
       return
     }
-
     let selectedMenu = this.getMenuById(this.selectedMenu);
+
     if (!selectedMenu) {
       return
     }
@@ -712,7 +729,7 @@ export class MapComponent implements OnInit {
                 if (reset) {
                   this.insertLocationOnMap(location, tag.currentColor);
                 } else if (selectedTagsMenuId === tag.parent_menu) {
-                  this.insertLocationOnMap(location, tag.currentColor);
+                    this.insertLocationOnMap(location, tag.currentColor);
                 }
               }
             }
@@ -970,12 +987,14 @@ export class MapComponent implements OnInit {
       border: 0.1px solid #5c5c5c`;
     }
 
+    var style = 'style="height: 11px; width: 11px; background-color: white; border-radius: 50%; display: flex; margin-left: 20%; margin-top: 20%;"'
+
     const icon = L.divIcon({
       className: 'custom-pin',
-      html: `<span style="${markerHtmlStyles}"><span style="height: 11px; width: 11px; background-color: white; border-radius: 50%; display: flex; margin-left: 20%; margin-top: 20%;"></span></span>`
+      html: `<span style="${markerHtmlStyles}"><span ></span></span>`
     });
 
-    return icon;
+    return icon; 
   }
 
   private getMaxLocationId() {
@@ -1025,6 +1044,17 @@ export class MapComponent implements OnInit {
       }
     }
     return null;
+  }
+
+  private setMenuVisibleNameById(newName:string, menuId: number) {
+    let lengthOfMenus = this._menus.length
+    for(let localIndex = 0 ; localIndex < lengthOfMenus; localIndex++) {
+      if (this._menus[localIndex].id === menuId) {
+        this._menus[localIndex].visibleName = newName
+        return true;
+      }
+    }
+    return false;
   }
 
   private getMenuById(menuId: number) {
@@ -1519,7 +1549,6 @@ export class MapComponent implements OnInit {
     `
     
     this.overlayedPopup.activateWithPersonalizedContent(popupContent, "About This Map")
-    console.log('Popup activated!');
   }
 
   private cancelEnrichPhase() {

@@ -1,10 +1,9 @@
 import {
   Component,
-  OnInit,
   Input,
   Output,
   EventEmitter,
-  ViewChild
+  ViewChild,
 } from '@angular/core';
 import { EventEmitterService } from '../event-emitter.service';
 import { PinnedMenusSidebarComponent } from './pinned-menus-sidebar/pinned-menus-sidebar.component';
@@ -43,7 +42,8 @@ export class FilterMenuComponent {
   public _hasMenuGroupTabs: boolean;
   public currentBehaviorOfMultipleTagsVisibilityButton: TagsMenuButtonBehavior = TagsMenuButtonBehavior.CloseAllEyes;
   tagsMenuButtonBehavior = TagsMenuButtonBehavior;
-  public activeMenus: Array<Menu>;
+  public _linksActive: boolean;
+  public activeMenus: Array<Menu>
 
   @Input()
   get menugroups() {
@@ -275,7 +275,6 @@ export class FilterMenuComponent {
 
   openAllEyes(menu: Menu, item: any, event: any) {
     event.stopPropagation();
-
     for (let i = 0; i < this._tags.length; i++) {
       if (this._tags[i].parent_menu == menu.id) {
         if (this._tags[i].visibility == false) {
@@ -306,6 +305,50 @@ export class FilterMenuComponent {
   menuSwitch(menu: Menu, event: any) {
     menu.expanded = !menu.expanded;
     event.stopPropagation();
+  }
+  
+  onMenuPinClicked(menu: Menu, event: any) {
+    this.toggleMenuPin(menu, event);
+    this.specialMenuPinRules(menu, event);
+  }
+
+  private toggleMenuPin(menu: Menu, event: any) {
+    menu.pinned ? this.unlockMenuButtonClicked(menu, event): this.pinMenuButtonClicked(menu, event);
+  }
+
+  private specialMenuPinRules(selectedMenu: Menu, event: any) {
+    if (selectedMenu.name.includes("Ipê")) {
+      this._menus.forEach((menu) => {
+        if (menu.name.includes("Ipê") && selectedMenu.id != menu.id) {
+          this.toggleMenuPin(menu, event);
+          return;
+        }
+      })
+    }
+    else if (selectedMenu.name.includes("CNDs")) {
+      this._menus.forEach((menu) => {
+        if (menu.name.includes("CNDs") && selectedMenu.id != menu.id) {
+          this.toggleMenuPin(menu, event);
+          return;
+        }
+      })
+    } 
+
+  }
+
+  pinMenuButtonClicked(menu: Menu, event: any) {
+    this.pinMenu(menu)
+    this.pinnedMenusSidebar.addPinnedMenu(menu)
+    this.menuCliked.emit({ selectedTagsMenuId: this.selectedTagsMenuId });
+    event.stopPropagation();
+  }
+
+  pinMenu(menu: Menu){
+    menu.pinned = true;
+  }
+
+  unpinMenu(menu: Menu){
+    menu.pinned = false;
   }
 
   onMenuLockClicked(menu: Menu, event: any) {

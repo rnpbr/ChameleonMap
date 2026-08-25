@@ -16,6 +16,11 @@ mat-expansion-panel  {
   position: relative !important;
   transition: all 0.5s;
   cursor: pointer;
+  
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .noselect {
@@ -60,7 +65,13 @@ mat-expansion-panel  {
 }
 
 .menu-header:hover {
-  background-color: rgba(168, 177, 189, 0.212) !important;
+  background-color: rgba(168, 177, 189, 0.212);
+}
+
+.selected-menu-header {
+  background: rgba(55, 60, 79, 0.35) !important; 
+  width: 117%; 
+  margin-left: -25px;
 }
 
 .menu-body {
@@ -237,6 +248,7 @@ mat-expansion-panel  {
   display: flex;
   align-items: center; 
   justify-content: center;
+  /* justify-content: space-evenly; */
   /* height: 100%; */
 }
 
@@ -263,9 +275,15 @@ mat-expansion-panel  {
   color: RoyalBlue;
 }
 
+
+#menu-button-lock-all{
+  font-size: 22px;
+  padding-left: 2px;
+}
+
 #menu-button-open-all{
   font-size: 22px;
-  vertical-align: middle;
+  /* vertical-align: middle; */
 }
 
 #menu-button-expand{
