@@ -54,7 +54,7 @@ class LinkSerializer(TranslatableTitleElement, serializers.ModelSerializer):
         
     class Meta:
         model = Link
-        fields = ['id', 'display_name', 'popup_description', 'curvature', 'weight', 'dashed', 'straight_link', 'location_1', 'location_2', 'links_group', 'invert_link', 'translations']
+        fields = ['id', 'name', 'popup_description', 'curvature', 'weight', 'dashed', 'straight_link', 'location_1', 'location_2', 'links_group', 'invert_link', 'translations']
 
 class Links_groupSerializer(TranslatableTitleElement, serializers.ModelSerializer):
     translations = serializers.SerializerMethodField()

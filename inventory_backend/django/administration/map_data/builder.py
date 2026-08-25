@@ -193,7 +193,7 @@ def build_map_data():
     links = [
         {
             'id': link.id,
-            'display_name': link.display_name,
+            'display_name': link.name,
             'popup_description': link.popup_description or '',
             'location_1': link.location_1_id,
             'location_2': link.location_2_id,

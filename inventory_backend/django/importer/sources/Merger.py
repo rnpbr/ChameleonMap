@@ -35,7 +35,7 @@ def requestAll(storedData):
     for storedLink in list(Link.objects.all()):
         link = serial(storedLink)
         storedData.links.append(LinksType(
-            link['id'], link['display_name'],
+            link['id'], link['name'],
             link['location_1'], link['location_2'], link['links_group'],
             link['curvature'], link['weight'], link['dashed'],
             link['straight_link'], link['invert_link'],

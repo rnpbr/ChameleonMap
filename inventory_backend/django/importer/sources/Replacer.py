@@ -116,7 +116,7 @@ def addElement(element, modelText):
         elif modelText == 'Links':
             newElement = Link(
                 id=element['id'],
-                display_name=element['name'],
+                name=element['name'],
                 curvature=element.get('curvature', 2.0),
                 weight=element.get('weight', 3),
                 dashed=element.get('dashed', False),

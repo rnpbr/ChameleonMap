@@ -349,7 +349,7 @@ def render_sql(data: GeneratedData) -> str:
             "link",
             (
                 "id",
-                "display_name",
+                "name",
                 "popup_description",
                 "curvature",
                 "weight",

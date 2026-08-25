@@ -233,7 +233,7 @@ def _translate_links(rows, mapData, links_group_counter, link_counter):
         invert_link = _parse_bool(row.get('invert_link', ''), default=False)
         popup_description = row.get('popup_description', '') or ''
 
-        link_id, link_counter = _query_id_by_name(Link, link_name, link_counter, name_field='display_name')
+        link_id, link_counter = _query_id_by_name(Link, link_name, link_counter, name_field='name')
         mapData.links.append(LinksType(
             link_id, link_name, loc1_id, loc2_id, lg.id,
             curvature, weight, dashed, straight_link, invert_link, popup_description

@@ -159,7 +159,7 @@ class Links_group(models.Model):
         return self.name
 
 class Link(models.Model):
-    display_name = models.CharField(max_length=25, verbose_name=_("display name"))
+    name = models.CharField(max_length=25, verbose_name=_("display name"))
     popup_description = HTMLField(null=True, blank=SET_NULL, verbose_name=_("popup description"))
     curvature = models.DecimalField(default=2.0, max_digits=4, decimal_places=3, validators=[MinValueValidator(1), MaxValueValidator(4)],
     verbose_name=_("curvature"), help_text=_("This field controls how curved the link will appear in the front-end. The higher the number, the less the link will be curved. Min(1)-Max(4). Accept decimal values."))

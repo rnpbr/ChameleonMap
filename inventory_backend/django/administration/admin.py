@@ -79,9 +79,9 @@ class TagAdmin(TranslatableModelAdmin):
     search_fields = ['name']
 
 class LinkAdmin(TranslatableModelAdmin):
-    list_display = ("display_name", "location_1", "location_2", "links_group")
+    list_display = ("name", "location_1", "location_2", "links_group")
     list_filter = ("links_group",)
-    search_fields = ['display_name']
+    search_fields = ['name']
 
 class Links_groupAdmin(TranslatableModelAdmin):
     list_display = ("name","parent_menu")
