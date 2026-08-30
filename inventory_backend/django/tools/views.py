@@ -38,7 +38,7 @@ def normalizeLanguageCode(code):
     return {'macro_language': macro_language, 'variation': variation_code}
     
 def translateText(text, target, source="auto"):
-    url = 'http://translator:5000/translate'
+    url = 'http://translator:5005/translate'
     translationRequest = {
         "q":text,
         "source": normalizeLanguageCode(source)['macro_language'],

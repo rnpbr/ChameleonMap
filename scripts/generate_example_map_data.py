@@ -255,28 +255,49 @@ def render_sql(data: GeneratedData) -> str:
     ]
 
     menu_group_rows = [
-        f"({group_id}, {sql_str(name)}, {sql_bool(simultaneous)})"
+        f"({group_id}, {sql_str(name)}, {sql_bool(simultaneous)}, true)"
         for group_id, name, simultaneous in data.menu_groups
     ]
-    lines.extend(render_insert("menugroup", ("id", "name", "simultaneous_context"), menu_group_rows))
+    lines.extend(
+        render_insert(
+            "menugroup",
+            ("id", "name", "simultaneous_context", "translatable"),
+            menu_group_rows,
+        )
+    )
     lines.append("")
 
     menu_rows = [
-        f"({menu_id}, {sql_str(name)}, {group_id}, {hierarchy}, {sql_bool(active)})"
+        f"({menu_id}, {sql_str(name)}, {group_id}, {hierarchy}, {sql_bool(active)}, true)"
         for menu_id, name, group_id, hierarchy, active in data.menus
     ]
-    lines.extend(render_insert("menu", ("id", "name", "group_id", "hierarchy_level", "active"), menu_rows))
+    lines.extend(
+        render_insert(
+            "menu",
+            ("id", "name", "group_id", "hierarchy_level", "active", "translatable"),
+            menu_rows,
+        )
+    )
     lines.append("")
 
     location_rows = [
         f"({location_id}, {sql_str(name)}, {sql_str(description)}, "
-        f"{sql_decimal(lat, 8)}, {sql_decimal(lon, 8)}, NULL, {sql_bool(active)})"
+        f"{sql_decimal(lat, 8)}, {sql_decimal(lon, 8)}, NULL, {sql_bool(active)}, true)"
         for location_id, name, description, lat, lon, active in data.locations
     ]
     lines.extend(
         render_insert(
             "location",
-            ("id", "name", "description", "latitude", "longitude", "overlayed_popup_content", "active"),
+            (
+                "id",
+                "name",
+                "description",
+                "latitude",
+                "longitude",
+                "overlayed_popup_content",
+                "active",
+                "translatable",
+            ),
             location_rows,
         )
     )
@@ -284,7 +305,7 @@ def render_sql(data: GeneratedData) -> str:
 
     tag_rows = [
         f"({tag_id}, {sql_str(name)}, {sql_str(color)}, {sql_str(description)}, "
-        f"NULL, NULL, {parent_menu_id}, {sql_bool(active)})"
+        f"NULL, NULL, {parent_menu_id}, {sql_bool(active)}, true)"
         for tag_id, name, parent_menu_id, color, description, active in data.tags
     ]
     lines.extend(
@@ -299,6 +320,7 @@ def render_sql(data: GeneratedData) -> str:
                 "overlayed_popup_content",
                 "parent_menu_id",
                 "active",
+                "translatable",
             ),
             tag_rows,
         )
@@ -327,13 +349,21 @@ def render_sql(data: GeneratedData) -> str:
     lines.append("")
 
     links_group_rows = [
-        f"({group_id}, {sql_str(name)}, {sql_str(color)}, {sql_decimal(opacity, 3)}, NULL, {parent_menu_id})"
+        f"({group_id}, {sql_str(name)}, {sql_str(color)}, {sql_decimal(opacity, 3)}, NULL, {parent_menu_id}, true)"
         for group_id, name, color, opacity, parent_menu_id in data.links_groups
     ]
     lines.extend(
         render_insert(
             "links_group",
-            ("id", "name", "links_color", "opacity", "sidebar_content", "parent_menu_id"),
+            (
+                "id",
+                "name",
+                "links_color",
+                "opacity",
+                "sidebar_content",
+                "parent_menu_id",
+                "translatable",
+            ),
             links_group_rows,
         )
     )
@@ -341,7 +371,8 @@ def render_sql(data: GeneratedData) -> str:
 
     link_rows = [
         f"({link_id}, {sql_str(name)}, NULL, {sql_decimal(curvature, 3)}, {weight}, "
-        f"{sql_bool(dashed)}, {sql_bool(straight)}, {loc1}, {loc2}, {links_group_id}, {sql_bool(invert)})"
+        f"{sql_bool(dashed)}, {sql_bool(straight)}, {loc1}, {loc2}, {links_group_id}, "
+        f"{sql_bool(invert)}, true)"
         for link_id, name, loc1, loc2, links_group_id, curvature, weight, dashed, straight, invert in data.links
     ]
     lines.extend(
@@ -359,6 +390,7 @@ def render_sql(data: GeneratedData) -> str:
                 "location_2_id",
                 "links_group_id",
                 "invert_link",
+                "translatable",
             ),
             link_rows,
         )
@@ -369,10 +401,10 @@ def render_sql(data: GeneratedData) -> str:
         "INSERT INTO map_config ("
         "id, map_name, map_style, inherit_children_tag_locations, cluster_close_tags, "
         "initial_zoom_level, initial_latitude, initial_longitude, link_feature, "
-        "hide_menu_group_when_unique, footer_file"
+        "hide_menu_group_when_unique, footer_file, default_content_language"
         ") VALUES ("
         "1, 'Benchmark Map', 'd', true, true, 5, "
-        f"{sql_decimal(CENTER_LAT, 6)}, {sql_decimal(CENTER_LON, 6)}, true, true, ''"
+        f"{sql_decimal(CENTER_LAT, 6)}, {sql_decimal(CENTER_LON, 6)}, true, true, '', 'pt'"
         ");"
     )
     lines.append("")
