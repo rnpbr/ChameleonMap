@@ -3,7 +3,11 @@
 // The list of file replacements can be found in `angular.json`.
 
 export const environment = {
-  production: false
+  production: false,
+  /** Filled at runtime from assets/env.js (MAP_TILE_KEY via env_file / set-env.js). */
+  get mapTileKey(): string {
+    return window.__env?.mapTileKey ?? '';
+  }
 };
 
 /*

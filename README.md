@@ -39,6 +39,7 @@ and replace/insert values for the keys listed below with your own.
  - **SQL_DATABASE** - The preferred name of the created database
  - **SQL_USER** - The username for the database
  - **SQL_PASSWORD** - The password for the database
+ - **MAP_TILE_KEY** - API key appended to basemap tile URLs in the Angular frontend
 
 If you want to use pgAdmin to access PostgreSQL, you must configure the following items (only in dev mode):
   - **PGADMIN_DEFAULT_EMAIL**

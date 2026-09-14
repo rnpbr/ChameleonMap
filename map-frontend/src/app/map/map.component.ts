@@ -29,6 +29,7 @@ import {
   isTag,
   shouldShowTagForMenu
 } from './map-behavior';
+import { environment } from '../../environments/environment';
 
 @Component({
   selector: 'app-map',
@@ -560,10 +561,14 @@ export class MapComponent implements OnInit {
       maxRadius = 0;
     }
 
+    const tileKey = environment.mapTileKey
+      ? `?key=${environment.mapTileKey}`
+      : '';
+
     switch (this.mapSetting.map_style) {
       case 'b':
         tiles = L.tileLayer(
-          'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+          `https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png${tileKey}`,
           {
             maxZoom: 18,
             minZoom: 3,
@@ -576,7 +581,7 @@ export class MapComponent implements OnInit {
 
       case 'd':
         tiles = L.tileLayer(
-          'https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png',
+          `https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png${tileKey}`,
           {
             maxZoom: 18,
             minZoom: 3,

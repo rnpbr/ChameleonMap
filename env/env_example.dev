@@ -63,3 +63,6 @@ INFRADPDI_TOKEN=''
 # Atlas Importer Settings
 GATEWAY_BASE_URL=''
 GATEWAY_AUTH_KEY=''
+
+# Map tile provider API key (used by the Angular frontend basemap layers)
+MAP_TILE_KEY=

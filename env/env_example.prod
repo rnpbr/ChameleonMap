@@ -54,3 +54,6 @@ AVAILABLE_IMPORTS=''
 
 ## InfraDPDI settings
 INFRADPDI_TOKEN=''
+
+# Map tile provider API key (used by the Angular frontend basemap layers)
+MAP_TILE_KEY=

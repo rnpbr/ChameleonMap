@@ -46,4 +46,7 @@ testem.log
 .DS_Store
 Thumbs.db
 
+# Generated from MAP_TILE_KEY (see set-env.js / env/.env.*)
+/src/assets/env.js
+
 

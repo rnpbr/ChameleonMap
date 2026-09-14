@@ -46,6 +46,8 @@ services:
     build:
       context: ./map-frontend
       target: development
+    env_file:
+      - ./env/.env.dev
     volumes:
       - ./map-frontend:/usr/src/app
     expose:
