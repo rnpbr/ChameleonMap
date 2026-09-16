@@ -220,8 +220,8 @@ mat-expansion-panel  {
 }
 
 .has-tabs{
-  top: 75px;
-  max-height: calc(100% - 100px);
+  top: 82px;
+  max-height: calc(100% - 107px);
   padding-bottom: 10px;
 }
 

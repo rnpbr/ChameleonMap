@@ -7,6 +7,29 @@ mat-expansion-panel  {
 
 mat-panel-title {
   margin-right: 0 !important;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+:host ::ng-deep .mat-expansion-panel-header {
+  padding-right: 8px !important;
+}
+
+:host ::ng-deep .mat-content {
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+  align-items: stretch;
+}
+
+:host ::ng-deep .mat-expansion-panel-header-title {
+  margin-right: 0 !important;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+  align-self: stretch;
 }
 
 .mat-icon {
@@ -47,12 +70,71 @@ mat-panel-title {
   color: RoyalBlue;
 }
 
-.menu-name {
+.menu-tabs {
   width: 100%;
-  display: inline-flex;
-  justify-content: space-around;
+  height: 100%;
   display: flex;
+  align-items: stretch;
+  min-width: 0;
+}
+
+.menu-tabs-scroll {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
+  scrollbar-width: none;
+}
+
+.menu-tabs-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.menu-tabs-scroll.centered {
+  justify-content: space-around;
+}
+
+.scroll-btn {
+  flex: 0 0 26px;
+  width: 32px;
+  align-self: stretch;
+  height: auto;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: transparent;
+  color: rgba(0, 0, 0, 0.75);
+  cursor: pointer;
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.scroll-btn:hover:not(:disabled) {
+  background-color: rgba(0, 0, 0, 0.06);
+}
+
+.scroll-btn:disabled {
+  opacity: 0.28;
+  cursor: default;
+}
+
+.scroll-btn-icon {
+  position: static !important;
+  right: auto !important;
+  font-size: 20px !important;
+  width: 20px;
+  height: 20px;
+  line-height: 20px;
 }
 
 .dark{
@@ -81,13 +163,31 @@ mat-panel-title {
 }
 
 .button {
-  display: inline-block;
+  box-sizing: border-box;
+  flex: 0 0 auto;
+  align-self: stretch;
+  max-width: 104px;
+  padding: 4px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   text-align: center;
   color: black;
   cursor: pointer;
-  padding: 15px 10px; 
-  width: inherit;   
-  align-content: center;
+  font-size: 13px;
+  line-height: 1.15;
+}
+
+.button-label {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  text-align: center;
+  max-width: 100%;
 }
 
 .button:hover:not(.dark) {

@@ -1,10 +1,43 @@
 <mat-accordion [multi]="true" [hideToggle]="true" class="scrollbar-box scrollbar-box-chrome">
     <mat-expansion-panel [expanded]="false" [disabled]="true">
 
-        <mat-expansion-panel-header [expandedHeight]="'45px'" style="background: rgba(168, 177, 189, 0.3); width: 100%; margin-left: -25px;">
+        <mat-expansion-panel-header [collapsedHeight]="'52px'" [expandedHeight]="'52px'" style="background: rgba(168, 177, 189, 0.3); width: 100%; margin-left: -25px;">
             <mat-panel-title id="menu-groups-tabs">
-                <div class="menu-name">
-                    <a *ngFor="let tab of tabs" class="button" (click)="onTabClick(tab)" [ngClass]="{'dark': _currentMenu == tab}">{{tab}}</a>
+                <div class="menu-tabs"
+                     (touchstart)="$event.stopPropagation()"
+                     (touchmove)="$event.stopPropagation()">
+                    <button type="button"
+                            class="scroll-btn"
+                            *ngIf="hasOverflow"
+                            [disabled]="!canScrollLeft"
+                            (click)="scrollTabs(-1, $event)"
+                            (mousedown)="$event.stopPropagation()"
+                            aria-label="Previous menu groups">
+                        <mat-icon class="scroll-btn-icon">chevron_left</mat-icon>
+                    </button>
+
+                    <div class="menu-tabs-scroll"
+                         #tabsScroll
+                         [class.centered]="!hasOverflow"
+                         (scroll)="onTabsScroll()">
+                        <a *ngFor="let tab of tabs"
+                           class="button"
+                           [attr.data-tab]="tab"
+                           (click)="onTabClick(tab)"
+                           [ngClass]="{'dark': _currentMenu == tab}">
+                          <span class="button-label">{{tab}}</span>
+                        </a>
+                    </div>
+
+                    <button type="button"
+                            class="scroll-btn"
+                            *ngIf="hasOverflow"
+                            [disabled]="!canScrollRight"
+                            (click)="scrollTabs(1, $event)"
+                            (mousedown)="$event.stopPropagation()"
+                            aria-label="Next menu groups">
+                        <mat-icon class="scroll-btn-icon">chevron_right</mat-icon>
+                    </button>
                 </div>
             </mat-panel-title>
         </mat-expansion-panel-header>
