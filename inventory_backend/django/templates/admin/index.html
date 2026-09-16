@@ -6,13 +6,14 @@
 {% load i18n %}
 
 {% block content %}
-{{ block.super }}
-
 {% multitenant_enabled as is_multitenant %}
-{% if is_multitenant %}
+{% is_root_tenant as is_root %}
+{# Mirror Unfold's index layout so custom sections stay in the same column as app modules #}
 <div class="flex flex-col lg:flex-row lg:gap-8">
     <div class="grow">
+        {% include "unfold/helpers/app_list_default.html" %}
 
+        {% if is_multitenant %}
         <!-- Managed map instances -->
         <div class="bg-base-50 mb-6 rounded-default p-3 dark:bg-base-800">
             <table class="border border-base-400/10 border-spacing-none border-separate rounded-default overflow-hidden shadow-xs w-full dark:border-base-800">
@@ -55,16 +56,17 @@
                 </tbody>
             </table>
         </div>
-{% endif %}
+        {% endif %}
 
-        <!-- Import data section (always visible) -->
+        {# Import is for scoped/map tenants (and single-tenant mode), not the root admin tenant #}
+        {% if not is_root %}
         <div class="bg-base-50 mb-6 rounded-default p-3 dark:bg-base-800">
             <table class="border border-base-400/10 border-spacing-none border-separate rounded-default overflow-hidden shadow-xs w-full dark:border-base-800">
                 <caption class="font-semibold mb-3 text-base-900 text-left dark:text-base-100">
                     <a class="section" title="Import data">{% trans "Import data" %}</a>
                 </caption>
                 <tbody>
-                    <!-- CSV import — always available -->
+                    <!-- CSV import -->
                     <tr class="model-menu bg-white dark:bg-base-900 model-usertenantpermissions">
                         <th scope="row" class="font-normal p-3 text-left">
                             <a href="/import/csv/">{% trans "Import map data (CSV, XLSX, or ZIP)" %}</a>
@@ -97,12 +99,11 @@
                 </tbody>
             </table>
         </div>
-
-{% if is_multitenant %}
+        {% endif %}
     </div>
-    <div class="lg:w-96"></div>
+
+    {% include "unfold/helpers/history.html" %}
 </div>
-{% endif %}
 
 <div class="background-no-go" id="loading-bg"></div>
 <div class="spinner" id="spinner"></div>
