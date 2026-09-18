@@ -75,7 +75,8 @@ export class MapDataService {
 
     const linksGroups = bundle.links_groups.map((group) => ({
       ...group,
-      visibility: false,
+      visibility: true,
+      onMap: false,
       currentColor: group.links_color,
     }));
 

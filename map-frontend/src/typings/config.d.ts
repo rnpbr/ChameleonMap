@@ -88,6 +88,7 @@ declare global {
     readonly opacity: number;
     readonly parent_menu: number;
     visibility: boolean;
+    onMap: boolean;
     currentColor: string;
   }
 

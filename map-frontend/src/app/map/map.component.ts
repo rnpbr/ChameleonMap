@@ -428,6 +428,7 @@ export class MapComponent implements OnInit {
       this.linksFeatureOn = true;
       const menusById = buildEntityIndex(this.menus ?? []);
       const menuGroupsById = buildEntityIndex(this.menugroups ?? []);
+      this._linksGroup.forEach((lg: LinksGroup) => (lg.onMap = false));
       this._links.forEach((link: Link) => {
         const loc1 = this.getLocationById(link.location_1);
         const loc2 = this.getLocationById(link.location_2);
@@ -446,7 +447,7 @@ export class MapComponent implements OnInit {
         ) {
           return;
         }
-        linkgroup!.visibility = true;
+        linkgroup!.onMap = true;
         const values = this.getOriginAndDestiny(loc1!, loc2!, link.invert_link);
         const pointA = values[0];
         const pointB = values[1];
@@ -499,7 +500,9 @@ export class MapComponent implements OnInit {
         }
 
         link.interactionsAttached = false;
-        link.line.addTo(this.map);
+        if (linkgroup!.visibility) {
+          link.line.addTo(this.map);
+        }
       });
     }
   }
@@ -774,7 +777,8 @@ export class MapComponent implements OnInit {
 
   private checkLinksOnMap(location: Location) {
     for (const link of this._links) {
-      if (this.getLinksGroupById(link.links_group)?.visibility) {
+      const linkgroup = this.getLinksGroupById(link.links_group);
+      if (linkgroup?.onMap && linkgroup.visibility) {
         if (link.location_1 == location.id || link.location_2 == location.id) {
           const loc1 = this.getLocationById(link.location_1);
           const loc2 = this.getLocationById(link.location_2);
@@ -1098,11 +1102,12 @@ export class MapComponent implements OnInit {
       lg.visibility = true;
       for (const link of this._links) {
         const elementLinksGroup = this.getLinksGroupById(link.links_group);
-        if (!elementLinksGroup) return;
+        if (!elementLinksGroup) continue;
+        if (!elementLinksGroup.onMap || !elementLinksGroup.visibility) continue;
         if (link.links_group == lg.id || this.isMenuSimultaneousAndSelectedInItsMenuGroup(elementLinksGroup.parent_menu)) {
           const loc1 = this.getLocationById(link.location_1);
           const loc2 = this.getLocationById(link.location_2);
-          if (loc1 && loc2 && loc1.onMap && loc2.onMap) {
+          if (loc1 && loc2 && loc1.onMap && loc2.onMap && link.line != null) {
             link.line.addTo(this.map);
             if (this.mapInteractionPhase === 'ready') {
               this.attachLinkInteractions(link);
