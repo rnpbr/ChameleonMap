@@ -218,7 +218,7 @@ export function isLinkEligible(
     return false;
   }
 
-  return isSimultaneous || (loc1.onMap && loc2.onMap);
+  return loc1.onMap && loc2.onMap;
 }
 
 export function shouldShowTagForMenu(
