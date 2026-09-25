@@ -18,8 +18,7 @@
 
                     <div class="menu-tabs-scroll"
                          #tabsScroll
-                         [class.centered]="!hasOverflow"
-                         (scroll)="onTabsScroll()">
+                         [class.centered]="!hasOverflow">
                         <a *ngFor="let tab of tabs"
                            class="button"
                            [attr.data-tab]="tab"

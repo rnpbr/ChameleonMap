@@ -87,7 +87,7 @@ mat-panel-title {
   gap: 2px;
   overflow-x: auto;
   overflow-y: hidden;
-  scroll-behavior: smooth;
+  scroll-behavior: auto;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-x;
   scrollbar-width: none;
@@ -98,7 +98,12 @@ mat-panel-title {
 }
 
 .menu-tabs-scroll.centered {
-  justify-content: space-around;
+  justify-content: stretch;
+}
+
+.menu-tabs-scroll.centered .button {
+  flex: 1 0 auto;
+  max-width: none;
 }
 
 .scroll-btn {

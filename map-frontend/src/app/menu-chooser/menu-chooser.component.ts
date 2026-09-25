@@ -5,6 +5,7 @@ import {
   ElementRef,
   EventEmitter,
   Input,
+  NgZone,
   OnDestroy,
   Output,
   ViewChild,
@@ -26,11 +27,17 @@ export class MenuChooserComponent implements AfterViewInit, OnDestroy {
   private _menugroups: Array<MenuGroup>;
   private resizeObserver?: ResizeObserver;
   private overflowCheckPending = false;
+  private scrollEdgesPending = false;
+  private textMeasureContext: CanvasRenderingContext2D | null = null;
   private readonly onWheelListener = (event: WheelEvent) => this.onTabsWheel(event);
+  private readonly onScrollListener = () => this.scheduleScrollEdgesUpdate();
 
   @ViewChild('tabsScroll') tabsScroll?: ElementRef<HTMLElement>;
 
-  constructor(private cdr: ChangeDetectorRef) { }
+  constructor(
+    private cdr: ChangeDetectorRef,
+    private zone: NgZone,
+  ) { }
 
   @Input()
   get linksFeatureOn(): boolean {
@@ -72,25 +79,27 @@ export class MenuChooserComponent implements AfterViewInit, OnDestroy {
         this.resizeObserver = new ResizeObserver(() => this.scheduleOverflowCheck());
         this.resizeObserver.observe(el);
       }
-      // Non-passive so we can preventDefault and map zoom doesn't steal the wheel.
-      el.addEventListener('wheel', this.onWheelListener, { passive: false });
+      this.zone.runOutsideAngular(() => {
+        el.addEventListener('wheel', this.onWheelListener, { passive: false });
+        el.addEventListener('scroll', this.onScrollListener, { passive: true });
+      });
     }
     this.scheduleOverflowCheck();
   }
 
   ngOnDestroy() {
     this.resizeObserver?.disconnect();
-    this.tabsScroll?.nativeElement.removeEventListener('wheel', this.onWheelListener);
+    const el = this.tabsScroll?.nativeElement;
+    if (el) {
+      el.removeEventListener('wheel', this.onWheelListener);
+      el.removeEventListener('scroll', this.onScrollListener);
+    }
   }
 
   onTabClick(tab: string) {
     this.buttonClicked.emit({ clickedMenu: tab });
     this._currentMenu = tab;
     this.scrollTabIntoView(tab);
-  }
-
-  onTabsScroll() {
-    this.updateOverflowState();
   }
 
   scrollTabs(direction: -1 | 1, event?: Event) {
@@ -104,21 +113,26 @@ export class MenuChooserComponent implements AfterViewInit, OnDestroy {
 
   private onTabsWheel(event: WheelEvent) {
     const container = this.tabsScroll?.nativeElement;
-    if (!container) { return; }
+    if (!container || !this.hasOverflow) { return; }
 
     const maxScroll = container.scrollWidth - container.clientWidth;
     if (maxScroll <= 1) { return; }
 
-    // Trackpads may already send deltaX; mice usually send deltaY.
-    const delta =
+    let delta =
       Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
     if (delta === 0) { return; }
 
+    // Normalize line/page deltas to pixels.
+    if (event.deltaMode === 1) {
+      delta *= 16;
+    } else if (event.deltaMode === 2) {
+      delta *= container.clientWidth;
+    }
+
     event.preventDefault();
     event.stopPropagation();
-    container.scrollLeft = Math.min(maxScroll, Math.max(0, container.scrollLeft + delta));
-    this.updateOverflowState();
-    this.cdr.detectChanges();
+    container.scrollLeft += delta;
+    this.scheduleScrollEdgesUpdate();
   }
 
   private scheduleOverflowCheck() {
@@ -131,14 +145,89 @@ export class MenuChooserComponent implements AfterViewInit, OnDestroy {
     });
   }
 
+  private scheduleScrollEdgesUpdate() {
+    if (this.scrollEdgesPending) { return; }
+    this.scrollEdgesPending = true;
+    requestAnimationFrame(() => {
+      this.scrollEdgesPending = false;
+      this.updateScrollEdges();
+    });
+  }
+
+  /** Fast path: only toggle chevron enabled state from current scrollLeft. */
+  private updateScrollEdges() {
+    const container = this.tabsScroll?.nativeElement;
+    if (!container || !this.hasOverflow) { return; }
+
+    const maxScroll = Math.max(0, container.scrollWidth - container.clientWidth);
+    const canLeft = container.scrollLeft > 1;
+    const canRight = container.scrollLeft < maxScroll - 1;
+
+    if (canLeft !== this.canScrollLeft || canRight !== this.canScrollRight) {
+      this.canScrollLeft = canLeft;
+      this.canScrollRight = canRight;
+      this.zone.run(() => this.cdr.detectChanges());
+    }
+  }
+
   private updateOverflowState() {
     const container = this.tabsScroll?.nativeElement;
     if (!container) { return; }
 
-    const maxScroll = container.scrollWidth - container.clientWidth;
-    this.hasOverflow = maxScroll > 1;
-    this.canScrollLeft = container.scrollLeft > 1;
-    this.canScrollRight = container.scrollLeft < maxScroll - 1;
+    // Decide overflow from capped preferred widths, not the current flex layout.
+    // Otherwise expand-to-fill can shrink tabs and hide real overflow.
+    const buttons = Array.from(container.querySelectorAll('.button')) as HTMLElement[];
+    const gap = parseFloat(getComputedStyle(container).gap || '0') || 0;
+    let preferredTotal = Math.max(0, buttons.length - 1) * gap;
+    for (const btn of buttons) {
+      preferredTotal += this.measureCappedTabWidth(btn);
+    }
+
+    const previousOverflow = this.hasOverflow;
+    this.hasOverflow = preferredTotal > container.clientWidth + 1;
+
+    const maxScroll = Math.max(0, container.scrollWidth - container.clientWidth);
+    this.canScrollLeft = this.hasOverflow && container.scrollLeft > 1;
+    this.canScrollRight = this.hasOverflow && container.scrollLeft < maxScroll - 1;
+
+    if (previousOverflow !== this.hasOverflow) {
+      this.scheduleOverflowCheck();
+    }
+  }
+
+  /** Preferred tab width as used in scroll mode (content, capped at max-width). */
+  private measureCappedTabWidth(btn: HTMLElement): number {
+    const tabMaxWidth = 104;
+    const label = btn.querySelector('.button-label') as HTMLElement | null;
+    const btnStyle = getComputedStyle(btn);
+    const pad =
+      (parseFloat(btnStyle.paddingLeft) || 0) +
+      (parseFloat(btnStyle.paddingRight) || 0);
+
+    let contentWidth = 0;
+    if (label?.textContent) {
+      const labelStyle = getComputedStyle(label);
+      contentWidth = this.measureTextWidth(label.textContent, labelStyle);
+    }
+
+    return Math.min(tabMaxWidth, Math.ceil(contentWidth + pad));
+  }
+
+  private measureTextWidth(text: string, style: CSSStyleDeclaration): number {
+    if (!this.textMeasureContext) {
+      const canvas = document.createElement('canvas');
+      this.textMeasureContext = canvas.getContext('2d');
+    }
+    const context = this.textMeasureContext;
+    if (!context) { return text.length * 8; }
+    context.font = [
+      style.fontStyle,
+      style.fontVariant,
+      style.fontWeight,
+      style.fontSize,
+      style.fontFamily,
+    ].join(' ');
+    return context.measureText(text).width;
   }
 
   private scrollTabIntoView(tab: string) {
