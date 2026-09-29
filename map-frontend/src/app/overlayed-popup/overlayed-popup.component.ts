@@ -71,18 +71,18 @@ export class OverlayedPopupComponent {
 
   /**
    * mailto: link for the footer's "Report a correction", pre-filled
-   * with the node and the active institution so the maintainers know
-   * what the report is about. Null when there's no institution or no
-   * configured address -- hides the footer.
+   * with the active institution so the maintainers know what the
+   * report is about (not the node -- an institution's popup content
+   * is the same on all of its nodes). Null when there's no institution
+   * or no configured address -- hides the footer.
    */
   get correctionMailto(): string | null {
     const institution = this.activeInstitution;
     if (!this.correctionEmail || !institution) {
       return null;
     }
-    const nodeName = this._currentKeeper.name;
-    const subject = `Correction request: ${nodeName} — ${institution.name}`;
-    const body = `Node: ${nodeName}\nInstitution: ${institution.name}\n\nWhat is wrong or outdated:\n`;
+    const subject = `Correction request: ${institution.name}`;
+    const body = `Institution: ${institution.name}\n\nWhat is wrong or outdated:\n`;
     return `mailto:${this.correctionEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   }
 

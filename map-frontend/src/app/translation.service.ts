@@ -14,7 +14,7 @@ const DEFAULT_LABELS: Record<string, string> = {
   institutions_plural: 'institutions',
   report_correction_prompt: 'Something wrong or outdated in the information about',
   report_correction: 'Report a correction',
-  report_correction_hint: 'Opens your email app with the node and institution pre-filled',
+  report_correction_hint: 'Opens your email app with the institution pre-filled',
 };
 
 /**
