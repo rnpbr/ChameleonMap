@@ -37,20 +37,57 @@ declare global {
     visibility: boolean;
   }
 
+  /** A single language's translation of an owning institution's popup content */
+  export interface PopupInstitutionTranslation {
+    readonly language_code: string;
+    readonly description: string;
+    readonly overlayed_popup_content: string;
+  }
+
+  /**
+   * Popup content (summary + full HTML) of one institution owning a
+   * location, plus its translations. A location may have more than
+   * one of these -- one tab per institution in the popup.
+   */
+  export interface PopupInstitution {
+    readonly name: string;
+    readonly description: string;
+    readonly overlayed_popup_content: string;
+    // Same PREN(1)/NREN(2) menu id as the map's own PREN/NREN filter
+    // -- a location can belong to networks in both menus, and only
+    // the one matching the currently selected menu should show.
+    readonly parent_menu: number;
+    readonly translations: PopupInstitutionTranslation[];
+  }
+
   export interface Location {
     readonly id: number;
     readonly name: string;
     readonly latitude: number;
     readonly longitude: number;
-    readonly description: string;
     readonly active: boolean;
-    
+    readonly popup_institutions: PopupInstitution[];
+
     onMap: boolean;
     activeColors: Array<string>;
     locationMarker: any;
     popup: string;
-    overlayed_popup_content: string;
+    hasPopupContent: boolean;
+    activePopupInstitutionIndex: number;
     /*  containedTags: Array<{tag: Tag, activeOnMap: boolean}>; */
+  }
+
+  /** A single language's translation of a UIString */
+  export interface UIStringTranslation {
+    readonly language_code: string;
+    readonly text: string;
+  }
+
+  /** A piece of fixed map interface vocabulary, and its translations */
+  export interface UIString {
+    readonly key: string;
+    readonly text: string;
+    readonly translations: UIStringTranslation[];
   }
 
   export interface TagRelationship {

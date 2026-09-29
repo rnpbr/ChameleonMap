@@ -9,6 +9,7 @@ import {
   AfterViewChecked
 } from '@angular/core';
 import { SubMapComponent } from '../sub-map/sub-map.component';
+import { TranslationService } from '../translation.service';
 
 @Component({
   selector: 'app-overlayed-popup',
@@ -19,7 +20,6 @@ import { SubMapComponent } from '../sub-map/sub-map.component';
 export class OverlayedPopupComponent {
   @ViewChild(SubMapComponent) subMap: SubMapComponent;
   @ViewChild('overlayed_popup_conteiner') overlayedPopupContainer: ElementRef;
-  @ViewChild('newtab_button') newtabButton: ElementRef;
   @ViewChild('opp_title') overlayedPopupTitle: ElementRef;
 
   // Data
@@ -31,14 +31,75 @@ export class OverlayedPopupComponent {
   // Control
   private _isActive: boolean;
 
+  // Which institution tab is active, when the current keeper is a
+  // Location owned by more than one institution with popup content.
+  public activeInstitutionIndex = 0;
+
   // Parent Methods
   @Input() locations: any;
   @Input() tags: any;
   @Input() getLocationById: any;
   @Input() getTagById: any;
+  // Currently selected PREN(1)/NREN(2) menu -- a location can belong
+  // to networks in both, and only the one matching this should show.
+  @Input() currentMenuId: number;
+  // Address the "Report a correction" footer link mails to -- from the
+  // map settings; the footer is hidden when empty.
+  @Input() correctionEmail: string;
 
-  constructor() {
+  constructor(private translationService: TranslationService) {
     this._isActive = false;
+  }
+
+  /**
+   * Institutions with popup content for the current Location keeper,
+   * filtered to whichever network(s) match the currently selected
+   * PREN/NREN menu (empty for a Tag keeper).
+   */
+  get currentInstitutions(): PopupInstitution[] {
+    if (this._currentKeeperType === 'location' && this._currentKeeper) {
+      const all = (this._currentKeeper as Location).popup_institutions || [];
+      return all.filter(institution => institution.parent_menu === this.currentMenuId);
+    }
+    return [];
+  }
+
+  /** Institution whose tab is currently shown (undefined for a Tag keeper) */
+  get activeInstitution(): PopupInstitution | undefined {
+    return this.currentInstitutions[this.activeInstitutionIndex];
+  }
+
+  /**
+   * mailto: link for the footer's "Report a correction", pre-filled
+   * with the node and the active institution so the maintainers know
+   * what the report is about. Null when there's no institution or no
+   * configured address -- hides the footer.
+   */
+  get correctionMailto(): string | null {
+    const institution = this.activeInstitution;
+    if (!this.correctionEmail || !institution) {
+      return null;
+    }
+    const nodeName = this._currentKeeper.name;
+    const subject = `Correction request: ${nodeName} — ${institution.name}`;
+    const body = `Node: ${nodeName}\nInstitution: ${institution.name}\n\nWhat is wrong or outdated:\n`;
+    return `mailto:${this.correctionEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  }
+
+  /** Fixed map vocabulary, translated for the browser's detected language */
+  public t(key: string): string {
+    return this.translationService.t(key);
+  }
+
+  public selectInstitution(index: number) {
+    this.activeInstitutionIndex = index;
+    this.renderLocationContent();
+  }
+
+  private renderLocationContent() {
+    const institution = this.activeInstitution;
+    const content = institution ? this.translationService.translatePopup(institution).overlayedPopupContent : '';
+    this.subMap.setContentDirectly(content);
   }
 
   get isActive() {
@@ -54,7 +115,6 @@ export class OverlayedPopupComponent {
     const buttonId: string = buttonClickedEvent.id;
 
     this.setCurrentKeeperByButtonId(buttonId);
-    this.setNewTabButtonLink();
 
     const popup = this.overlayedPopupContainer.nativeElement;
     popup.classList.add('visible');
@@ -66,12 +126,11 @@ export class OverlayedPopupComponent {
     if (location !== null) {
       this._currentKeeperType = 'location';
       this._currentKeeper = this.getLocationById(location.id);
+      this.activeInstitutionIndex = 0;
 
       const popup = this.overlayedPopupContainer.nativeElement;
       this.overlayedPopupTitle.nativeElement.innerHTML = `<div>${this.getPopupTitle()}</div>`;
-      this.subMap.keeper = this._currentKeeper;
-
-      this.setNewTabButtonLink();
+      this.renderLocationContent();
 
       popup.classList.remove('hidden');
       this._isActive = true;
@@ -87,7 +146,6 @@ export class OverlayedPopupComponent {
       this.overlayedPopupTitle.nativeElement.innerHTML = `<div>${title}</div>`;
       // this.subMap.keeper = this._currentKeeper;
       this.subMap.setContentDirectly(content)
-      // this.setNewTabButtonLink();
 
       popup.classList.add('visible');
       popup.classList.remove('hidden');
@@ -104,6 +162,8 @@ export class OverlayedPopupComponent {
 
 
   private setCurrentKeeperByButtonId(buttonId: string) {
+    this.activeInstitutionIndex = 0;
+
     if (buttonId.includes('location')) {
       this._currentKeeperType = 'location';
       this._currentKeeper = this.getLocationById(this.getLocationIdByButtonHtmlId(buttonId));
@@ -116,17 +176,16 @@ export class OverlayedPopupComponent {
     this.overlayedPopupTitle.nativeElement.innerHTML = `<div>${this.getPopupTitle()}</div>`;
 
     // Set Content
-    this.subMap.keeper = this._currentKeeper;
+    if (this._currentKeeperType === 'location') {
+      this.renderLocationContent();
+    } else {
+      this.subMap.keeper = this._currentKeeper as Tag;
+    }
   }
 
   private getPopupTitle(): string {
     const name = this._currentKeeper.name;
     return name;
-  }
-
-  private setNewTabButtonLink(type: string = this._currentKeeperType, id: number = this._currentKeeper.id) {
-    this.newtabButton.nativeElement.setAttribute('routerLink', `${type}/detail/${id}`)
-    this.newtabButton.nativeElement.setAttribute('href', `${type}/detail/${id}`)
   }
 
   private getLocationIdByButtonHtmlId(buttonId: string): number {
@@ -147,7 +206,8 @@ export class OverlayedPopupComponent {
   }
 
   public getOverlayedPopupButtonForLocation(location: Location): string {
-    return `<img src="assets/expand-icon.png" class='opp-open-button opp-open-button-for-location opp-expand-icon' id='opp-location-${location.id}'>`;
+    return `<button type="button" class="opp-toggle opp-open-button opp-open-button-for-location" id='opp-location-${location.id}'>` +
+      `<i class="fa fa-plus"></i></button>`;
   }
 
   public getOverlayedPopupButtonForTag(tag: Tag): string {

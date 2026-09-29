@@ -71,12 +71,15 @@ export class SubMapComponent implements OnInit {
     // map.setZoom(10);
   }
 
-  public set keeper( keeper: Location | Tag){
+  // Locations resolve their content via TranslationService and go
+  // through setContentDirectly() instead (they own a list of
+  // institutions with untranslated overlayed_popup_content per
+  // institution, not a single flat field). Only Tags still use this
+  // setter directly.
+  public set keeper(keeper: Tag) {
     this._keeper = keeper;
-    // console.log(this._keeper.overlayed_popup_content)
-    let keeperHtml = `<div style=''>${this._keeper.overlayed_popup_content}</div>`;
+    let keeperHtml = `<div style=''>${keeper.overlayed_popup_content}</div>`;
     this.popupContentBody = this.sanitizer.bypassSecurityTrustHtml(keeperHtml);
-  
   }
 
 

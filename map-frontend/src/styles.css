@@ -13,13 +13,11 @@ body {
 }
 
 .popup-title {
-    margin-top: -3px;
-    margin-bottom: -7px;
-    font-family: 'Open Sans', sans-serif;
+    margin: 0;
     text-align: left;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    font-size: 15px;
+    font-weight: 500;
+    color: #202124;
 }
 
 .popup-subtitle {
@@ -28,6 +26,124 @@ body {
     align-items: center;
     margin-top: 30px;
     margin-bottom: -10px;
+}
+
+/* Institution tabs shown for a location owned by more than one
+   institution with popup content -- used both in the small Leaflet
+   popup (built as a raw HTML string, hence global styles) and in the
+   big overlayed popup. */
+.opp-tabs-subtitle {
+    font-size: 11px;
+    color: #5f6368;
+    margin-top: 3px;
+}
+
+.opp-tabs,
+.opp-institution-tabs {
+    display: flex;
+    gap: 4px;
+    margin-top: 12px;
+    border-bottom: 1px solid #e0e0e0;
+    overflow-x: auto;
+}
+
+/* .sub-map-container (in the big overlayed popup) is absolutely
+   positioned with a fixed top offset that assumes only the title bar
+   sits above it -- push it down when the institution tab bar is also
+   present, and make sure the tabs sit in their own stacking context
+   above it so they stay clickable. */
+.opp-institution-tabs {
+    position: relative;
+    z-index: 7775;
+    background: #fff;
+}
+
+#overlayed-popup.has-institution-tabs .sub-map-container {
+    top: 98px;
+}
+
+/* Leave room for the "Report a correction" footer (48px) pinned to
+   the bottom of the big overlayed popup. */
+#overlayed-popup.has-report-footer .sub-map-container {
+    bottom: 48px;
+}
+
+.opp-tab {
+    flex: none;
+    border: none;
+    background: none;
+    padding: 7px 8px 6px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #5f6368;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.opp-tab.active {
+    color: #2a2d7c;
+    border-bottom-color: #2a2d7c;
+}
+
+/* Match GREN-Map-Visualization's node-popup-content proportions so the
+   institution section doesn't stretch across the whole popup width. */
+.leaflet-popup-content:has(.opp-popup-institutions) {
+    max-width: 280px;
+}
+
+/* The big overlayed popup's institution tab bar mirrors a Material
+   tab group (as used in GREN-Map-Visualization's modal): full-width,
+   evenly-split tabs, rather than the compact left-aligned pills used
+   in the small Leaflet popup. */
+.opp-institution-tabs .opp-tab {
+    flex: 1 1 0;
+    text-align: center;
+    padding: 14px 16px 12px;
+    font-size: 14px;
+}
+
+.opp-summary {
+    margin: 10px 0 0;
+    font-size: 12px;
+    line-height: 1.55;
+    color: #3c4043;
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.opp-popup-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    margin-top: 10px;
+}
+
+.opp-toggle {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: none;
+    background: #2a2d7c;
+    color: #fff;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 0;
+    margin-bottom: 20px;
+}
+
+.opp-toggle i {
+    pointer-events: none;
+}
+
+.opp-toggle.opp-open-button:hover {
+    background: #2a2d7c;
 }
 
 /* For Google Chrome */

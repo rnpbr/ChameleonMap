@@ -53,4 +53,8 @@ export class ApiService {
   getKmlShapes() {
     return this.http.get<KmlShape[]>('/kmlshape/');
   }
+
+  getUiStrings() {
+    return this.http.get<UIString[]>('/uistrings/');
+  }
 }

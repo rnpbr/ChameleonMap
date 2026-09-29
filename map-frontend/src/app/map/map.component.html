@@ -14,7 +14,7 @@
     <app-collapser id="app-collapser" [hasTabs]="hasMenuGroupTabs"></app-collapser>
   </div>
 </div>
-<app-overlayed-popup [locations]="locations" [tags]="tags" [getLocationById]="getLocationById" [getTagById]="getTagById"></app-overlayed-popup>
+<app-overlayed-popup [locations]="locations" [tags]="tags" [getLocationById]="getLocationById" [getTagById]="getTagById" [currentMenuId]="selectedMenu" [correctionEmail]="mapSetting?.correction_email"></app-overlayed-popup>
 <app-help-button [locations]="locations" (howToHelpClickEvent)="showHowToHelpMessage($event)"></app-help-button>
 <app-tooltip [map]="map"></app-tooltip>
 <app-footer [footerUrl]="footerUrl"></app-footer>

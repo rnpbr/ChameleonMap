@@ -7,6 +7,7 @@ import { MatIconModule } from '@angular/material/icon';
 
 import { ApiService } from './api.service';
 import { EventEmitterService } from './event-emitter.service';
+import { TranslationService } from './translation.service';
 import { AppComponent } from './app.component';
 import { MapComponent } from './map/map.component';
 import { LeafletModule } from '@asymmetrik/ngx-leaflet';
@@ -65,7 +66,7 @@ import { ChameleonButtonComponent } from './chameleon-button/chameleon-button.co
     MatTableModule,
     AppRoutingModule
   ],
-  providers: [ApiService, EventEmitterService],
+  providers: [ApiService, EventEmitterService, TranslationService],
   bootstrap: [AppComponent]
 })
 export class AppModule {}

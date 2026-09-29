@@ -1,16 +1,29 @@
 <div id="overlayed-popup-container" #overlayed_popup_conteiner class="hidden">
-    <div id="fade-background"></div>
-    <div id="overlayed-popup">
-        <button type="button" id="opp-close-button" class="corner-button" (click)="this.desactivate()"><i class="fa fa-close"></i></button>
-        <a id="newtab-button" #newtab_button class="corner-button" routerLink="/" routerLinkActive="active" ariaCurrentWhenActive="page" target="_blank"><img src="assets/expand-icon.png" class="opp-open-button opp-open-button-for-location opp-expand-icon"></a>
-        
+    <div id="fade-background" (click)="this.desactivate()"></div>
+    <div id="overlayed-popup" [class.has-institution-tabs]="currentInstitutions.length > 1" [class.has-report-footer]="!!correctionMailto">
         <div class="overlayed-popup-title">
             <p id = "opp-title" #opp_title></p>
-            <hr>  
-        </div>    
+            <div class="opp-title-actions">
+                <button type="button" id="opp-close-button" class="corner-button" (click)="this.desactivate()"><i class="fa fa-close"></i></button>
+            </div>
+        </div>
+        <div class="opp-institution-tabs" *ngIf="currentInstitutions.length > 1">
+            <button type="button" *ngFor="let institution of currentInstitutions; let i = index"
+                    class="opp-tab" [class.active]="i === activeInstitutionIndex"
+                    (click)="selectInstitution(i)">
+                {{ institution.name }}
+            </button>
+        </div>
         <div class="overlayed-popup-content">
             <div id = "opp-content" #opp_content></div>
         </div>
         <app-sub-map [locations]="locations" [tags]="tags" [getLocationById]="getLocationById" [getTagById]="getTagById"></app-sub-map>
+        <div class="opp-report-footer" *ngIf="correctionMailto">
+            <span class="opp-report-prompt">{{ t('report_correction_prompt') }} {{ activeInstitution?.name }}?</span>
+            <a class="opp-report-link" [href]="correctionMailto" [title]="t('report_correction_hint')">
+                <i class="fa fa-flag"></i>
+                <span>{{ t('report_correction') }}</span>
+            </a>
+        </div>
     </div>
 </div>

@@ -1,6 +1,6 @@
 .sub-map-container {
     position: absolute;
-    top: 70px;
+    top: 44px;
     left: 0;
     right: 0;
     bottom: 0;
@@ -29,11 +29,12 @@
     background: white;
 
     display: flex;
-    justify-content: baseline;  
-    align-items: center;     
+    justify-content: baseline;
+    align-items: center;
     flex-direction: column;
     padding: 20px;
     box-sizing: border-box;
+    text-align: left;
   }
 
   .intern-sub-popup{

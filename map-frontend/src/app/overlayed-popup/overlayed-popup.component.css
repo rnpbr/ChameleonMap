@@ -12,6 +12,7 @@
   height: 100%;
   opacity: 0.8;
   z-index: 7000;
+  cursor: pointer;
 }
 
 #overlayed-popup {  
@@ -21,7 +22,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  margin: 8%;
+  margin: 8% 30%;
   z-index: 7771;
   background: #fff;
   text-align: center;
@@ -39,42 +40,105 @@
   z-index: 7772;
 }
 
+.overlayed-popup-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background-color: #2a2d7c;
+  color: #fff;
+  height: 44px;
+  padding: 0 8px 0 20px;
+  border-radius: 5px 5px 0 0;
+  box-sizing: border-box;
+}
+
+.opp-title-actions {
+  display: flex;
+  align-items: center;
+  flex: none;
+}
+
 .corner-button {
-  float: right;
-  padding: 7px;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
   cursor: pointer;
   border: none;
   border-radius: 50%;
-  color: gray;
+  color: #fff;
   font-weight: bold;
   font-size: 16px;
   background-color: transparent;
-  padding: 19px 5px 0px 8px;
+  box-sizing: border-box;
 }
 
-#opp-close-button {
-  padding-right: 10px;
-}
-
-#opp-close-button:hover{
-  color: rgb(37, 36, 36) ;
-}
-
-#newtab-button:hover{
-  color: rgb(37, 36, 36) ;
+#opp-close-button:hover {
+  background-color: rgba(255, 255, 255, 0.2);
 }
 
 #opp-title{
+  flex: 1 1 auto;
+  min-width: 0;
   font-weight: bold;
-  font-size: 23px;
+  font-size: 18px;
   text-align: left;
-  top: 0%;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  line-height: 110%;
-  padding-left: 20px;
-  margin-top: 17px;
+  margin: 0;
+}
+
+/* "Report a correction" footer, pinned to the bottom of the modal
+   (the sub-map above it is absolutely positioned -- see styles.css,
+   .has-report-footer). */
+.opp-report-footer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 7775;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  height: 48px;
+  padding: 0 24px;
+  border-top: 1px solid #e0e0e0;
+  border-radius: 0 0 5px 5px;
+  background: #f7f8fb;
+  box-sizing: border-box;
+  text-align: left;
+}
+
+.opp-report-prompt {
+  min-width: 0;
+  font-size: 12px;
+  color: #5f6368;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.opp-report-link {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #2a2d7c;
+  text-decoration: none;
+}
+
+.opp-report-link:hover {
+  color: #4a4ea8;
+  text-decoration: underline;
 }
 
 #opp-content {

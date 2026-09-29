@@ -1,6 +1,7 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../api.service';
+import { TranslationService } from '../translation.service';
 
 @Component({
   selector: 'app-location-detail',
@@ -12,7 +13,11 @@ export class LocationDetailComponent implements OnInit, OnDestroy {
 
   private error: any;
 
-  constructor(private route: ActivatedRoute, private api: ApiService) {}
+  constructor(
+    private route: ActivatedRoute,
+    private api: ApiService,
+    private translationService: TranslationService,
+  ) {}
 
   ngOnInit() {
     this.idSubscriber = this.route.params.subscribe((params) => {
@@ -39,7 +44,16 @@ export class LocationDetailComponent implements OnInit, OnDestroy {
     }
     const description = document.getElementById('description');
     if (description) {
-      description.innerHTML = location.overlayed_popup_content;
+      const institutions = location.popup_institutions || [];
+      description.innerHTML = institutions
+        .map(institution => {
+          const { overlayedPopupContent } = this.translationService.translatePopup(institution);
+          const heading = institutions.length > 1
+            ? `<h3 class="popup-subtitle">${institution.name}</h3>`
+            : '';
+          return heading + overlayedPopupContent;
+        })
+        .join('');
     }
   }
 }

@@ -14,6 +14,7 @@ import * as L from 'leaflet';
 import 'leaflet-responsive-popup';
 import '@elfalem/leaflet-curve';
 import { ApiService } from '../api.service';
+import { TranslationService } from '../translation.service';
 import { OverlayedPopupComponent } from '../overlayed-popup/overlayed-popup.component';
 import { forkJoin } from 'rxjs';
 import { kml } from '@tmcw/togeojson';
@@ -47,6 +48,11 @@ export class MapComponent implements OnInit {
   public mapSetting: any = null;
   public map: L.Map;
   private locationHeaderSize = 0;
+  // Tracks the exact HTML currently in each location's `popup` string
+  // for its institutions section, so a tab click can swap it out
+  // in-place without rebuilding the whole popup (which also has
+  // per-tag sections appended after it).
+  private locationPopupInstitutionsHtml: { [locationId: number]: string } = {};
   private mapLoaded = false;
   private mapInitialized = false;
   private markerClusterGroup: L.MarkerClusterGroup;
@@ -83,6 +89,8 @@ export class MapComponent implements OnInit {
   clickout(event: any) {
     if (event.target.classList.contains("opp-open-button")) {
       this.overlayedPopup.activate(event.target);
+    } else if (event.target.classList.contains("opp-tab")) {
+      this.onPopupTabClick(event.target);
     }
   }
 
@@ -160,7 +168,11 @@ export class MapComponent implements OnInit {
     this._kmlShapes = value;
   }
 
-  constructor(private api: ApiService, private zone: NgZone) {
+  constructor(
+    private api: ApiService,
+    private zone: NgZone,
+    private translationService: TranslationService,
+  ) {
     this.checkOrientation();
   }
 
@@ -334,7 +346,9 @@ export class MapComponent implements OnInit {
         location.activeColors = [];
         location.locationMarker = {};
         location.popup =
-          "<div style='max-height:calc(100vh - 500px); min-height: 180px; overflow:scroll; overflow-x:hidden; margin-top: 20px; margin-right:0px; margin-left: 10px; text-align: justify;'>";
+          "<div style='max-height:calc(100vh - 500px); min-height: 180px; overflow:scroll; overflow-x:hidden; margin-top: 20px; margin-right:0px; margin-left: 10px; text-align: left;'>";
+        location.hasPopupContent = false;
+        location.activePopupInstitutionIndex = 0;
         this.locationHeaderSize = location.popup.length;
       });
     }
@@ -384,15 +398,14 @@ export class MapComponent implements OnInit {
         if (!shouldShow) return;
 
         const groups = link.networks
-          ?.map((net: string) =>
-            this._linksGroup.find(g => g.name === net)
-          )
-          .filter((group: any) => {
+          ?.map((net: string) => {
+            const group = this._linksGroup.find(g => g.name === net);
+
             if (!group || !group.visibility) {
-              return false;
+              return null;
             }
 
-            return this._tags.some(tag => {
+            const matchedTag = this._tags.find(tag => {
               if (
                 !tag.visibility ||
                 tag.name.toLowerCase() !== group.name.toLowerCase()
@@ -412,7 +425,19 @@ export class MapComponent implements OnInit {
                 parentMenu.pinned
               );
             });
-          });
+
+            if (!matchedTag) {
+              return null;
+            }
+
+            // 🔥 respeita o cinza aplicado pelo clique na tag (pinClick),
+            // igual já acontece com os pins
+            return {
+              ...group,
+              links_color: matchedTag.currentColor || group.links_color
+            };
+          })
+          .filter((group: any) => !!group);
 
         let pointA;
         let pointB;
@@ -691,29 +716,24 @@ export class MapComponent implements OnInit {
             if (location) {
               if (location.active) {
                 if (location.popup.length === this.locationHeaderSize) {
-                  let overlayedPopupButton = '';
-
-                  if (
-                    location.overlayed_popup_content &&
-                    location.overlayed_popup_content !== null
-                  ) {
-                    overlayedPopupButton =
-                      this.overlayedPopup.getOverlayedPopupButtonForLocation(
-                        location
-                      );
-                  }
+                  // Whether to show the institutions section/popup at
+                  // all is decided from every network the location
+                  // belongs to, not just the ones matching whichever
+                  // PREN/NREN menu happens to be selected right now --
+                  // otherwise a purely-NREN location would get no
+                  // popup bound to its marker at all when the map
+                  // opens on the PRENs menu (the default).
+                  const allInstitutions = location.popup_institutions || [];
 
                   location.popup +=
                     '<div style="margin-right: 10px;"><h1 class="popup-title">' +
                     location.name +
-                    ' ' +
-                    overlayedPopupButton +
-                    '</h1><hr>';
-                  if (location.description && location.description !== 'nan') {
-                    location.popup +=
-                      '<div style = "border-top: 1px; margin-top: -5px; margin-bottom: 15px"> <p>' +
-                      location.description +
-                      '</p> </div> ';
+                    '</h1>';
+                  if (allInstitutions.length > 0) {
+                    const institutionsHtml = this.buildInstitutionsPopupSection(location);
+                    this.locationPopupInstitutionsHtml[location.id] = institutionsHtml;
+                    location.popup += institutionsHtml;
+                    location.hasPopupContent = true;
                   }
                 }
 
@@ -950,23 +970,27 @@ export class MapComponent implements OnInit {
       location.onMap = true;
       if (color != '') location.activeColors = [color];
 
-      const pop = L.responsivePopup({ offset: L.point(-3, -11), hasTip: false, closeButton: false }).setContent(location.popup);
-
       location.locationMarker = L.marker(
         [location.latitude, location.longitude],
         { icon: this.generatePinIcon(location.activeColors) }
-      )
-        .bindPopup(pop)
-        .bindTooltip(location.name, {
-          offset: L.point(-3, -18),
-          direction: 'top'
-        });
+      ).bindTooltip(location.name, {
+        offset: L.point(-3, -18),
+        direction: 'top'
+      });
+
+      // 🔥 sem texto no popup (só o cabeçalho vazio), não faz sentido abrir nada no clique
+      if (location.hasPopupContent) {
+        const pop = L.responsivePopup({ offset: L.point(-3, -11), hasTip: false, closeButton: false }).setContent(location.popup);
+        location.locationMarker.bindPopup(pop);
+      }
 
       this.markerClusterGroup.addLayer(location.locationMarker);
       this.map.addLayer(this.markerClusterGroup);
     } else {
       location.popup += '</div>';
-      location.locationMarker._popup.setContent(location.popup);
+      if (location.hasPopupContent && location.locationMarker._popup) {
+        location.locationMarker._popup.setContent(location.popup);
+      }
       if (color != '') location.activeColors.push(color);
       location.locationMarker.setIcon(
         this.generatePinIcon(location.activeColors)
@@ -1007,6 +1031,118 @@ export class MapComponent implements OnInit {
     }
   }
 
+  /**
+   * Builds the HTML for a location's popup institutions section: a
+   * tab bar (only when the location has more than one owning
+   * institution with popup content) plus the active institution's
+   * translated summary. Institution names are never translated.
+   */
+  private buildInstitutionsPopupSection(location: Location): string {
+    // Only the network(s) matching the currently selected PREN/NREN
+    // menu -- a location can belong to both a PREN and an NREN (e.g.
+    // a member NREN plus the regional PREN it belongs to), and the
+    // popup should reflect whichever one the map is currently
+    // showing, the same way the marker/tag filtering already does.
+    const institutions = (location.popup_institutions || [])
+      .filter(institution => institution.parent_menu === this.selectedMenu);
+
+    let html = '<div class="opp-popup-institutions">';
+
+    if (institutions.length === 0) {
+      html += '</div>';
+      return html;
+    }
+
+    const activeIndex = Math.min(location.activePopupInstitutionIndex || 0, institutions.length - 1);
+    const active = institutions[activeIndex];
+    const { description } = this.translationService.translatePopup(active);
+
+    if (institutions.length > 1) {
+      html +=
+        `<div class="opp-tabs-subtitle">${this.translationService.t('owned_by')} ` +
+        `${institutions.length} ${this.translationService.t('institutions_plural')}</div>`;
+      html += '<div class="opp-tabs">';
+      institutions.forEach((institution, index) => {
+        const activeClass = index === activeIndex ? ' active' : '';
+        html +=
+          `<button type="button" class="opp-tab${activeClass}" ` +
+          `data-location-id="${location.id}" data-institution-index="${index}">` +
+          `${institution.name}</button>`;
+      });
+      html += '</div>';
+    } else {
+      // No tabs needed for a single institution, but its name still
+      // needs to show up somewhere -- otherwise the summary text
+      // below is the only content, and it never says whose it is.
+      html += `<div class="opp-tabs-subtitle">${active.name}</div>`;
+    }
+
+    if (description && description !== 'nan') {
+      html += '<p class="opp-summary">' + description + '</p>';
+    }
+
+    if (institutions.some(inst => !!inst.overlayed_popup_content)) {
+      html +=
+        '<div class="opp-popup-footer">' +
+        this.overlayedPopup.getOverlayedPopupButtonForLocation(location) +
+        '</div>';
+    }
+
+    html += '</div>';
+    return html;
+  }
+
+  /**
+   * Rebuilds the institutions section of every location's popup in
+   * place after the PREN/NREN menu changes, so a location owned by
+   * networks in both menus swaps which one it shows instead of
+   * staying stuck on whichever was active when the popup was first
+   * built.
+   */
+  private rebuildInstitutionsPopupsForCurrentMenu() {
+    if (!this._locations) {
+      return;
+    }
+    this._locations.forEach(location => {
+      const oldHtml = this.locationPopupInstitutionsHtml[location.id];
+      if (oldHtml === undefined) {
+        return;
+      }
+      location.activePopupInstitutionIndex = 0;
+      const newHtml = this.buildInstitutionsPopupSection(location);
+      location.popup = location.popup.replace(oldHtml, newHtml);
+      this.locationPopupInstitutionsHtml[location.id] = newHtml;
+
+      if (location.locationMarker && location.locationMarker._popup) {
+        location.locationMarker._popup.setContent(location.popup);
+      }
+    });
+  }
+
+  /**
+   * Handles a click on an institution tab inside a location's small
+   * popup: switches the active institution and swaps just that
+   * section of the popup's HTML in place.
+   */
+  private onPopupTabClick(target: any) {
+    const locationId = parseInt(target.getAttribute('data-location-id'), 10);
+    const institutionIndex = parseInt(target.getAttribute('data-institution-index'), 10);
+    const location = this.getLocationById(locationId);
+    if (!location) {
+      return;
+    }
+
+    location.activePopupInstitutionIndex = institutionIndex;
+    const newHtml = this.buildInstitutionsPopupSection(location);
+    const oldHtml = this.locationPopupInstitutionsHtml[location.id];
+    location.popup = location.popup.replace(oldHtml, newHtml);
+    this.locationPopupInstitutionsHtml[location.id] = newHtml;
+
+    if (location.locationMarker && location.locationMarker._popup) {
+      location.locationMarker._popup.setContent(location.popup);
+    }
+  }
+
   private insertTagOnPopup(tag: Tag, location: Location) {
     let opp_btn = '';
     if (tag.description) {
@@ -1020,9 +1156,10 @@ export class MapComponent implements OnInit {
         <h3 class="popup-subtitle">
           ${tag.name} ${opp_btn}
         </h3>
-        <p>${tag.description}</p> 
+        <p>${tag.description}</p>
       </div>
       `;
+      location.hasPopupContent = true;
     }
   }
 
@@ -1350,6 +1487,7 @@ export class MapComponent implements OnInit {
 
   public onMenuCliked(event: any) {
     this.insertMarkersByMenu(event.selectedTagsMenuId);
+    this.rebuildInstitutionsPopupsForCurrentMenu();
   }
 
   public onTagRemoval(event: any) {
