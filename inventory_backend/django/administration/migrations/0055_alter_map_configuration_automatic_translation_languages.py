@@ -7,13 +7,13 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('administration', '0054_kml_shape_translatable_link_translatable_and_more'),
-        ('clients', '0009_auto_20260420_1828'),
+        ('languages', '0001_initial'),
     ]
 
     operations = [
         migrations.AlterField(
             model_name='map_configuration',
             name='automatic_translation_languages',
-            field=models.ManyToManyField(blank=True, help_text='After the elementios creation, an automatic translation will be added for each selected language.', to='clients.languageoption'),
+            field=models.ManyToManyField(blank=True, help_text='After the elementios creation, an automatic translation will be added for each selected language.', to='languages.languageoption'),
         ),
     ]
