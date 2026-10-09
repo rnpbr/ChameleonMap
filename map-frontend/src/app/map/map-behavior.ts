@@ -176,12 +176,6 @@ export function isMenuSimultaneousAndSelected(
   return selectedMenusByGroup[resolvedMenuGroup.name] === menuId;
 }
 
-/**
- * Returns true when the links group belongs to the current menu context: its menu
- * is selected, selected in its simultaneous menu group, or pinned. It ignores
- * whether link endpoints are on the map, since that changes with tag toggles
- * without a recompute.
- */
 export function isLinksGroupInContext(
   linksGroup: LinksGroupLike,
   selectedMenuId: number,

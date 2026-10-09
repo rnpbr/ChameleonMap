@@ -3,7 +3,7 @@
         <div>
             <mat-expansion-panel-header [expandedHeight]="'45px'" (click)="menuClick(menu)" class="menu-header" [ngClass]="{'pinned-header': menu.pinned === true, 'selected-menu-header': selectedTagsMenuId==menu.id}">
                 <mat-panel-title>
-                    <div class="menu-name">
+                    <div class="menu-name" (click)="onMenuNameClick(menu, $event)">
                         <p class="menu-text">{{ capitalizeFirstLetter(menu | translateTitle) }}</p>
                     </div>
                     <div class="menu-button-container">
@@ -28,7 +28,7 @@
             <div *ngFor="let marker of mapMarkers">
                 <div *ngIf="isMarkerActive(marker)">
                     <div id="tag-list" class="tag-list" *ngIf="marker.parent_menu === menu.id">    
-                        <div id="tag-name" *ngIf="marker.visibility" class="tag-name" >{{marker  | translateTitle}}</div>
+                        <button id="tag-name" *ngIf="marker.visibility" type="button" class="tag-name tag-name-button" (click)="focusMarkerOnMap(marker)">{{marker | translateTitle}}</button>
                         <div *ngIf="!marker.visibility" class="tag-name tag-name-disabled">{{marker  | translateTitle}}</div>
                         <div id="tag-button" *ngIf="!isMarkerKmlLayerDto(marker)" class="marker-item-icon" [ngClass]="getMarkerIconClass(marker)" (click)="pinClick(marker, $event)" [ngStyle]="{'background-color': getMarkerDisplayColor(marker)}">
                             <span *ngIf="isMarkerTag(marker);" class="white-circle"></span>
