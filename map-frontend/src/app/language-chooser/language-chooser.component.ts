@@ -25,6 +25,15 @@ export class LanguageChooserComponent {
 
   constructor(private languageService: LanguageService){}
 
+  /**
+   * The language chooser only makes sense when the map offers more than one
+   * language. The backend always includes the default language in the list, so
+   * a length of one (or less) means there is nothing to switch to.
+   */
+  get hasMultipleLanguages(): boolean {
+    return (this.languageOptionsList?.length ?? 0) > 1;
+  }
+
   ngOnInit(){
     this.currentLanguage = this.defaultLanguage
   }

@@ -1,4 +1,4 @@
-<div id="language-chooser-conteiner" (mouseenter)="onMouseEntering()" (mouseleave)="onMouseLeaving()">
+<div *ngIf="hasMultipleLanguages" id="language-chooser-conteiner" (mouseenter)="onMouseEntering()" (mouseleave)="onMouseLeaving()">
     <div class="language-icon">
         {{currentLanguage.flag}}
     </div>

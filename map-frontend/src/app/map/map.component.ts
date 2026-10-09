@@ -933,21 +933,29 @@ export class MapComponent implements OnInit {
   }
 
   private generatePinIcon(colors: any) {
-    const size = '24px';
+    const size = 24;
+    const sizePx = `${size}px`;
     const border = '0.1px solid #5c5c5c';
 
-    if (colors.length === 1) {
-      var markerHtmlStyles = `
-      background-color: ${colors[0]};
-      width: ${size};
-      height: ${size};
+    // Shared shape: a circle centered on the location. The 45deg rotation is
+    // kept only so the multi-color gradient preserves its original on-screen
+    // orientation; a circle is rotation-invariant, so the rendered shape is a
+    // plain circle instead of the legacy pin/teardrop.
+    const shapeStyles = `
+      width: ${sizePx};
+      height: ${sizePx};
+      box-sizing: border-box;
       display: block;
-      left: -11px;
-      top: -21px;
-      position: relative;
-      border-radius: ${size} ${size} 0;
+      border-radius: 50%;
       transform: rotate(45deg);
       border: ${border};`;
+
+    let markerHtmlStyles: string;
+
+    if (colors.length === 1) {
+      markerHtmlStyles = `
+      background-color: ${colors[0]};
+      ${shapeStyles}`;
     } else {
       let increaseBorders = 0;
       if (colors.length > 2) {
@@ -983,23 +991,15 @@ export class MapComponent implements OnInit {
         )
         .join(' ' + (100 - basePercentage - increaseBorders).toString() + '%');
 
-      var markerHtmlStyles = `
+      markerHtmlStyles = `
       background-image: linear-gradient(${gradient});
-      width: ${size};
-      height: ${size};
-      display: block;
-      left: -11px;
-      top: -21px;
-      position: relative;
-      border-radius: 100% 100% 0;
-      transform: rotate(45deg);
-      border: 0.1px solid #5c5c5c`;
+      ${shapeStyles}`;
     }
-
-    var style = 'style="height: 11px; width: 11px; background-color: white; border-radius: 50%; display: flex; margin-left: 20%; margin-top: 20%;"'
 
     const icon = L.divIcon({
       className: 'custom-pin',
+      iconSize: [size, size],
+      iconAnchor: [size / 2, size / 2],
       html: `<span style="${markerHtmlStyles}"><span ></span></span>`
     });
 
