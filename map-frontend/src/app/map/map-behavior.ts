@@ -33,18 +33,6 @@ export interface LinksGroupLike {
   readonly parent_menu: number;
 }
 
-export interface LinkLike {
-  readonly id: number;
-  readonly location_1: number;
-  readonly location_2: number;
-  readonly links_group: number;
-}
-
-export interface LocationLike {
-  readonly id: number;
-  onMap: boolean;
-}
-
 export function buildTagRelationshipIndexes<T extends TagLike>(
   tags: T[],
   relationships: TagRelationshipRecord[]
@@ -188,20 +176,19 @@ export function isMenuSimultaneousAndSelected(
   return selectedMenusByGroup[resolvedMenuGroup.name] === menuId;
 }
 
-export function isLinkEligible(
-  link: LinkLike,
-  linksGroup: LinksGroupLike | undefined,
+/**
+ * Returns true when the links group belongs to the current menu context: its menu
+ * is selected, selected in its simultaneous menu group, or pinned. It ignores
+ * whether link endpoints are on the map, since that changes with tag toggles
+ * without a recompute.
+ */
+export function isLinksGroupInContext(
+  linksGroup: LinksGroupLike,
   selectedMenuId: number,
-  loc1: LocationLike | undefined,
-  loc2: LocationLike | undefined,
   menusById: Map<number, MenuLike>,
   menuGroupsById: Map<number, MenuGroupLike>,
   selectedMenusByGroup: Record<string, number>
 ): boolean {
-  if (!linksGroup || !loc1 || !loc2) {
-    return false;
-  }
-
   const isSimultaneous = isMenuSimultaneousAndSelected(
     linksGroup.parent_menu,
     menusById,
@@ -210,15 +197,7 @@ export function isLinkEligible(
   );
   const isPinned = menusById.get(linksGroup.parent_menu)?.pinned === true;
 
-  if (
-    linksGroup.parent_menu !== selectedMenuId &&
-    !isSimultaneous &&
-    !isPinned
-  ) {
-    return false;
-  }
-
-  return loc1.onMap && loc2.onMap;
+  return linksGroup.parent_menu === selectedMenuId || isSimultaneous || isPinned;
 }
 
 export function shouldShowTagForMenu(

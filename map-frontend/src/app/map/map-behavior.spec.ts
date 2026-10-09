@@ -1,7 +1,7 @@
 import {
   buildTagRelationshipIndexes,
   isAnyClusterActive,
-  isLinkEligible,
+  isLinksGroupInContext,
   isMenuSimultaneousAndSelected,
   resolveInheritedLocations,
   TagLike,
@@ -128,9 +128,10 @@ describe('map-behavior', () => {
     expect(selectedMenusByGroup['Group B']).toBe(10);
   });
 
-  it('requires both locations to be on the map for non-simultaneous links', () => {
+  it('puts only links groups of the selected menu in context for non-simultaneous groups', () => {
     const menusById = new Map([
-      [1, { id: 1, group: 1, hierarchy_level: 0 }]
+      [1, { id: 1, group: 1, hierarchy_level: 0 }],
+      [2, { id: 2, group: 1, hierarchy_level: 0 }]
     ]);
     const menuGroupsById = new Map([
       [1, { id: 1, name: 'Group A', simultaneous_context: false }]
@@ -138,33 +139,14 @@ describe('map-behavior', () => {
     const selectedMenusByGroup = { 'Group A': 1 };
 
     expect(
-      isLinkEligible(
-        { id: 1, location_1: 1, location_2: 2, links_group: 1 },
-        { id: 1, parent_menu: 1 },
-        1,
-        { id: 1, onMap: true },
-        { id: 2, onMap: false },
-        menusById,
-        menuGroupsById,
-        selectedMenusByGroup
-      )
-    ).toBeFalse();
-
-    expect(
-      isLinkEligible(
-        { id: 1, location_1: 1, location_2: 2, links_group: 1 },
-        { id: 1, parent_menu: 1 },
-        1,
-        { id: 1, onMap: true },
-        { id: 2, onMap: true },
-        menusById,
-        menuGroupsById,
-        selectedMenusByGroup
-      )
+      isLinksGroupInContext({ id: 1, parent_menu: 1 }, 1, menusById, menuGroupsById, selectedMenusByGroup)
     ).toBeTrue();
+    expect(
+      isLinksGroupInContext({ id: 2, parent_menu: 2 }, 1, menusById, menuGroupsById, selectedMenusByGroup)
+    ).toBeFalse();
   });
 
-  it('allows links from pinned menus even when not selected', () => {
+  it('puts links groups of pinned menus in context even when not selected', () => {
     const menusById = new Map([
       [1, { id: 1, group: 1, hierarchy_level: 0, pinned: false }],
       [2, { id: 2, group: 1, hierarchy_level: 0, pinned: true }]
@@ -175,16 +157,27 @@ describe('map-behavior', () => {
     const selectedMenusByGroup = { 'Group A': 1 };
 
     expect(
-      isLinkEligible(
-        { id: 1, location_1: 1, location_2: 2, links_group: 2 },
-        { id: 2, parent_menu: 2 },
-        1,
-        { id: 1, onMap: true },
-        { id: 2, onMap: true },
-        menusById,
-        menuGroupsById,
-        selectedMenusByGroup
-      )
+      isLinksGroupInContext({ id: 2, parent_menu: 2 }, 1, menusById, menuGroupsById, selectedMenusByGroup)
     ).toBeTrue();
+  });
+
+  it('puts links groups of the menu selected in a simultaneous group in context', () => {
+    const menusById = new Map([
+      [1, { id: 1, group: 1, hierarchy_level: 0 }],
+      [8, { id: 8, group: 2, hierarchy_level: 0 }],
+      [10, { id: 10, group: 2, hierarchy_level: 1 }]
+    ]);
+    const menuGroupsById = new Map([
+      [1, { id: 1, name: 'Group A', simultaneous_context: true }],
+      [2, { id: 2, name: 'Group B', simultaneous_context: true }]
+    ]);
+    const selectedMenusByGroup = { 'Group A': 1, 'Group B': 10 };
+
+    expect(
+      isLinksGroupInContext({ id: 1, parent_menu: 10 }, 1, menusById, menuGroupsById, selectedMenusByGroup)
+    ).toBeTrue();
+    expect(
+      isLinksGroupInContext({ id: 2, parent_menu: 8 }, 1, menusById, menuGroupsById, selectedMenusByGroup)
+    ).toBeFalse();
   });
 });

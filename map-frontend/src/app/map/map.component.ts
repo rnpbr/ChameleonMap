@@ -23,8 +23,8 @@ import {
   buildEntityIndex,
   isAnyClusterActive,
   isKml,
-  isLinkEligible,
   isLinksGroup,
+  isLinksGroupInContext,
   isMenuSimultaneousAndSelected,
   isTag,
   shouldShowTagForMenu
@@ -428,26 +428,24 @@ export class MapComponent implements OnInit {
       this.linksFeatureOn = true;
       const menusById = buildEntityIndex(this.menus ?? []);
       const menuGroupsById = buildEntityIndex(this.menugroups ?? []);
-      this._linksGroup.forEach((lg: LinksGroup) => (lg.onMap = false));
+      this._linksGroup.forEach((lg: LinksGroup) => {
+        lg.onMap = isLinksGroupInContext(
+          lg,
+          this.selectedMenu,
+          menusById,
+          menuGroupsById,
+          this.selectedMenusByGroup
+        );
+      });
       this._links.forEach((link: Link) => {
         const loc1 = this.getLocationById(link.location_1);
         const loc2 = this.getLocationById(link.location_2);
         const linkgroup = this.getLinksGroupById(link.links_group);
-        if (
-          !isLinkEligible(
-            link,
-            linkgroup ?? undefined,
-            this.selectedMenu,
-            loc1 ?? undefined,
-            loc2 ?? undefined,
-            menusById,
-            menuGroupsById,
-            this.selectedMenusByGroup
-          )
-        ) {
+        // Lines are also built while an endpoint is hidden, so checkLinksOnMap and
+        // insertLinkByLinkGroup can add them back when the tag or the eye is reactivated.
+        if (!linkgroup?.onMap || !loc1 || !loc2) {
           return;
         }
-        linkgroup!.onMap = true;
         const values = this.getOriginAndDestiny(loc1!, loc2!, link.invert_link);
         const pointA = values[0];
         const pointB = values[1];
@@ -500,7 +498,7 @@ export class MapComponent implements OnInit {
         }
 
         link.interactionsAttached = false;
-        if (linkgroup!.visibility) {
+        if (linkgroup!.visibility && loc1!.onMap && loc2!.onMap) {
           link.line.addTo(this.map);
         }
       });
