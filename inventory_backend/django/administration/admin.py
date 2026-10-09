@@ -1,15 +1,15 @@
-import json
+from functools import partial
 from django.conf import settings
 from django.contrib import admin, messages
 from django.db import connection
-from django.http import StreamingHttpResponse
+from django.http import JsonResponse
 from django.utils.translation import gettext_lazy as _
 from django.utils.html import format_html
 from unfold.apps import UnfoldAdminSite
 from django.urls import path
 from django.template.response import TemplateResponse
 from django.shortcuts import redirect
-from tools.views import createTranslationsForAllTitles, generateTranslationsInBatches
+from tools.translation_jobs import getTranslationJob, startTranslationJob
 from .language_codes import LanguageCode
 from .admin_translatable_model import TranslatableModelAdmin
 from .admin_inlines import NameTranslationInline, Tag_relationshipInline
@@ -42,38 +42,30 @@ if settings.ENABLE_MULTITENANT:
                     self.admin_view(self.generate_translations_view),
                     name="generate_translations",
                 ),
+                path(
+                    "generate-translations/status/",
+                    self.admin_view(self.generate_translations_status_view),
+                    name="generate_translations_status",
+                ),
             ]
             return custom_urls + urls
 
         def generate_translations_view(self, request):
             if request.method == "POST":
                 targetLanguage = request.POST.get("targetLanguage")
-                if request.headers.get("Accept") == "application/x-ndjson":
-                    return self.translations_progress_response(targetLanguage)
-                try:
-                    createTranslationsForAllTitles(targetLanguage)
-                    messages.success(request, f"Translations generated successfully for: {LanguageCode(targetLanguage).label}")
-                except Exception as e:
-                    messages.error(request, f"Error generating translations: {str(e)}")
+                job = startTranslationJob(
+                    connection.schema_name, targetLanguage, partial(tenant_context, connection.tenant)
+                )
+                if request.headers.get("Accept") == "application/json":
+                    return JsonResponse(job)
+                messages.info(request, f"Generating translations in background for: {LanguageCode(job['language']).label}")
                 return redirect("tenant_admin:generate_translations")
 
             context = dict(self.each_context(request))
             return TemplateResponse(request, "admin/generate_translations.html", context)
 
-        def translations_progress_response(self, targetLanguage):
-            tenant = connection.tenant
-
-            def events():
-                with tenant_context(tenant):
-                    try:
-                        for event in generateTranslationsInBatches(targetLanguage):
-                            yield json.dumps(event) + "\n"
-                    except Exception as e:
-                        yield json.dumps({"type": "error", "message": str(e)}) + "\n"
-
-            response = StreamingHttpResponse(events(), content_type="application/x-ndjson")
-            response["X-Accel-Buffering"] = "no"
-            return response
+        def generate_translations_status_view(self, request):
+            return JsonResponse(getTranslationJob(connection.schema_name) or {"state": "idle"})
 
     tenant_admin_site = TenantAdminSite(name='tenant_admin')
     map_admin_site = tenant_admin_site
