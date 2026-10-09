@@ -931,7 +931,7 @@ export class MapComponent implements OnInit {
   }
 
   private generatePinIcon(colors: any) {
-    const size = '24px';
+    const size = '16px';
     const border = '0.1px solid #5c5c5c';
 
     if (colors.length === 1) {
@@ -940,10 +940,10 @@ export class MapComponent implements OnInit {
       width: ${size};
       height: ${size};
       display: block;
-      left: -11px;
-      top: -21px;
+      left: -4px;
+      top: -4px;
       position: relative;
-      border-radius: ${size} ${size} 0;
+      border-radius: ${size} ${size} ${size} ${size};
       transform: rotate(45deg);
       border: ${border};`;
     } else {
@@ -986,10 +986,10 @@ export class MapComponent implements OnInit {
       width: ${size};
       height: ${size};
       display: block;
-      left: -11px;
-      top: -21px;
+      left: -4px;
+      top: -4px;
       position: relative;
-      border-radius: 100% 100% 0;
+      border-radius: 100% 100% 100% 100%;
       transform: rotate(45deg);
       border: 0.1px solid #5c5c5c`;
     }
