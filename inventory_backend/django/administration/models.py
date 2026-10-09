@@ -8,7 +8,7 @@ from .models_constraints import StringConstraints
 from .language_codes import LanguageCode 
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import  GenericRelation, GenericForeignKey
-from clients.models import LanguageOption
+from languages.models import LanguageOption
    
 class NameTranslation(models.Model):
     name = models.CharField(max_length = StringConstraints.ELEMENT_TITLE_SIZE)
@@ -218,7 +218,7 @@ class Map_configuration(models.Model):
         verbose_name = _("Default content language")
         )
     automatic_translation_languages = models.ManyToManyField(
-        'clients.LanguageOption', 
+        'languages.LanguageOption', 
         blank = True,
         verbose_name = _("automatic translation languages"),
         help_text = _("After the elementios creation, an automatic translation will be added for each selected language.")        

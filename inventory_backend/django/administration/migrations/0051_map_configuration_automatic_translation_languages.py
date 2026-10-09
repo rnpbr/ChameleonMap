@@ -7,13 +7,13 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('administration', '0050_delete_languageoption_and_more'),
-        ('clients', '0006_alter_languageoption_table'),
+        ('languages', '0001_initial'),
     ]
 
     operations = [
         migrations.AddField(
             model_name='map_configuration',
             name='automatic_translation_languages',
-            field=models.ManyToManyField(blank=True, to='clients.languageoption'),
+            field=models.ManyToManyField(blank=True, to='languages.languageoption'),
         ),
     ]

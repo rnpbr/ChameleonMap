@@ -63,6 +63,8 @@ ADMINISTRATION_APP = 'administration.apps.AdministrationConfig'
 
 CLIENTS_APP = 'clients'
 
+LANGUAGES_APP = 'languages'
+
 TOOLS_APP = 'tools.apps.AdministrationTools'
 
 TENANT_PERMISSIONS_APP = 'inventory_backend.apps_overrides.TenantPermissionsConfig'
@@ -180,7 +182,7 @@ if ENABLE_MULTITENANT:
 
     TENANT_TYPES = {
         "public": {
-            "APPS": _unique_apps(portal_apps, [CLIENTS_APP]),
+            "APPS": _unique_apps(portal_apps, [CLIENTS_APP, LANGUAGES_APP]),
             "URLCONF": ROOT_URLCONF,
         },
         "root": {
@@ -230,7 +232,7 @@ else:
     INSTALLED_APPS = _installed_apps(
         DJANGO_CONTRIB_APPS,
         MAP_STACK_APPS,
-        [ADMINISTRATION_APP],
+        [LANGUAGES_APP, ADMINISTRATION_APP],
     )
 
     MIDDLEWARE = [
