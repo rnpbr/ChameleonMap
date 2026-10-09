@@ -1,12 +1,15 @@
+import json
 from django.conf import settings
 from django.contrib import admin, messages
+from django.db import connection
+from django.http import StreamingHttpResponse
 from django.utils.translation import gettext_lazy as _
 from django.utils.html import format_html
 from unfold.apps import UnfoldAdminSite
 from django.urls import path
 from django.template.response import TemplateResponse
 from django.shortcuts import redirect
-from tools.views import createTranslationsForAllTitles
+from tools.views import createTranslationsForAllTitles, generateTranslationsInBatches
 from .language_codes import LanguageCode
 from .admin_translatable_model import TranslatableModelAdmin
 from .admin_inlines import NameTranslationInline, Tag_relationshipInline
@@ -24,6 +27,8 @@ from administration.models import (
 )
 
 if settings.ENABLE_MULTITENANT:
+    from django_tenants.utils import tenant_context
+
     class TenantAdminSite(UnfoldAdminSite):
         site_header = _("ChameleonMap Admin")
         site_title = _("ChameleonMap Portal")
@@ -43,6 +48,8 @@ if settings.ENABLE_MULTITENANT:
         def generate_translations_view(self, request):
             if request.method == "POST":
                 targetLanguage = request.POST.get("targetLanguage")
+                if request.headers.get("Accept") == "application/x-ndjson":
+                    return self.translations_progress_response(targetLanguage)
                 try:
                     createTranslationsForAllTitles(targetLanguage)
                     messages.success(request, f"Translations generated successfully for: {LanguageCode(targetLanguage).label}")
@@ -52,6 +59,21 @@ if settings.ENABLE_MULTITENANT:
 
             context = dict(self.each_context(request))
             return TemplateResponse(request, "admin/generate_translations.html", context)
+
+        def translations_progress_response(self, targetLanguage):
+            tenant = connection.tenant
+
+            def events():
+                with tenant_context(tenant):
+                    try:
+                        for event in generateTranslationsInBatches(targetLanguage):
+                            yield json.dumps(event) + "\n"
+                    except Exception as e:
+                        yield json.dumps({"type": "error", "message": str(e)}) + "\n"
+
+            response = StreamingHttpResponse(events(), content_type="application/x-ndjson")
+            response["X-Accel-Buffering"] = "no"
+            return response
 
     tenant_admin_site = TenantAdminSite(name='tenant_admin')
     map_admin_site = tenant_admin_site

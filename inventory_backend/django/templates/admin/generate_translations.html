@@ -33,6 +33,12 @@
     ℹ: Elements that already contain translation for target language will be skipped.
   </div>
 
+  <div id = "gentranslations-progress" hidden>
+    <progress id = "gentranslations-progress-bar" value = "0" max = "1"></progress>
+    <div id = "gentranslations-progress-text"></div>
+  </div>
+  <div id = "gentranslations-result" hidden></div>
+
   <div id = "gentranslations-loading-animation">
     <div id = "gentranslations-loading-animation-globe">
       🌐
@@ -70,18 +76,92 @@
     loadingAnimationChameleon.style.bottom = `${(heightGlobe+heightChameleon)/2.0}px`
   }, 2);
   
-  document.querySelector('#gentranslations-form form').addEventListener('submit', () => {
-      const generateTranslationsPage = document.getElementById('gentranslations-page')
-      const generateTranslationsButton = document.getElementById('gentranslations-button')
-      const generateTranslationsButtonIcon = document.getElementById('gentranslations-button-icon')
-      const generateTranslationsButtonText = document.getElementById('gentranslations-button-text')
-      const loadingAnimation = document.getElementById('gentranslations-loading-animation')
-      const formContainer = document.getElementById('gentranslations-form')
-      
-      loadingAnimation.style.visibility = 'visible'
-      formContainer.style.pointerEvents = "none"
-      formContainer.classList.toggle("blocked")
-      generateTranslationsPage.style.cursor = "progress"
+  const progressContainer = document.getElementById('gentranslations-progress')
+  const progressBar = document.getElementById('gentranslations-progress-bar')
+  const progressText = document.getElementById('gentranslations-progress-text')
+  const resultMessage = document.getElementById('gentranslations-result')
+
+  function setRunning(running) {
+    const generateTranslationsPage = document.getElementById('gentranslations-page')
+    const formContainer = document.getElementById('gentranslations-form')
+
+    loadingAnimation.style.visibility = running ? 'visible' : 'hidden'
+    formContainer.style.pointerEvents = running ? 'none' : ''
+    formContainer.classList.toggle('blocked', running)
+    generateTranslationsPage.style.cursor = running ? 'progress' : ''
+  }
+
+  function showProgress(done, total, model) {
+    const percent = total ? Math.floor(done * 100 / total) : 100
+    progressBar.max = total || 1
+    progressBar.value = total ? done : 1
+    progressText.textContent = `${done} / ${total} (${percent}%)` + (model ? ` · ${model}` : '')
+  }
+
+  function showResult(message, isError) {
+    resultMessage.textContent = message
+    resultMessage.classList.toggle('gentranslations-result-error', isError)
+    resultMessage.hidden = false
+  }
+
+  document.querySelector('#gentranslations-form form').addEventListener('submit', async (event) => {
+    event.preventDefault()
+    const form = event.target
+    const languageLabel = form.targetLanguage.selectedOptions[0].text
+    let progress = { done: 0, total: 0 }
+    let finished = false
+
+    const handleEvent = (data) => {
+      if (data.type === 'start') {
+        progress.total = data.total
+        showProgress(0, data.total)
+      } else if (data.type === 'progress') {
+        progress = data
+        showProgress(data.done, data.total, data.model)
+      } else if (data.type === 'done') {
+        finished = true
+        showProgress(data.done, data.total)
+        showResult(data.total
+          ? `${data.done} translations generated for ${languageLabel}.`
+          : `Nothing to translate: every element already has a ${languageLabel} translation.`, false)
+      } else if (data.type === 'error') {
+        finished = true
+        showResult(`Error after ${progress.done} of ${progress.total} elements: ${data.message}. ` +
+          'Translations already generated were kept; run again to continue.', true)
+      }
+    }
+
+    resultMessage.hidden = true
+    progressContainer.hidden = false
+    progressBar.removeAttribute('value')
+    progressText.textContent = 'Starting...'
+    setRunning(true)
+    try {
+      const response = await fetch(form.action, {
+        method: 'POST',
+        body: new FormData(form),
+        headers: { 'Accept': 'application/x-ndjson' },
+      })
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      while (true) {
+        const { value, done } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop()
+        lines.filter((line) => line.trim()).forEach((line) => handleEvent(JSON.parse(line)))
+      }
+      if (!finished) throw new Error('connection closed before finishing')
+    } catch (error) {
+      showResult(`Error generating translations: ${error.message}. ` +
+        'Translations already generated were kept; run again to continue.', true)
+    } finally {
+      setRunning(false)
+    }
   });
 </script>
 
@@ -178,6 +258,28 @@
     font-size: 0.75rem;
     margin-top: 0.50rem;
     font-style: italic;
+  }
+
+  #gentranslations-progress{
+    margin-top: 1rem;
+    max-width: 480px;
+  }
+  #gentranslations-progress-bar{
+    width: 100%;
+    height: 0.75rem;
+    accent-color: #2563eb;
+  }
+  #gentranslations-progress-text{
+    font-size: 0.8125rem;
+    margin-top: 0.25rem;
+  }
+  #gentranslations-result{
+    margin-top: 0.75rem;
+    font-weight: 600;
+    color: #16a34a;
+  }
+  #gentranslations-result.gentranslations-result-error{
+    color: #dc2626;
   }
 
   @keyframes orbitate{
