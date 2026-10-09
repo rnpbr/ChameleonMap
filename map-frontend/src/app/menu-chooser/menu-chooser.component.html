@@ -24,7 +24,7 @@
                            [attr.data-tab]="tab"
                            (click)="onTabClick(tab)"
                            [ngClass]="{'dark': _currentMenu == tab}">
-                          <span class="button-label">{{tab}}</span>
+                          <span class="button-label">{{ getMenuGroupByName(tab) | translateTitle }}</span>
                         </a>
                     </div>
 

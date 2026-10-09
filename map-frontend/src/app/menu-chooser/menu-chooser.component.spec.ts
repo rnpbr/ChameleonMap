@@ -4,6 +4,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 
 import { MenuChooserComponent } from './menu-chooser.component';
+import { TranslateTitlePipe } from '../translate-field.pipe';
 
 describe('MenuChooserComponent', () => {
   let component: MenuChooserComponent;
@@ -12,7 +13,7 @@ describe('MenuChooserComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [MenuChooserComponent],
-      imports: [MatExpansionModule, MatIconModule, NoopAnimationsModule]
+      imports: [MatExpansionModule, MatIconModule, NoopAnimationsModule, TranslateTitlePipe]
     }).compileComponents();
   });
 

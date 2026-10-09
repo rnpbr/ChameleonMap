@@ -9,7 +9,9 @@ import {
   OnDestroy,
   Output,
   ViewChild,
+  effect,
 } from '@angular/core';
+import { LanguageService } from '../language.service';
 
 @Component({
   selector: 'app-menu-chooser',
@@ -37,7 +39,13 @@ export class MenuChooserComponent implements AfterViewInit, OnDestroy {
   constructor(
     private cdr: ChangeDetectorRef,
     private zone: NgZone,
-  ) { }
+    private languageService: LanguageService,
+  ) {
+    effect(() => {
+      this.languageService.language;
+      this.scheduleOverflowCheck();
+    });
+  }
 
   @Input()
   get linksFeatureOn(): boolean {
@@ -94,6 +102,10 @@ export class MenuChooserComponent implements AfterViewInit, OnDestroy {
       el.removeEventListener('wheel', this.onWheelListener);
       el.removeEventListener('scroll', this.onScrollListener);
     }
+  }
+
+  getMenuGroupByName(name: string): MenuGroup | { name: string } {
+    return this._menugroups?.find((group) => group.name === name) ?? { name };
   }
 
   onTabClick(tab: string) {
