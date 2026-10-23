@@ -7,7 +7,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('administration', '0058_rename_titletranslation_nametranslation_and_more'),
-        ('clients', '0009_auto_20260420_1828'),
+        ('languages', '0001_initial'),
     ]
 
     operations = [
@@ -19,7 +19,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='map_configuration',
             name='automatic_translation_languages',
-            field=models.ManyToManyField(blank=True, help_text='After the elementios creation, an automatic translation will be added for each selected language.', to='clients.languageoption', verbose_name='automatic translation languages'),
+            field=models.ManyToManyField(blank=True, help_text='After the elementios creation, an automatic translation will be added for each selected language.', to='languages.languageoption', verbose_name='automatic translation languages'),
         ),
         migrations.AlterField(
             model_name='menu',
