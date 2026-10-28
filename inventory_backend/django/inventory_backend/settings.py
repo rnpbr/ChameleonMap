@@ -58,6 +58,8 @@ MAP_STACK_APPS = [
 ]
 
 UNFOLD_APP = 'unfold'
+SINGLE_TENANT_UNFOLD_APP = 'unfold.apps.BasicAppConfig'
+SINGLE_TENANT_ADMIN_APP = 'inventory_backend.apps_overrides.MapAdminConfig'
 
 ADMINISTRATION_APP = 'administration.apps.AdministrationConfig'
 
@@ -98,9 +100,9 @@ def _unique_apps(*app_groups):
     return apps
 
 
-def _installed_apps(*app_groups):
+def _installed_apps(*app_groups, unfold_app=UNFOLD_APP):
     """unfold must be listed before django.contrib.admin."""
-    return _unique_apps([UNFOLD_APP], *app_groups)
+    return _unique_apps([unfold_app], *app_groups)
 
 UNFOLD = {
     "SITE_TITLE": _("ChameleonMap Portal"),
@@ -225,14 +227,24 @@ if ENABLE_MULTITENANT:
         }
     }
 
+    SINGLE_TENANT_SOURCE_DATABASE = 'single_tenant_source'
+    if os.environ.get('POSTGRES_DB_MULTITENANT'):
+        DATABASES["default"]["NAME"] = os.environ['POSTGRES_DB_MULTITENANT']
+        DATABASES[SINGLE_TENANT_SOURCE_DATABASE] = {
+            **DATABASE_DEFAULT,
+            "ENGINE": 'django.db.backends.postgresql',
+            "OPTIONS": {"options": "-c default_transaction_read_only=on"},
+        }
+
     DATABASE_ROUTERS = (
         'django_tenants.routers.TenantSyncRouter',
     )
 else:
     INSTALLED_APPS = _installed_apps(
-        DJANGO_CONTRIB_APPS,
+        [SINGLE_TENANT_ADMIN_APP if app == 'django.contrib.admin' else app for app in DJANGO_CONTRIB_APPS],
         MAP_STACK_APPS,
-        [LANGUAGES_APP, ADMINISTRATION_APP],
+        [LANGUAGES_APP, ADMINISTRATION_APP, TOOLS_APP],
+        unfold_app=SINGLE_TENANT_UNFOLD_APP,
     )
 
     MIDDLEWARE = [

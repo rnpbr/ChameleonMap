@@ -8,7 +8,7 @@
 <div id = "gentranslations-page">
 
   <div id = "gentranslations-form" class = "gentranslations-form">
-    <form method="POST" action="{% url 'tenant_admin:generate_translations' %}">
+    <form method="POST" action="{% url 'admin:generate_translations' %}">
       <div class="gentranslations-language-selector">
         {% csrf_token %}
         <label id="gentranslations-language-selector-label" for="gentranslations-targetLanguage">
@@ -96,7 +96,7 @@
 
   const progressNote = document.getElementById('gentranslations-progress-note')
   const form = document.querySelector('#gentranslations-form form')
-  const statusUrl = "{% url 'tenant_admin:generate_translations_status' %}"
+  const statusUrl = "{% url 'admin:generate_translations_status' %}"
   let pollTimer = null
   let lastState = 'idle'
 

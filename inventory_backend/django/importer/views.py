@@ -66,10 +66,10 @@ def _extract_named_files(request):
 
 
 def _admin_context(request, title, extra=None):
-    """Build a base context enriched with the tenant admin site variables."""
-    from administration.admin import tenant_admin_site
+    """Build a base context enriched with the map admin site variables."""
+    from administration.admin import map_admin_site
     try:
-        context = tenant_admin_site.each_context(request)
+        context = map_admin_site.each_context(request)
     except Exception:
         context = {}
     context['title'] = title

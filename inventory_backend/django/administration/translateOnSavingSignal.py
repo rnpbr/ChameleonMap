@@ -14,8 +14,8 @@ TRANSLATABLE_MODELS = [
 ]
 
 @receiver(post_save)
-def translatingOnSaving(sender, instance, created, **kwargs):
-    if created:
+def translatingOnSaving(sender, instance, created, raw=False, **kwargs):
+    if created and not raw:
         if sender in TRANSLATABLE_MODELS:
             originalLanguage = Map_configuration.objects.first().default_content_language
             automaticTranslationLanguages = Map_configuration.objects.first().automatic_translation_languages.all()

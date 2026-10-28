@@ -9,11 +9,13 @@ fail_deploy() {
     exit 1
 }
 
+python manage.py create_missing_database || fail_deploy "Database creation failed"
 python manage.py check_tenancy_mode || fail_deploy "Tenancy mode check failed"
 
 if [ "${ENABLE_MULTITENANT}" = "true" ]; then
     python manage.py migrate_schemas --shared || fail_deploy "migrate_schemas failed"
     python manage.py setup_admin
+    python manage.py import_single_tenant || echo "Warning: single-tenant map import failed; it runs again on the next start"
 else
     python manage.py migrate || fail_deploy "Migrate failed"
 

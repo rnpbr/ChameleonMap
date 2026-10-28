@@ -1,5 +1,10 @@
 from django.apps import AppConfig
+from django.contrib.admin.apps import AdminConfig
 from django.utils.translation import gettext_lazy as _
+
+
+class MapAdminConfig(AdminConfig):
+    default_site = 'administration.sites.MapAdminSite'
 
 
 class AxesConfig(AppConfig):

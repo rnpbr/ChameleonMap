@@ -1,6 +1,6 @@
 from django.shortcuts import redirect
 from unfold.admin import ModelAdmin
-from administration.admin import tenant_admin_site
+from administration.admin import map_admin_site
 from .models import TranslationsGeneratorTool
 
 
@@ -23,7 +23,7 @@ class TranslationsGeneratorToolAdmin(ModelAdmin):
         return redirect("admin:generate_translations")
 
 
-tenant_admin_site.register(
+map_admin_site.register(
     TranslationsGeneratorTool,
     TranslationsGeneratorToolAdmin
 )

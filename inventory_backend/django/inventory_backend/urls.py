@@ -30,6 +30,7 @@ if not settings.ENABLE_MULTITENANT:
         Kml_shapeViewSet,
         Tag_relationshipViewSet,
         Map_configurationViewSet,
+        ListLanguageOptions,
     )
     from administration.map_data.views import MapDataAPIView
 
@@ -45,6 +46,7 @@ if not settings.ENABLE_MULTITENANT:
     router.register('settings', Map_configurationViewSet)
 
     urlpatterns = [
+        path('tools/', include("tools.urls")),
         path('admin/', admin.site.urls),
         path('i18n/', include('django.conf.urls.i18n')),
         path('api-auth/', include('rest_framework.urls')),
@@ -52,6 +54,7 @@ if not settings.ENABLE_MULTITENANT:
         path('', include(router.urls)),
         path('import/', include("importer.urls")),
         path('atlas/', include("atlas_builder.urls")),
+        path('language-options/', ListLanguageOptions.as_view()),
         *password_reset_patterns,
     ]
 

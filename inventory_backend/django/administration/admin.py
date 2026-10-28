@@ -1,16 +1,10 @@
 from functools import partial
 from django.conf import settings
-from django.contrib import admin, messages
+from django.contrib import admin
 from django.db import connection
-from django.http import JsonResponse
 from django.utils.translation import gettext_lazy as _
 from django.utils.html import format_html
-from unfold.apps import UnfoldAdminSite
-from django.urls import path
-from django.template.response import TemplateResponse
-from django.shortcuts import redirect
-from tools.translation_jobs import getTranslationJob, startTranslationJob
-from .language_codes import LanguageCode
+from .sites import MapAdminSite
 from .admin_translatable_model import TranslatableModelAdmin
 from .admin_inlines import NameTranslationInline, Tag_relationshipInline
 
@@ -29,43 +23,16 @@ from administration.models import (
 if settings.ENABLE_MULTITENANT:
     from django_tenants.utils import tenant_context
 
-    class TenantAdminSite(UnfoldAdminSite):
+    class TenantAdminSite(MapAdminSite):
         site_header = _("ChameleonMap Admin")
         site_title = _("ChameleonMap Portal")
         index_title = _("Welcome to ChameleonMap Admin Portal")
 
-        def get_urls(self):
-            urls = super().get_urls()
-            custom_urls = [
-                path(
-                    "generate-translations/",
-                    self.admin_view(self.generate_translations_view),
-                    name="generate_translations",
-                ),
-                path(
-                    "generate-translations/status/",
-                    self.admin_view(self.generate_translations_status_view),
-                    name="generate_translations_status",
-                ),
-            ]
-            return custom_urls + urls
+        def get_translation_job_key(self):
+            return connection.schema_name
 
-        def generate_translations_view(self, request):
-            if request.method == "POST":
-                targetLanguage = request.POST.get("targetLanguage")
-                job = startTranslationJob(
-                    connection.schema_name, targetLanguage, partial(tenant_context, connection.tenant)
-                )
-                if request.headers.get("Accept") == "application/json":
-                    return JsonResponse(job)
-                messages.info(request, f"Generating translations in background for: {LanguageCode(job['language']).label}")
-                return redirect("tenant_admin:generate_translations")
-
-            context = dict(self.each_context(request))
-            return TemplateResponse(request, "admin/generate_translations.html", context)
-
-        def generate_translations_status_view(self, request):
-            return JsonResponse(getTranslationJob(connection.schema_name) or {"state": "idle"})
+        def get_translation_job_context(self):
+            return partial(tenant_context, connection.tenant)
 
     tenant_admin_site = TenantAdminSite(name='tenant_admin')
     map_admin_site = tenant_admin_site

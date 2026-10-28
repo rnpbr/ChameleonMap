@@ -8,6 +8,8 @@ services:
     build: 
       target: development
     env_file: ./env/.env.dev
+    environment:
+      - POSTGRES_DB_MULTITENANT=map_multitenant
     restart: unless-stopped
 
   db:
