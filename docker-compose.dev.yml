@@ -8,6 +8,8 @@ services:
     build: 
       target: development
     env_file: ./env/.env.dev
+    environment:
+      - POSTGRES_DB_MULTITENANT=map_multitenant
     restart: unless-stopped
 
   db:
@@ -16,6 +18,7 @@ services:
 
   nginx:
     build: ./nginx
+    env_file: ./env/.env.dev
     ports:
       - "${NGINX_PORT:-80}:80"
     volumes:
@@ -45,7 +48,25 @@ services:
     build:
       context: ./map-frontend
       target: development
+    env_file:
+      - ./env/.env.dev
     volumes:
       - ./map-frontend:/usr/src/app
     expose:
       - 4200
+
+  translator:
+    image: libretranslate/libretranslate:latest
+    restart: unless-stopped
+    ports:
+      - "5005:5005"
+    env_file:
+      - ./env/.env.dev
+    environment:
+      - LT_PORT=5005
+      - LT_LOAD_ONLY=en,pt,es,ko,de
+      - LT_THREADS=4
+      - LT_CHAR_LIMIT=5000
+    volumes:
+      - lt_models:/home/libretranslate/.local 
+    

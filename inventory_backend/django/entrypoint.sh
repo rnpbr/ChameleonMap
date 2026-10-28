@@ -1,39 +1,43 @@
 #!/bin/sh
 
-## Function to be called if any step of the deployment fails.
 fail_deploy() {
     if [ -n "$1" ]; then
         echo "Failing deployment: $1"
     else
         echo "Failing deployment"
     fi
-    exit 1  # proceed no further!
+    exit 1
 }
 
-python manage.py migrate || fail_deploy "Migrate Failed"
+python manage.py create_missing_database || fail_deploy "Database creation failed"
+python manage.py check_tenancy_mode || fail_deploy "Tenancy mode check failed"
 
-if [[ ${DJANGO_SUPERUSER_USERNAME:-0} == 0 || ${DJANGO_SUPERUSER_PASSWORD:-0} == 0 || ${DJANGO_SUPERUSER_EMAIL:-0} == 0 ]]; then
-  echo "Skipped Superuser creation because required environment variables are missing"
+if [ "${ENABLE_MULTITENANT}" = "true" ]; then
+    python manage.py migrate_schemas --shared || fail_deploy "migrate_schemas failed"
+    python manage.py setup_admin
+    python manage.py import_single_tenant || echo "Warning: single-tenant map import failed; it runs again on the next start"
 else
-  echo "Create superuser"
+    python manage.py migrate || fail_deploy "Migrate failed"
 
-  # 2>&1 redirects stderr to stdout; this lets us capture error messages.
-  SUPERUSER_OUTPUT=$(python manage.py createsuperuser --no-input 2>&1)
+    if [ -z "${DJANGO_SUPERUSER_USERNAME}" ] || [ -z "${DJANGO_SUPERUSER_PASSWORD}" ] || [ -z "${DJANGO_SUPERUSER_EMAIL}" ]; then
+        echo "Skipped superuser creation because required environment variables are missing"
+    else
+        echo "Create superuser"
+        SUPERUSER_OUTPUT=$(python manage.py createsuperuser --no-input 2>&1)
+        SUPERUSER_STATUS=$?
+        echo "createsuperuser result: $SUPERUSER_STATUS - output: $SUPERUSER_OUTPUT"
 
-  # Assign the exit status to a variable.
-  SUPERUSER_STATUS=$?
-
-  echo "createsuperuser result: $SUPERUSER_STATUS - output: $SUPERUSER_OUTPUT"
-
-  if [ $SUPERUSER_STATUS -ne 0 ]; then
-    # Manage.py createsuperuser did not finish with success:
-
-    if [ "$SUPERUSER_OUTPUT" = "$SUPERUSER_EXISTS_MSG" ]; then
-      # The message it printed in stderr was SUPERUSER_EXISTS_MSG.
-      # This means the superuser already exists, so we continue.
-      echo "Superuser already exists"
+        if [ $SUPERUSER_STATUS -ne 0 ]; then
+            case "$SUPERUSER_OUTPUT" in
+                *"already exists"*|*"already taken"*)
+                    echo "Warning: superuser already exists, continuing"
+                    ;;
+                *)
+                    fail_deploy "createsuperuser failed"
+                    ;;
+            esac
+        fi
     fi
-  fi
 fi
 
-python manage.py runserver 0.0.0.0:8000
+exec python manage.py runserver 0.0.0.0:8000

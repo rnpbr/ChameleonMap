@@ -50,7 +50,15 @@ export class ApiService {
     return this.http.get(url, { responseType: 'text' })
   }
 
+  getMapData() {
+    return this.http.get<MapDataBundle>('/map-data/');
+  }
+
   getKmlShapes() {
     return this.http.get<KmlShape[]>('/kmlshape/');
+  }  
+  
+  getLanguageOptionsList(){
+    return this.http.get<{ languageOptions: string[] }>('/language-options/')
   }
 }

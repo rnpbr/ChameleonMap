@@ -11,10 +11,13 @@ declare global {
   export interface Menu {
     readonly id: number;
     readonly name: string;
+    visibleName: string;
     readonly group: number;
     readonly hierarchy_level: number;
     readonly active: boolean;
     expanded: boolean;
+    pinned: boolean;
+    isEyeVisibilityOpen?: boolean;
   }
 
   export interface Tag {
@@ -47,7 +50,9 @@ declare global {
     onMap: boolean;
     activeColors: Array<string>;
     locationMarker: any;
-    popup: string;
+    popup?: string;
+    popupDto?: LocationPopupDto;
+    interactionsAttached?: boolean;
     overlayed_popup_content: string;
     /*  containedTags: Array<{tag: Tag, activeOnMap: boolean}>; */
   }
@@ -56,7 +61,7 @@ declare global {
     readonly id: number;
     readonly parent_tag: number;
     readonly child_tag: number;
-    readonly is_subtag: boolean;
+    readonly cluster_id: number | null;
   }
 
   export interface Link {
@@ -72,6 +77,7 @@ declare global {
     readonly dashed: boolean;
     readonly weight: number;
     line: any;
+    interactionsAttached?: boolean;
   }
 
   export interface LinksGroup {
@@ -82,6 +88,8 @@ declare global {
     readonly opacity: number;
     readonly parent_menu: number;
     visibility: boolean;
+    onMap: boolean;
+    currentColor: string;
   }
 
   export interface KmlShape {
@@ -94,4 +102,13 @@ declare global {
     visibility: boolean;
     currentColor: string;
   }
+  
+  export type MapMarkerType = Tag | KmlLayerDto | KmlShape | LinksGroup;
+
+  export interface LanguageOption {
+    code: string;
+    flag: string;
+    name: string;
+  }
 }
+

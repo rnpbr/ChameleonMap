@@ -1,0 +1,125 @@
+:host {
+  display: block;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.right-sidebar-container {
+  position: relative;
+  z-index: 400;
+  max-height: 100%;
+  overflow-x: hidden;
+  scrollbar-width: none;
+}
+
+.pinned-menus-list-items {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+}
+
+.right-sidebar {
+  position: relative;
+  z-index: 400;
+  right: 0px;
+  width: 285px;
+  scrollbar-color: rgba(148, 143, 0, 0) rgba(255, 255, 255, 0);
+  background-color: rgba(255, 255, 255, 0.8);
+  float: right;
+  overflow-x: hidden;
+  transition: all 0.3s ease;
+  box-shadow: 0px 3px 1px -2px rgba(0, 0, 0, 0.2), 0px 2px 2px 0px rgba(0, 0, 0, 0.14), 0px 1px 5px 0px rgba(0, 0, 0, 0.12);
+  border-radius: 4px;
+  padding: 5px;
+}
+
+::-webkit-scrollbar {
+  width: 0px;
+  height: 0px;
+}
+
+.unpin-all-button {
+  position: relative;
+  float: right;
+  cursor: pointer;
+}
+
+.unpin-all-button-style {
+  font-size: 18px;
+  color: #3d3d3d;
+  text-align: center;
+  margin-top: 4px;
+}
+
+.unpin-all-button-style:hover {
+  color: RoyalBlue !important;
+}
+
+.right-sidebar-title {
+  font-family: 'Open Sans', sans-serif;
+  font-size: 16px;
+  background: rgba(168, 177, 189, 0.45) none repeat scroll 0% 0%;
+  padding: 5px 5px 7px 5px;
+  cursor: pointer;
+}
+
+.locations-button {
+  position: relative;
+  float: right;
+  cursor: pointer;
+  font-size: 18px;
+  color: #3d3d3d;
+  text-align: center;
+}
+
+.locations-button:hover {
+  color: RoyalBlue !important;
+}
+
+.rotated-icon {
+  transform: rotate(180deg) !important;
+}
+
+.locations-table {
+  visibility: visible;
+  opacity: 1;
+  display: block;
+  transition: visibility 0s, opacity 0.5s, display 0.5s linear;
+}
+
+.hide {
+  visibility: hidden;
+  opacity: 0;
+  display: none;
+  pointer-events: none;
+}
+
+table {
+  font: 12px/1.75 "Helvetica Neue", Arial, Helvetica, sans-serif;
+  text-align: center;
+  padding-bottom: 15px;
+  padding-top: 10px;
+}
+
+td, th {
+  border: 1px solid gray;
+  padding: 4px;
+}
+
+td:hover {
+  background-color: #ddd;
+}
+
+.noselect {
+  transition: all 0.3s;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}

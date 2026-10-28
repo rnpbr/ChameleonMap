@@ -1,30 +1,118 @@
 {% extends "admin/index.html" %}
 {% load importer_tags %}
+{% load tenancy_tags %}
+{% load get_managed_maps %}
+{% load get_current_tenant_name %}
+{% load i18n %}
 
+{% block content %}
+{% multitenant_enabled as is_multitenant %}
+{% is_root_tenant as is_root %}
+{# Mirror Unfold's index layout so custom sections stay in the same column as app modules #}
+<div class="flex flex-col lg:flex-row lg:gap-8">
+    <div class="grow">
+        {% include "unfold/helpers/app_list_default.html" %}
 
-{% block sidebar %}
-{{ block.super }}
-{% if 'AVAILABLE_IMPORTS'|env == 'infradpdi' %}
-<div class="background-no-go" id="bg"></div>
-<div class="spinner" id="spinner"></div>
-<div class="spinner-text" id="text">Loading, please wait...</div>
-<div class="app-administration module">
-    <table>
-        <caption>
-            <a class="section" title="Import data from an API">Import data</a>
-        </caption>
-        <tbody>
-            <tr class="model-menu">
-                <th scope="row"><a href="/import/netbox/" onclick="showSpinner()">Import data from Netbox</a></th>
-                <td><a href="/import/netbox/" class="addlink" onclick="showSpinner()">Import</a></td>
-            </tr>
-        </tbody>
-    </table>
+        {% if is_multitenant %}
+        <!-- Managed map instances -->
+        <div class="bg-base-50 mb-6 rounded-default p-3 dark:bg-base-800">
+            <table class="border border-base-400/10 border-spacing-none border-separate rounded-default overflow-hidden shadow-xs w-full dark:border-base-800">
+                <caption class="font-semibold mb-3 text-base-900 text-left dark:text-base-100">
+                    <a class="section" title="Models in the Permissions application">
+                        {% trans "Your managed map instances" %}
+                    </a>
+                </caption>
+                <tbody>
+                {% get_managed_maps as maps %}
+                {% get_current_tenant_name as curr_tenant %}
+                {% for instance in maps %}
+                    {% if curr_tenant == instance.name %}
+                        <tr class="bg-gray-100 dark:bg-base-900 model-usertenantpermissions">
+                            <th scope="row" class="font-normal p-3 text-left ">
+                                <span class="font-semibold">{{ instance.name }} ({% trans "Current" %})</span>
+                            </th>
+                            <td class="p-3 text-right">
+                                <div class="flex flex-row items-center ml-auto gap-4 justify-end">
+                                    <span class="text-sm text-base-500 dark:text-base-400"></span>
+                                </div>
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr class="bg-white dark:bg-base-900 model-usertenantpermissions">
+                            <th scope="row" class="font-normal p-3 text-left ">
+                                <a href="{{ instance.url }}">{{ instance.name }}</a>
+                            </th>
+                            <td class="p-3 text-right">
+                                <div class="flex flex-row items-center ml-auto gap-4 justify-end">
+                                    <a href="{{ instance.url }}" class="changelink">{% trans "Manage instance" %}</a>
+                                    <a href="{{ instance.url }}" class="changelink block leading-none text-base-400 transition-colors dark:text-base-500 " title="Go to instance">
+                                        <span class="material-symbols-outlined">edit_location_alt</span>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endif %}
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+
+        {# Import is for scoped/map tenants (and single-tenant mode), not the root admin tenant #}
+        {% if not is_root %}
+        <div class="bg-base-50 mb-6 rounded-default p-3 dark:bg-base-800">
+            <table class="border border-base-400/10 border-spacing-none border-separate rounded-default overflow-hidden shadow-xs w-full dark:border-base-800">
+                <caption class="font-semibold mb-3 text-base-900 text-left dark:text-base-100">
+                    <a class="section" title="Import data">{% trans "Import data" %}</a>
+                </caption>
+                <tbody>
+                    <!-- CSV import -->
+                    <tr class="model-menu bg-white dark:bg-base-900 model-usertenantpermissions">
+                        <th scope="row" class="font-normal p-3 text-left">
+                            <a href="/import/csv/">{% trans "Import map data (CSV, XLSX, or ZIP)" %}</a>
+                        </th>
+                        <td class="p-3 text-right">
+                            <div class="flex flex-row items-center ml-auto gap-4 justify-end">
+                                <a href="/import/csv/" class="changelink">{% trans "Import" %}</a>
+                                <a href="/import/csv/" class="changelink block leading-none text-base-400 transition-colors dark:text-base-500" title="Import map data (CSV, XLSX, or ZIP)">
+                                    <span class="material-symbols-outlined">upload_file</span>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    <!-- Netbox import — only when AVAILABLE_IMPORTS=infradpdi -->
+                    {% if 'AVAILABLE_IMPORTS'|env == 'infradpdi' %}
+                    <tr class="model-menu bg-white dark:bg-base-900 model-usertenantpermissions">
+                        <th scope="row" class="font-normal p-3 text-left">
+                            <a href="/import/netbox/" onclick="showSpinner()">{% trans "Import data from Netbox" %}</a>
+                        </th>
+                        <td class="p-3 text-right">
+                            <div class="flex flex-row items-center ml-auto gap-4 justify-end">
+                                <a href="/import/netbox/" onclick="showSpinner()">{% trans "Import" %}</a>
+                                <a href="/import/netbox/" onclick="showSpinner()" class="changelink block leading-none text-base-400 transition-colors dark:text-base-500" title="Import from Netbox">
+                                    <span class="material-symbols-outlined">input</span>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    </div>
+
+    {% include "unfold/helpers/history.html" %}
 </div>
+
+<div class="background-no-go" id="loading-bg"></div>
+<div class="spinner" id="spinner"></div>
+<div class="spinner-text" id="loading-text">{% trans "Loading, please wait..." %}</div>
+
 <script>
-    function showSpinner(){
-        document.getElementById('text').style.display = 'block';
-        document.getElementById('bg').style.display = 'block';
+    function showSpinner() {
+        document.getElementById('loading-text').style.display = 'block';
+        document.getElementById('loading-bg').style.display = 'block';
         document.getElementById('spinner').style.display = 'block';
     }
 </script>
@@ -77,5 +165,5 @@
         100% { transform: rotate(360deg); }
     }
 </style>
-{% endif %}
+
 {% endblock %}

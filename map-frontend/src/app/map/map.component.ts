@@ -1,4 +1,3 @@
-import { TagContentType } from '@angular/compiler';
 import {
   Component,
   OnInit,
@@ -13,12 +12,24 @@ import {
 import * as L from 'leaflet';
 import 'leaflet-responsive-popup';
 import '@elfalem/leaflet-curve';
-import { ApiService } from '../api.service';
 import { OverlayedPopupComponent } from '../overlayed-popup/overlayed-popup.component';
-import { forkJoin } from 'rxjs';
-import { kml } from '@tmcw/togeojson';
 import { TooltipComponent } from '../tooltip/tooltip.component';
 import { ChameleonButtonComponent } from '../chameleon-button/chameleon-button.component';
+import { createMapLoadProfiler, MapLoadProfiler } from './map-load-profiler';
+import { MapDataService, MapDataStore } from './map-data.service';
+import { PopupContentService } from './popup-content.service';
+import { runBatchedWork, BatchSchedulerHandle } from './map-interaction-scheduler';
+import {
+  buildEntityIndex,
+  isAnyClusterActive,
+  isKml,
+  isLinksGroup,
+  isLinksGroupInContext,
+  isMenuSimultaneousAndSelected,
+  isTag,
+  shouldShowTagForMenu
+} from './map-behavior';
+import { environment } from '../../environments/environment';
 
 @Component({
   selector: 'app-map',
@@ -37,10 +48,11 @@ export class MapComponent implements OnInit {
   private _mapSettings: any;
   private _links: Array<Link>;
   private _linksGroup: Array<LinksGroup>;
-  private _kmlShapes: Array<KmlShape>;
+  private _kmlShapes: Array<KmlLayerDto>;
+  private _currentLanguage: LanguageOption;
+  private _languageOptionsList: Array<string>;
   public mapSetting: any = null;
   public map: L.Map;
-  private locationHeaderSize = 0;
   private mapLoaded = false;
   private mapInitialized = false;
   private markerClusterGroup: L.MarkerClusterGroup;
@@ -58,7 +70,6 @@ export class MapComponent implements OnInit {
   public defaultMenuId: number;
 
   public footerUrl = ""
-
   public linksFeatureOn = false;
   showRotateMessage = false;
   
@@ -72,6 +83,21 @@ export class MapComponent implements OnInit {
   }
 
   private kmlLayers: { [key: number]: L.Layer } = {};
+  private readonly loadProfiler: MapLoadProfiler = createMapLoadProfiler();
+
+  mapInteractionPhase: 'loading' | 'static' | 'enriching' | 'ready' = 'loading';
+  private deferClusterTooltips = true;
+  private clusterHoverAttached = false;
+  private markerClusterOnMap = false;
+  private isInitialStaticLoad = true;
+  private enrichGeneration = 0;
+  private enrichSchedulerHandle: BatchSchedulerHandle | null = null;
+  private pendingKmlTooltipAttaches: Array<() => void> = [];
+
+  private static readonly MARKER_INTERACTION_CHUNK = 200;
+  private static readonly LINK_INTERACTION_CHUNK = 100;
+  private static readonly FOCUS_ZOOM = 16;
+  private static readonly FOCUS_PADDING = 20;
 
   @HostListener('document:click', ['$event'])
   clickout(event: any) {
@@ -128,9 +154,11 @@ export class MapComponent implements OnInit {
   }
   set mapSettings(value) {
     this._mapSettings = value;
-    if (value !== undefined) {
-      this.mapSetting = this._mapSettings[0];
+    if (value === undefined || value === null) {
+      this.mapSetting = null;
+      return;
     }
+    this.mapSetting = Array.isArray(value) ? value[0] : value;
   }
 
   get links() {
@@ -153,140 +181,186 @@ export class MapComponent implements OnInit {
   set kmlShapes(value) {
     this._kmlShapes = value;
   }
+   
+  get languageOptionsList() {
+    return this._languageOptionsList;
+  }
+  set languageOptionsList(value) {
+    this._languageOptionsList = value;
+  }   
 
-  constructor(private api: ApiService) {
+  get currentLanguage() {
+    return this._currentLanguage;
+  }
+  set currentLanguage(value) {
+    this._currentLanguage = value;
+  }
+
+  constructor(
+    private mapDataService: MapDataService,
+    private popupContent: PopupContentService
+  ) {
     this.checkOrientation();
   }
 
   ngOnInit() {
-    forkJoin({
-      menugroups: this.api.getMenuGroups(),
-      menus: this.api.getMenus(),
-      locations: this.api.getLocations(),
-      tags: this.api.getTags(),
-      tagRelationships: this.api.getTagRelationships(),
-      mapSettings: this.api.getSettings(),
-      links: this.api.getLinks(),
-      linksGroup: this.api.getLinkGroups(),
-      kmlShapes: this.api.getKmlShapes()
-    }).subscribe({
-      next: (results) => {
-        this.menugroups = results.menugroups.sort((a: MenuGroup, b: MenuGroup) => a.id - b.id);
-
-        if (this.menugroups.length > 0) {
-          this.currentMenuGroup = this.menugroups[0].name;
-        }
-  
-        this.menus = results.menus;
-        this.menus.forEach(menu => {
-          menu.expanded = this.menus.length < 3;
-        });
-        this.menus.forEach(menu => {
-          if (menu.group == this.menugroups[0].id) {
-            this.selectedMenu = menu.id;
-            this.defaultMenuId = menu.id;
-            return;
-          }
-        });
-  
-        this.locations = results.locations;
-        this.tags = results.tags;
-        this.tagRelationships = results.tagRelationships;
-        this.mapSettings = results.mapSettings;
-        this.links = results.links;
-        this.linksGroup = results.linksGroup;
-        this.kmlShapes = results.kmlShapes;
-  
-        // After all data is set, initialize the map
+    this.loadProfiler.mark('map.load.total.start');
+    this.loadProfiler.mark('map.load.mapData.start');
+    this.mapDataService.load().subscribe({
+      next: (store) => {
+        this.loadProfiler.endMark('map.load.mapData.end');
+        this.loadProfiler.measure('map.load.mapData', 'map.load.mapData.start', 'map.load.mapData.end');
+        this.hydrateFromStore(store);
         this.initializeMap();
       },
       error: (error) => {
         this.error = error;
-        console.error('Error loading data:', error);
+        console.error('Error loading map data:', error);
       }
     });
   }
 
-  private initializeMap(): void {
-    if (this.mapSetting) {
-      this.initializeMapOptions();
-      this.initLocations();
-      this.insertTagRelations();
-      this.markerPreConfigure();
-      if (this.mapSetting.link_feature) {
-        this.insertLinks();
-      }
-      this.mapLoaded = true;
+  private hydrateFromStore(store: MapDataStore) {
+    this.menugroups = [...store.menuGroups].sort((a, b) => a.id - b.id);
+    if (this.menugroups.length > 0) {
+      this.currentMenuGroup = this.menugroups[0].name;
     }
-  }
-  
-  private async loadKMLs() {
-    const parser = new DOMParser();
-    const kmlLoadPromises = this._kmlShapes.map(async (storedKml) => {
-      try {
-        const kmlData = await this.loadKMLData(storedKml.kml_file);
-        const kmlDoc = parser.parseFromString(kmlData, 'text/xml');
-        const geoJsonData = kml(kmlDoc);
-  
-        this.createAndAddGeoJsonLayer(storedKml, geoJsonData);
-      } catch (error) {
-        console.error('Error loading KML file:', error);
+
+    this.menus = store.menus;
+    let defaultMenuSet = false;
+    this.menus.forEach((menu) => {
+      menu.expanded = this.menus.length < 3;
+      menu.pinned = false;
+      if (menu.group == this.menugroups[0]?.id && !defaultMenuSet) {
+        this.selectedMenu = menu.id;
+        this.defaultMenuId = menu.id;
+        defaultMenuSet = true;
       }
     });
-  
-    await Promise.all(kmlLoadPromises);
+        
+    this.menugroups.forEach((menuGroup) => {
+      const firstMenuInsideGroup = this.menus.find((menu) => menu.group === menuGroup.id);
+      if (firstMenuInsideGroup) {
+        this.selectedMenusByGroup[menuGroup.name] = firstMenuInsideGroup.id;
+      }
+    });
+
+    this.locations = store.locations;
+    this.tags = store.tags;
+    this.tagRelationships = [];
+    this.mapSettings = store.settings;
+    this.links = store.links;
+    this.linksGroup = store.linksGroups;
+    this.kmlShapes = store.kmlLayers;
+    this.languageOptionsList = store.languageOptionsList;
+    this.currentLanguage = this.mapSettings.default_content_language;
   }
-  
-  private loadKMLData(kmlFile: string): Promise<string> {
-    return new Promise((resolve, reject) => {
-      this.api.getKml(kmlFile).subscribe(
-        (kmlData) => resolve(kmlData),
-        (error) => reject(error)
+
+  private initializeMap(): void {
+    if (this.mapSetting) {
+      this.loadProfiler.timeSync('map.load.initializeMap', () => {
+        this.loadProfiler.timeSync('map.load.initializeMapOptions', () => {
+          this.initializeMapOptions();
+        });
+        this.loadProfiler.timeSync('map.load.initLocations', () => {
+          this.initLocations();
+        });
+        this.loadProfiler.timeSync('map.load.markerPreConfigure', () => {
+          this.markerPreConfigure();
+        });
+        if (this.mapSetting.link_feature) {
+          this.loadProfiler.timeSync('map.load.insertLinks', () => {
+            this.insertLinkGeometries();
+          });
+        }
+        this.loadProfiler.timeSync('map.load.kml', () => {
+          this.initKmlLayers();
+        });
+        this.ensureMarkerClusterOnMap();
+        this.mapLoaded = true;
+        this.mapInteractionPhase = 'static';
+      });
+      this.isInitialStaticLoad = false;
+      this.loadProfiler.endMark('map.load.interactive.end');
+      this.loadProfiler.measure(
+        'map.load.interactive.total',
+        'map.load.total.start',
+        'map.load.interactive.end'
       );
+      this.loadProfiler.logInteractiveSummary();
+      this.startEnrichPhase();
+    }
+  }
+
+  private initKmlLayers() {
+    const kmlShapes = this._kmlShapes ?? [];
+    kmlShapes.forEach((storedKml) => {
+      if (storedKml.geojson) {
+        this.createAndAddGeoJsonLayer(storedKml, storedKml.geojson);
+      }
     });
   }
   
   private createAndAddGeoJsonLayer(storedKml: any, geoJsonData: any) {
     storedKml.currentColor = storedKml.links_color;
     storedKml.visibility = true;
-    
+
     const geojsonMarkerOptions = {
       radius: 2,
       fillColor: '#000000',
-      color: "#000000",
+      color: '#000000',
       weight: 1,
       opacity: 1,
       fillOpacity: 1
     };
-  
+
     const polygonStyle = {
-      "color": storedKml.links_color,
-      "weight": 3,
-      "opacity": storedKml.opacity
+      color: storedKml.links_color,
+      weight: 3,
+      opacity: storedKml.opacity
     };
-  
-    const geoJsonTooltip = L.tooltip({ 'sticky': true });
-    geoJsonTooltip.setContent(storedKml.name);
-  
+
     const geoJsonLayer = L.geoJSON(geoJsonData, {
-      pointToLayer: (feature, latlng) => {
-        const tooltip = L.tooltip({ 'sticky': true });
-        tooltip.setContent(storedKml.name + " - " + feature.properties['name']);
-        tooltip.on('add', () => geoJsonTooltip.setOpacity(0));
-        tooltip.on('remove', () => geoJsonTooltip.setOpacity(1));
-  
-        return L.circleMarker(latlng, geojsonMarkerOptions).bindTooltip(tooltip);
+      pointToLayer: (_feature, latlng) => {
+        return L.circleMarker(latlng, geojsonMarkerOptions);
       },
       style: polygonStyle
-    }).bindTooltip(geoJsonTooltip);
-  
+    });
+
     this.kmlLayers[storedKml.id] = geoJsonLayer;
+    this.queueKmlTooltipAttach(storedKml, geoJsonLayer);
     if (this.shouldLoadKML(storedKml)) {
       this.kmlLayers[storedKml.id].addTo(this.map);
     }
   }
 
-  private shouldLoadKML(kmlShape: KmlShape): boolean {
+  private queueKmlTooltipAttach(storedKml: any, geoJsonLayer: L.GeoJSON) {
+    this.pendingKmlTooltipAttaches.push(() => {
+      const layer = this.kmlLayers[storedKml.id] as L.GeoJSON | undefined;
+      if (!layer) {
+        return;
+      }
+
+      const geoJsonTooltip = L.tooltip({ sticky: true });
+      geoJsonTooltip.setContent(storedKml.name);
+      layer.bindTooltip(geoJsonTooltip);
+
+      layer.eachLayer((featureLayer: L.Layer) => {
+        const circle = featureLayer as L.CircleMarker;
+        if (!circle.bindTooltip) {
+          return;
+        }
+        const featureName = (circle as any).feature?.properties?.name ?? '';
+        const tooltip = L.tooltip({ sticky: true });
+        tooltip.setContent(storedKml.name + ' - ' + featureName);
+        tooltip.on('add', () => geoJsonTooltip.setOpacity(0));
+        tooltip.on('remove', () => geoJsonTooltip.setOpacity(1));
+        circle.bindTooltip(tooltip);
+      });
+    });
+  }
+
+  private shouldLoadKML(kmlShape: KmlLayerDto): boolean {
     let parent_menu = this.getMenuById(kmlShape.parent_menu)
     if (!parent_menu) {
       return false;
@@ -298,24 +372,18 @@ export class MapComponent implements OnInit {
     }
     let inCurrentMenuGroup = menu_group.name == this.currentMenuGroup;
     let shouldLoadSimultaneously = !inCurrentMenuGroup && this.isMenuSimultaneousAndSelectedInItsMenuGroup(parent_menu.id, menu_group);
-    return inCurrentMenu || shouldLoadSimultaneously;
+    let isKmlShapeMenuPinned = parent_menu.pinned;
+    return inCurrentMenu || shouldLoadSimultaneously || isKmlShapeMenuPinned;
   }
 
   private isMenuSimultaneousAndSelectedInItsMenuGroup(menu_id: number, menu_group: MenuGroup | undefined = undefined) {
-    let menu = this.getMenuById(menu_id);
-    if (!menu) return false;
-    if (menu_group == undefined) {
-      let parent_menu_group_id = menu?.group;
-      if (parent_menu_group_id == undefined) return false;
-      menu_group = this.getMenuGroup(parent_menu_group_id)
-    }
-    if (menu_group == undefined || !menu_group.simultaneous_context) return false;
-    if (this.selectedMenusByGroup[menu_group.name] == undefined) {
-      // If no menu is selected in that menu group yet, then select it
-      this.selectedMenusByGroup[menu_group.name] = menu_id;
-      return true;
-    }
-    return this.selectedMenusByGroup[menu_group.name] == menu_id;
+    return isMenuSimultaneousAndSelected(
+      menu_id,
+      buildEntityIndex(this.menus ?? []),
+      buildEntityIndex(this.menugroups ?? []),
+      this.selectedMenusByGroup,
+      menu_group
+    );
   }
 
   private initLocations() {
@@ -324,12 +392,9 @@ export class MapComponent implements OnInit {
         location.onMap = false;
         location.activeColors = [];
         location.locationMarker = {};
-        location.popup =
-          "<div style='max-height:calc(100vh - 500px); min-height: 180px; overflow:scroll; overflow-x:hidden; margin-top: 20px; margin-right:0px; margin-left: 10px; text-align: justify;'>";
-        this.locationHeaderSize = location.popup.length;
+        location.interactionsAttached = false;
       });
     }
-    this.loadKMLs()
   }
 
   private getOriginAndDestiny(
@@ -351,85 +416,112 @@ export class MapComponent implements OnInit {
   }
 
   private insertLinks() {
+    this.insertLinkGeometries();
+    if (this.mapInteractionPhase === 'ready') {
+      this.attachAllLinkInteractions();
+    }
+  }
+
+  private insertLinkGeometries() {
     this.resetlinks();
     if (this._linksGroup && this._links && this._links.length > 0) {
       this.linksFeatureOn = true;
+      const menusById = buildEntityIndex(this.menus ?? []);
+      const menuGroupsById = buildEntityIndex(this.menugroups ?? []);
+      this._linksGroup.forEach((lg: LinksGroup) => {
+        lg.onMap = isLinksGroupInContext(
+          lg,
+          this.selectedMenu,
+          menusById,
+          menuGroupsById,
+          this.selectedMenusByGroup
+        );
+      });
       this._links.forEach((link: Link) => {
         const loc1 = this.getLocationById(link.location_1);
         const loc2 = this.getLocationById(link.location_2);
         const linkgroup = this.getLinksGroupById(link.links_group);
-        if (linkgroup == undefined) return;
-        let isSimultaneous = this.isMenuSimultaneousAndSelectedInItsMenuGroup(linkgroup.parent_menu);
-        if (linkgroup.parent_menu == this.selectedMenu || isSimultaneous){
-          if (loc1 && loc2) {
-            linkgroup.visibility = true;
-            let pointA;
-            let pointB;
-            let values;
-            values = this.getOriginAndDestiny(loc1, loc2, link.invert_link);
-            pointA = values[0];
-            pointB = values[1];
-  
-            const pointList = [pointA, pointB];
-            if (isSimultaneous || (loc1.onMap && loc2.onMap)) {
-              const latlngs = [];
-  
-              const latlng1 = [pointA.lat, pointA.lng],
-                latlng2 = [pointB.lat, pointB.lng];
-  
-              const offsetX = latlng2[1] - latlng1[1],
-                offsetY = latlng2[0] - latlng1[0];
-  
-              const r = Math.sqrt(Math.pow(offsetX, 2) + Math.pow(offsetY, 2)),
-                theta = Math.atan2(offsetY, offsetX);
-  
-              const thetaOffset = 3.14 / 10;
-  
-              const r2 = r / 2 / Math.cos(thetaOffset),
-                theta2 = theta + thetaOffset;
-  
-              const midpointX = (r2 * Math.cos(theta2)) / 1.5 + latlng1[1],
-                midpointY = (r2 * Math.sin(theta2)) / 1.5 + latlng1[0];
-  
-              const midpointLatLng = [midpointY, midpointX];
-  
-              latlngs.push(latlng1, midpointLatLng, latlng2);
-  
-              const pathOptions = {
-                color: linkgroup.links_color,
-                weight: link.weight,
-                opacity: linkgroup.opacity, //link.opacity;
-                smoothFactor: 1,
-                stroke: true,
-                dashArray:'',
-                dashOffset: ''
-              };
-              if(link.dashed){
-                pathOptions.dashArray = '10, 10';
-                pathOptions.dashOffset = '10';
-              }
-              if(link.straight_link){
-                link.line = new L.Polyline([pointA, pointB], pathOptions);
-              }else{
-                link.line = L.curve(
-                  [
-                    'M',
-                    [latlng1[0], latlng1[1]],
-                    'S',
-                    [midpointLatLng[0], midpointLatLng[1]],
-                    [latlng2[0], latlng2[1]]
-                  ],
-                  pathOptions
-                );
-              }
-              
-              link.line.bindTooltip(linkgroup.name, {sticky : true});
-              link.line.addTo(this.map);
-            }
-          }
+        // Lines are also built while an endpoint is hidden, so checkLinksOnMap and
+        // insertLinkByLinkGroup can add them back when the tag or the eye is reactivated.
+        if (!linkgroup?.onMap || !loc1 || !loc2) {
+          return;
+        }
+        const values = this.getOriginAndDestiny(loc1!, loc2!, link.invert_link);
+        const pointA = values[0];
+        const pointB = values[1];
+
+        const latlng1 = [pointA.lat, pointA.lng];
+        const latlng2 = [pointB.lat, pointB.lng];
+
+        const offsetX = latlng2[1] - latlng1[1];
+        const offsetY = latlng2[0] - latlng1[0];
+
+        const r = Math.sqrt(Math.pow(offsetX, 2) + Math.pow(offsetY, 2));
+        const theta = Math.atan2(offsetY, offsetX);
+
+        const thetaOffset = 3.14 / 10;
+
+        const r2 = r / 2 / Math.cos(thetaOffset);
+        const theta2 = theta + thetaOffset;
+
+        const midpointX = (r2 * Math.cos(theta2)) / 1.5 + latlng1[1];
+        const midpointY = (r2 * Math.sin(theta2)) / 1.5 + latlng1[0];
+
+        const midpointLatLng = [midpointY, midpointX];
+
+        const pathOptions = {
+          color: linkgroup!.links_color,
+          weight: link.weight,
+          opacity: linkgroup!.opacity,
+          smoothFactor: 1,
+          stroke: true,
+          dashArray: '',
+          dashOffset: ''
+        };
+        if (link.dashed) {
+          pathOptions.dashArray = '10, 10';
+          pathOptions.dashOffset = '10';
+        }
+        if (link.straight_link) {
+          link.line = new L.Polyline([pointA, pointB], pathOptions);
+        } else {
+          link.line = L.curve(
+            [
+              'M',
+              [latlng1[0], latlng1[1]],
+              'S',
+              [midpointLatLng[0], midpointLatLng[1]],
+              [latlng2[0], latlng2[1]]
+            ],
+            pathOptions
+          );
+        }
+
+        link.interactionsAttached = false;
+        if (linkgroup!.visibility && loc1!.onMap && loc2!.onMap) {
+          link.line.addTo(this.map);
         }
       });
     }
+  }
+
+  private attachLinkInteractions(link: Link) {
+    if (link.interactionsAttached || !link.line) {
+      return;
+    }
+    const linkgroup = this.getLinksGroupById(link.links_group);
+    if (!linkgroup) {
+      return;
+    }
+    link.line.bindTooltip(linkgroup.name, { sticky: true });
+    link.interactionsAttached = true;
+  }
+
+  private attachAllLinkInteractions() {
+    if (!this._links) {
+      return;
+    }
+    this._links.forEach((link) => this.attachLinkInteractions(link));
   }
 
   private initializeMapOptions() {
@@ -470,10 +562,14 @@ export class MapComponent implements OnInit {
       maxRadius = 0;
     }
 
+    const tileKey = environment.mapTileKey
+      ? `?key=${environment.mapTileKey}`
+      : '';
+
     switch (this.mapSetting.map_style) {
       case 'b':
         tiles = L.tileLayer(
-          'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+          `https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png${tileKey}`,
           {
             maxZoom: 18,
             minZoom: 3,
@@ -486,7 +582,7 @@ export class MapComponent implements OnInit {
 
       case 'd':
         tiles = L.tileLayer(
-          'https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png',
+          `https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png${tileKey}`,
           {
             maxZoom: 18,
             minZoom: 3,
@@ -503,7 +599,7 @@ export class MapComponent implements OnInit {
     }
 
     this.markerClusterGroup = L.markerClusterGroup({
-      iconCreateFunction: function (cluster) {
+      iconCreateFunction: (cluster) => {
         let colors: Array<any> = [];
 
         cluster.getAllChildMarkers().forEach((marker: any) => {
@@ -514,17 +610,18 @@ export class MapComponent implements OnInit {
           colors.splice(colors.indexOf('#5c5c5c'), 1);
         });
         const clusterLength = cluster.getChildCount();
-        cluster.bindTooltip(clusterLength.toString() + ' locations grouped', {
-          offset: L.point(0, 0),
-          direction: 'left'
-        });
+        if (!this.deferClusterTooltips) {
+          cluster.bindTooltip(clusterLength.toString() + ' locations grouped', {
+            offset: L.point(0, 0),
+            direction: 'left'
+          });
+        }
         return getMarkerIcon(colors, clusterLength);
       },
       maxClusterRadius: maxRadius,
       disableClusteringAtZoom: 12,
       showCoverageOnHover: false
     });
-    this.addHoverFunction(this.markerClusterGroup);
 
     this.footerUrl = this.mapSetting.footer_file;
 
@@ -555,124 +652,17 @@ export class MapComponent implements OnInit {
           tag.onMap = true;
           tag.dependenciesActive = true;
           tag.visibility = true;
-          if (this.mapSetting.inherit_children_tag_locations) {
-            this.insertChildrenLocations(tag, tag);
-          }
-          tag.related_locations.forEach((location_id: number) => {
-            const location: Location | null = this.getLocationById(location_id);
-
-            if (location) {
-              if (location.active) {
-                if (location.popup.length === this.locationHeaderSize) {
-                  let overlayedPopupButton = '';
-
-                  if (
-                    location.overlayed_popup_content &&
-                    location.overlayed_popup_content !== null
-                  ) {
-                    overlayedPopupButton =
-                      this.overlayedPopup.getOverlayedPopupButtonForLocation(
-                        location
-                      );
-                  }
-
-                  location.popup +=
-                    '<div style="margin-right: 10px;"><h1 class="popup-title">' +
-                    location.name +
-                    ' ' +
-                    overlayedPopupButton +
-                    '</h1><hr>';
-                  if (location.description && location.description !== 'nan') {
-                    location.popup +=
-                      '<div style = "border-top: 1px; margin-top: -5px; margin-bottom: 15px"> <p>' +
-                      location.description +
-                      '</p> </div> ';
-                  }
-                }
-
-                this.insertTagOnPopup(tag, location);
-              }
-            }
-          });
         }
       });
-      this.getFirstMenuId();
-      this.insertMarkersByMenu(this.defaultMenuId);
+      this.loadProfiler.timeSync('map.load.insertMarkersByMenu', () => {
+        this.insertMarkersByMenu(this.defaultMenuId, true);
+      });
       if (typeof this.mapSetting.map_name === 'string')
         document.title = this.mapSetting.map_name;
       if (this.menus && this.locations && this.mapSettings)
         this.mapLoaded = true;
     }
     this.markerClusterGroup.refreshClusters();
-  }
-
-  private insertChildrenLocations(tag: Tag, iterationTag: Tag) {
-    if (iterationTag.child_tags) {
-      iterationTag.child_tags.forEach((childRelated: any) => {
-        const child = this.getTagById(childRelated.child_tag);
-        if (child) {
-          if (!this.isIndirectChild(tag, child)) {
-            child?.related_locations.forEach((locationId: any) => {
-              tag.related_locations.push(locationId);
-            });
-          } else {
-            let cluster_ids: any[] = [];
-            const relatedMenus: any[] = [];
-
-            child?.parent_tags.forEach((relation: any) => {
-              cluster_ids.push(relation.cluster_id);
-              relatedMenus.push(
-                this.getTagById(relation.parent_tag)?.parent_menu
-              );
-            });
-            cluster_ids = [...new Set(cluster_ids)];
-
-            if (
-              cluster_ids.length === 1 ||
-              !relatedMenus.includes(tag.parent_menu)
-            ) {
-              child?.related_locations.forEach((locationId: any) => {
-                tag.related_locations.push(locationId);
-              });
-            }
-          }
-        }
-
-        // Using recursion to insert indirect children locations
-        child?.child_tags.forEach((childRelated: any) => {
-          const itTag = this.getTagById(childRelated.parent_tag);
-          if (itTag) {
-            this.insertChildrenLocations(tag, itTag);
-          }
-        });
-      });
-
-      tag.related_locations = [...new Set(tag.related_locations)];
-    }
-  }
-
-  private isIndirectChild(tag: Tag, childTag: Tag) {
-    let directFlag = false;
-    tag.child_tags.forEach((relation: any) => {
-      if (relation.child_tag === childTag.id) {
-        directFlag = true;
-      }
-    });
-    if (directFlag) {
-      return false;
-    }
-    const tagMenu = this.getMenuById(tag.parent_menu)?.hierarchy_level;
-    const childTagMenu = this.getMenuById(
-      childTag.parent_menu
-    )?.hierarchy_level;
-
-    if (tagMenu && childTagMenu) {
-      if (childTagMenu > tagMenu + 1) {
-        return true;
-      }
-    }
-
-    return false;
   }
 
   private getMenuGroup(id: number): MenuGroup | undefined {
@@ -684,20 +674,21 @@ export class MapComponent implements OnInit {
     return undefined;
   }
 
-  private insertMarkersByMenu(selectedTagsMenuId: number) {
+  private insertMarkersByMenu(selectedTagsMenuId: number, reset: boolean) {
     if (!this._locations || !this._tags) {
       return
     }
-
     let selectedMenu = this.getMenuById(this.selectedMenu);
+
     if (!selectedMenu) {
       return
     }
-    let selectedMenuGroup = this.getMenuGroup(selectedMenu.group)
 
-    this.resetMarkers();
+    if (reset) {
+      this.resetMarkers();
+      this.selectedMenu = selectedTagsMenuId;
+    }
 
-    this.selectedMenu = selectedTagsMenuId;
     const menuHierarchy = this.getMenuById(selectedTagsMenuId)?.hierarchy_level;
     const otherMenuTags = this._tags.filter((currentTag: Tag) => {
       const currentTagHierarchy = this.getMenuById(
@@ -718,8 +709,16 @@ export class MapComponent implements OnInit {
       });
     });
 
+    const menusById = buildEntityIndex(this.menus ?? []);
+    const menuGroupsById = buildEntityIndex(this.menugroups ?? []);
     this._tags.forEach((tag: Tag) => {
-      let isMenuShown = tag.parent_menu === selectedTagsMenuId || this.isMenuSimultaneousAndSelectedInItsMenuGroup(tag.parent_menu);
+      const isMenuShown = shouldShowTagForMenu(
+        tag,
+        selectedTagsMenuId,
+        menusById,
+        menuGroupsById,
+        this.selectedMenusByGroup
+      );
       if (
         tag.active &&
         tag.dependenciesActive &&
@@ -733,12 +732,10 @@ export class MapComponent implements OnInit {
             if (location.active) {
               const tagMenu = this.getMenuById(tag.parent_menu);
               if (tagMenu) {
-                if (tagMenu.hierarchy_level > 1) {
-                  // if (allOtherMenuLocations.includes(location.id)) {
+                if (reset) {
                   this.insertLocationOnMap(location, tag.currentColor);
-                  // }
-                } else {
-                  this.insertLocationOnMap(location, tag.currentColor);
+                } else if (selectedTagsMenuId === tag.parent_menu) {
+                    this.insertLocationOnMap(location, tag.currentColor);
                 }
               }
             }
@@ -746,8 +743,19 @@ export class MapComponent implements OnInit {
         });
       }
     });
-    if (this.mapSetting.link_feature) this.insertLinks();
+    if (!this.isInitialStaticLoad && this.mapSetting.link_feature) {
+      this.insertLinks();
+    }
     if (this._kmlShapes.length) this.insertKmlShapes();
+    this.ensureMarkerClusterOnMap();
+    if (this.mapInteractionPhase === 'ready') {
+      this._locations.forEach((location) => {
+        if (location.onMap && !location.interactionsAttached) {
+          this.attachLocationInteractions(location);
+        }
+      });
+      this.attachAllLinkInteractions();
+    }
   }
 
   private insertKmlShapes() {
@@ -767,12 +775,16 @@ export class MapComponent implements OnInit {
 
   private checkLinksOnMap(location: Location) {
     for (const link of this._links) {
-      if (this.getLinksGroupById(link.links_group)?.visibility) {
+      const linkgroup = this.getLinksGroupById(link.links_group);
+      if (linkgroup?.onMap && linkgroup.visibility) {
         if (link.location_1 == location.id || link.location_2 == location.id) {
           const loc1 = this.getLocationById(link.location_1);
           const loc2 = this.getLocationById(link.location_2);
-          if (loc1?.onMap && loc2?.onMap) {
+          if (loc1?.onMap && loc2?.onMap && link.line != null) {
             link.line.addTo(this.map);
+            if (this.mapInteractionPhase === 'ready') {
+              this.attachLinkInteractions(link);
+            }
           }
         }
       }
@@ -800,44 +812,91 @@ export class MapComponent implements OnInit {
   }
 
   private resetMarkers() {
+    this.cancelEnrichPhase();
     this._locations.forEach((location: Location) => {
       if (location.onMap) {
         this.markerClusterGroup.removeLayer(location.locationMarker);
         location.locationMarker = {};
         location.onMap = false;
         location.activeColors = [];
+        location.interactionsAttached = false;
       }
     });
   }
 
   private insertLocationOnMap(location: Location, color = '') {
     if (!location.onMap) {
-      location.onMap = true;
-      if (color != '') location.activeColors = [color];
+      this.insertLocationShell(location, color);
+      if (this.mapInteractionPhase === 'ready') {
+        this.attachLocationInteractions(location);
+      }
+      return;
+    }
 
-      const pop = L.responsivePopup({ offset: L.point(-3, -11), hasTip: false, closeButton: false }).setContent(location.popup);
-
-      location.locationMarker = L.marker(
-        [location.latitude, location.longitude],
-        { icon: this.generatePinIcon(location.activeColors) }
-      )
-        .bindPopup(pop)
-        .bindTooltip(location.name, {
-          offset: L.point(-3, -18),
-          direction: 'top'
-        });
-
-      this.markerClusterGroup.addLayer(location.locationMarker);
-      this.map.addLayer(this.markerClusterGroup);
-    } else {
+    if (color != '') {
+      location.activeColors.push(color);
+    }
+    location.locationMarker.setIcon(this.generatePinIcon(location.activeColors));
+    if (location.interactionsAttached && location.locationMarker._popup) {
+      this.ensureLocationPopup(location);
       location.popup += '</div>';
       location.locationMarker._popup.setContent(location.popup);
-      if (color != '') location.activeColors.push(color);
-      location.locationMarker.setIcon(
-        this.generatePinIcon(location.activeColors)
+    }
+  }
+
+  private insertLocationShell(location: Location, color = '') {
+    location.onMap = true;
+    if (color != '') {
+      location.activeColors = [color];
+    }
+    location.interactionsAttached = false;
+
+    location.locationMarker = L.marker(
+      [location.latitude, location.longitude],
+      { icon: this.generatePinIcon(location.activeColors) }
+    );
+
+    this.markerClusterGroup.addLayer(location.locationMarker);
+  }
+
+  private ensureLocationPopup(location: Location): string {
+    if (!location.popup) {
+      location.popup = this.popupContent.buildLocationPopup(
+        location.id,
+        location.popupDto
       );
     }
+    return location.popup;
+  }
+
+  private attachLocationInteractions(location: Location) {
+    if (location.interactionsAttached || !location.onMap || !location.locationMarker) {
+      return;
+    }
+
+    const popupHtml = this.ensureLocationPopup(location);
+    const pop = L.responsivePopup({
+      offset: L.point(-3, -11),
+      hasTip: false,
+      closeButton: false
+    }).setContent(popupHtml);
+
+    location.locationMarker
+      .bindPopup(pop)
+      .bindTooltip(location.name, {
+        offset: L.point(-3, -18),
+        direction: 'top'
+      });
+
     this.addHoverFunction(location.locationMarker);
+    location.interactionsAttached = true;
+  }
+
+  private ensureMarkerClusterOnMap() {
+    if (!this.markerClusterOnMap && this.map && this.markerClusterGroup) {
+      this.map.addLayer(this.markerClusterGroup);
+      this.markerClusterOnMap = true;
+    }
   }
 
   private addHoverFunction(marker: any) {
@@ -852,38 +911,18 @@ export class MapComponent implements OnInit {
     });
   }
 
-  private insertTagRelations() {
-    if (this._tagRelationships) {
-      this._tagRelationships.forEach((relation: TagRelationship) => {
-        this._tags.forEach((tag: Tag) => {
-          if (!tag.child_tags) {
-            tag.child_tags = [];
-          }
-          if (!tag.parent_tags) {
-            tag.parent_tags = [];
-          }
-          if (relation.parent_tag === tag.id) {
-            tag.child_tags.push(relation);
-          } else if (relation.child_tag === tag.id) {
-            tag.parent_tags.push(relation);
-          }
-        });
-      });
-    }
-  }
-
   private insertTagOnPopup(tag: Tag, location: Location) {
-    let opp_btn = '';
-    if (tag.description) {
-      if (tag.overlayed_popup_content && tag.overlayed_popup_content != null) {
-        opp_btn = this.overlayedPopup.getOverlayedPopupButtonForTag(tag);
-      }
+    const tagOverlayButton = tag.overlayed_popup_content && tag.overlayed_popup_content != null
+      ? this.popupContent.getTagOverlayButton(tag.id)
+      : '';
 
+    if (tag.description) {
+      this.ensureLocationPopup(location);
       location.popup +=
         `
       <div class="tag-popup-${tag.id}">
         <h3 class="popup-subtitle">
-          ${tag.name} ${opp_btn}
+          ${tag.name} ${tagOverlayButton}
         </h3>
         <p>${tag.description}</p> 
       </div>
@@ -892,7 +931,7 @@ export class MapComponent implements OnInit {
   }
 
   private generatePinIcon(colors: any) {
-    const size = '24px';
+    const size = '16px';
     const border = '0.1px solid #5c5c5c';
 
     if (colors.length === 1) {
@@ -901,10 +940,10 @@ export class MapComponent implements OnInit {
       width: ${size};
       height: ${size};
       display: block;
-      left: -11px;
-      top: -21px;
+      left: -4px;
+      top: -4px;
       position: relative;
-      border-radius: ${size} ${size} 0;
+      border-radius: ${size} ${size} ${size} ${size};
       transform: rotate(45deg);
       border: ${border};`;
     } else {
@@ -947,20 +986,22 @@ export class MapComponent implements OnInit {
       width: ${size};
       height: ${size};
       display: block;
-      left: -11px;
-      top: -21px;
+      left: -4px;
+      top: -4px;
       position: relative;
-      border-radius: 100% 100% 0;
+      border-radius: 100% 100% 100% 100%;
       transform: rotate(45deg);
       border: 0.1px solid #5c5c5c`;
     }
 
+    var style = 'style="height: 11px; width: 11px; background-color: white; border-radius: 50%; display: flex; margin-left: 20%; margin-top: 20%;"'
+
     const icon = L.divIcon({
       className: 'custom-pin',
-      html: `<span style="${markerHtmlStyles}"><span style="height: 11px; width: 11px; background-color: white; border-radius: 50%; display: flex; margin-left: 20%; margin-top: 20%;"></span></span>`
+      html: `<span style="${markerHtmlStyles}"><span ></span></span>`
     });
 
-    return icon;
+    return icon; 
   }
 
   private getMaxLocationId() {
@@ -1012,6 +1053,17 @@ export class MapComponent implements OnInit {
     return null;
   }
 
+  private setMenuVisibleNameById(newName:string, menuId: number) {
+    let lengthOfMenus = this._menus.length
+    for(let localIndex = 0 ; localIndex < lengthOfMenus; localIndex++) {
+      if (this._menus[localIndex].id === menuId) {
+        this._menus[localIndex].visibleName = newName
+        return true;
+      }
+    }
+    return false;
+  }
+
   private getMenuById(menuId: number) {
     for (const menu of this._menus) {
       if (menu.id === menuId) {
@@ -1037,10 +1089,10 @@ export class MapComponent implements OnInit {
       for (const link of this._links) {
         if (link.line != null) {
           link.line.remove(this.map);
+          link.interactionsAttached = false;
         }
       }
     }
-
   }
 
   private insertLinkByLinkGroup(lg: LinksGroup) {
@@ -1048,12 +1100,16 @@ export class MapComponent implements OnInit {
       lg.visibility = true;
       for (const link of this._links) {
         const elementLinksGroup = this.getLinksGroupById(link.links_group);
-        if (!elementLinksGroup) return;
+        if (!elementLinksGroup) continue;
+        if (!elementLinksGroup.onMap || !elementLinksGroup.visibility) continue;
         if (link.links_group == lg.id || this.isMenuSimultaneousAndSelectedInItsMenuGroup(elementLinksGroup.parent_menu)) {
           const loc1 = this.getLocationById(link.location_1);
           const loc2 = this.getLocationById(link.location_2);
-          if (loc1 && loc2 && loc1.onMap && loc2.onMap) {
+          if (loc1 && loc2 && loc1.onMap && loc2.onMap && link.line != null) {
             link.line.addTo(this.map);
+            if (this.mapInteractionPhase === 'ready') {
+              this.attachLinkInteractions(link);
+            }
           }
         }
       }
@@ -1098,10 +1154,13 @@ export class MapComponent implements OnInit {
     this.markerClusterGroup.removeLayer(location.locationMarker);
     location.onMap = false;
     location.locationMarker = {};
+    location.interactionsAttached = false;
 
     for (const link of this._links) {
       if (link.location_1 == location.id || link.location_2 == location.id) {
-        link.line.remove(this.map);
+        if (link.line != null) {
+          link.line.remove(this.map);
+        }
       }
     }
   }
@@ -1109,9 +1168,15 @@ export class MapComponent implements OnInit {
   private removeTagFromPopups(tag: Tag) {
     tag.related_locations.forEach((location_id: number) => {
       const location = this.getLocationById(location_id);
-      if (location && location.locationMarker._popup) {
-        location.popup = this.removeTagFromDiv(tag.id, location.popup);
-        location.locationMarker.bindPopup(location.popup);
+      if (!location) {
+        return;
+      }
+      if (location.popup || location.popupDto) {
+        const popup = this.ensureLocationPopup(location);
+        location.popup = this.removeTagFromDiv(tag.id, popup);
+        if (location.interactionsAttached && location.locationMarker?._popup) {
+          location.locationMarker.bindPopup(location.popup);
+        }
       }
     });
   }
@@ -1126,9 +1191,15 @@ export class MapComponent implements OnInit {
   private putTagBackOnPopup(tag: Tag) {
     tag.related_locations.forEach((location_id: number) => {
       const location = this.getLocationById(location_id);
-      if (location && location.locationMarker._popup) {
-        location.popup = this.makeTagVisibleOnDiv(tag.id, location.popup);
-        location.locationMarker.bindPopup(location.popup);
+      if (!location) {
+        return;
+      }
+      if (location.popup || location.popupDto) {
+        const popup = this.ensureLocationPopup(location);
+        location.popup = this.makeTagVisibleOnDiv(tag.id, popup);
+        if (location.interactionsAttached && location.locationMarker?._popup) {
+          location.locationMarker.bindPopup(location.popup);
+        }
       }
     });
   }
@@ -1182,41 +1253,25 @@ export class MapComponent implements OnInit {
   }
 
   private anyClusterIsActive(childTag: Tag) {
-    let cluster_ids: any[] = [];
-    let isAnyClusterActive = true;
-
-    childTag.parent_tags.forEach((relation: any) => {
-      cluster_ids.push(relation.cluster_id);
-    }); // get all cluster ids in this tag
-
-    cluster_ids = [...new Set(cluster_ids)]; // remove duplicates
-
-    cluster_ids.forEach((cluster: number) => {
-      const parentsInThisCluster = childTag.parent_tags.filter(
-        (relation: any) => relation.cluster_id === cluster
-      );
-
-      // A cluster is considered inactive if *at least one* tag that composes it is inactive.
-      // if ANY cluster present on the tag is active, the tag dependencies will be active.
-      if (this.parentsInactive(parentsInThisCluster)) {
-        isAnyClusterActive = false;
-      }
-    });
-
-    return isAnyClusterActive;
-  }
-
-  private parentsInactive(relations: any) {
-    return relations.every((relation: any) => {
-      return (
-        this.getTagById(relation.parent_tag)?.visibility === false ||
-        this.getTagById(relation.parent_tag)?.dependenciesActive === false
-      );
-    });
+    return isAnyClusterActive(childTag, buildEntityIndex(this._tags ?? []));
   }
 
   public onMenuCliked(event: any) {
-    this.insertMarkersByMenu(event.selectedTagsMenuId);
+    this.onMenuIdClicked(event.selectedTagsMenuId);
+  }
+
+  private onMenuIdClicked(menuId: number) {
+    const menu = this.getMenuById(menuId);
+    if (!menu) {
+      return;
+    }
+
+    this.insertMarkersByMenu(menuId, true);
+    this.menus.forEach(currentMenu => {
+      if (currentMenu.id != menuId && currentMenu.pinned) {
+        this.insertMarkersByMenu(currentMenu.id, false);
+      }
+    });
   }
 
   public onTagRemoval(event: any) {
@@ -1247,6 +1302,182 @@ export class MapComponent implements OnInit {
 
   public onButtonClicked(event: any) {
     this.currentMenuGroup = event.clickedMenu;
+  }
+
+  /**
+   * Handles an item click on the filter menu and focuses the map on its elements.
+   * Only elements actually rendered on the map are considered.
+   */
+  public onMarkerFocus(marker: MapMarkerType) {
+    if (!marker || !marker.visibility) return;
+    if (!this.map) return;
+
+    if (isTag(marker)) {
+      this.focusMapOnLocations(this.resolveTagLocations(marker));
+    } else if (isLinksGroup(marker)) {
+      this.focusMapOnLocations(this.resolveLinkGroupLocations(marker));
+    } else if (isKml(marker)) {
+      this.focusMapOnKml(marker);
+    }
+  }
+
+  /**
+   * Handles a menu name click (second click, when already selected) and focuses
+   * the map on every visible element of the menu: locations, links and KMLs.
+   */
+  public onMenuFocus(menu: Menu) {
+    if (!menu || !this.map) return;
+
+    const locations = this.resolveMenuLocations(menu);
+    const kmlBounds = this.resolveMenuKmlBounds(menu);
+
+    if (locations.length === 0 && kmlBounds.length === 0) return;
+
+    if (locations.length === 1 && kmlBounds.length === 0) {
+      this.focusMapOnSingleLocation(locations[0]);
+      return;
+    }
+
+    const bounds = L.latLngBounds([]);
+    locations.forEach((location) => bounds.extend([location.latitude, location.longitude]));
+    kmlBounds.forEach((kmlBound) => bounds.extend(kmlBound));
+
+    this.flyToBoundsWithPadding(bounds);
+  }
+
+  /** Returns the locations of a tag that are currently on the map. */
+  private resolveTagLocations(tag: Tag): Array<Location> {
+    return tag.related_locations
+      .map((locationId: number) => this.getLocationById(locationId))
+      .filter(
+        (location: Location | null): location is Location =>
+          location != null && location.onMap
+      );
+  }
+
+  /**
+   * Returns the locations spanned by the links of a group that are currently
+   * drawn on the map, deduplicated by id.
+   */
+  private resolveLinkGroupLocations(linkGroup: LinksGroup): Array<Location> {
+    const locationsById = new Map<number, Location>();
+    (this._links ?? []).forEach((link: Link) => {
+      if (link.links_group !== linkGroup.id) return;
+      if (!link.line || !this.map.hasLayer(link.line)) return;
+
+      const location1 = this.getLocationById(link.location_1);
+      const location2 = this.getLocationById(link.location_2);
+      if (location1) locationsById.set(location1.id, location1);
+      if (location2) locationsById.set(location2.id, location2);
+    });
+    return Array.from(locationsById.values());
+  }
+
+  /** Focuses the map on a KML layer bounds, when the layer is loaded on the map. */
+  private focusMapOnKml(kml: KmlLayerDto) {
+    const bounds = this.getVisibleKmlBounds(kml);
+    if (!bounds) return;
+
+    this.flyToBoundsWithPadding(bounds);
+  }
+
+  /** Returns the bounds of a KML layer, or null when it is not loaded or empty. */
+  private getVisibleKmlBounds(kml: KmlLayerDto): L.LatLngBounds | null {
+    const layer = this.kmlLayers[kml.id] as L.GeoJSON | undefined;
+    if (!layer || !this.map.hasLayer(layer)) return null;
+
+    const bounds = layer.getBounds();
+    return bounds.isValid() ? bounds : null;
+  }
+
+  /**
+   * Collects every visible location of a menu (from its tags and the links of
+   * its link groups), deduplicated by id.
+   */
+  private resolveMenuLocations(menu: Menu): Array<Location> {
+    const locationsById = new Map<number, Location>();
+
+    (this._tags ?? []).forEach((tag) => {
+      if (tag.parent_menu !== menu.id) return;
+      this.resolveTagLocations(tag).forEach((location) => locationsById.set(location.id, location));
+    });
+
+    (this._linksGroup ?? []).forEach((linkGroup) => {
+      if (linkGroup.parent_menu !== menu.id) return;
+      this.resolveLinkGroupLocations(linkGroup).forEach((location) => locationsById.set(location.id, location));
+    });
+
+    return Array.from(locationsById.values());
+  }
+
+  /** Returns the bounds of every KML layer of a menu that is loaded on the map. */
+  private resolveMenuKmlBounds(menu: Menu): Array<L.LatLngBounds> {
+    const kmlBounds: Array<L.LatLngBounds> = [];
+
+    (this._kmlShapes ?? []).forEach((kml) => {
+      if (kml.parent_menu !== menu.id) return;
+
+      const bounds = this.getVisibleKmlBounds(kml);
+      if (bounds) {
+        kmlBounds.push(bounds);
+      }
+    });
+
+    return kmlBounds;
+  }
+
+  /**
+   * Flies to a single location. `flyTo` does not accept padding, so the target
+   * point is shifted in pixel space before converting back to lat/lng, keeping
+   * the marker centered on the visible area instead of behind the filter menu.
+   */
+  private focusMapOnSingleLocation(location: Location) {
+    const zoom = MapComponent.FOCUS_ZOOM;
+    const leftPadding = this.getFilterMenuOverlapWidth() + MapComponent.FOCUS_PADDING;
+    const targetPoint = this.map
+      .project([location.latitude, location.longitude], zoom)
+      .subtract([leftPadding / 2, 0]);
+    const targetCenter = this.map.unproject(targetPoint, zoom);
+    this.map.flyTo(targetCenter, zoom);
+  }
+
+  /** Flies to bounds, reserving left padding for the filter menu overlay. */
+  private flyToBoundsWithPadding(bounds: L.LatLngBounds) {
+    if (!bounds.isValid()) return;
+
+    const leftPadding = this.getFilterMenuOverlapWidth() + MapComponent.FOCUS_PADDING;
+    this.map.flyToBounds(bounds, {
+      paddingTopLeft: [leftPadding, MapComponent.FOCUS_PADDING],
+      paddingBottomRight: [MapComponent.FOCUS_PADDING, MapComponent.FOCUS_PADDING],
+      maxZoom: MapComponent.FOCUS_ZOOM
+    });
+  }
+
+  /** Focuses the map on a set of locations (single point or combined bounds). */
+  private focusMapOnLocations(locations: Array<Location>) {
+    if (!locations || locations.length === 0) return;
+
+    if (locations.length === 1) {
+      this.focusMapOnSingleLocation(locations[0]);
+      return;
+    }
+
+    const bounds = L.latLngBounds(
+      locations.map((location): L.LatLngTuple => [location.latitude, location.longitude])
+    );
+    this.flyToBoundsWithPadding(bounds);
+  }
+
+  private getFilterMenuOverlapWidth(): number {
+    const filterMenuPanel = document.querySelector('#app-filter-menu .scrollbar-box') as HTMLElement;
+    const mapContainer = document.getElementById('map');
+    if (!filterMenuPanel || !mapContainer) return 0;
+
+    const overlap = Math.max(0, filterMenuPanel.getBoundingClientRect().right);
+    const mapWidth = mapContainer.getBoundingClientRect().width;
+    // On narrow (mobile) screens the panel can cover most of the viewport;
+    // never reserve more than half the map so there's always room to focus into.
+    return Math.min(overlap, mapWidth * 0.5);
   }
 
   public showHowToHelpMessage(id: number) {
@@ -1326,7 +1557,74 @@ export class MapComponent implements OnInit {
     `
     
     this.overlayedPopup.activateWithPersonalizedContent(popupContent, "About This Map")
-    console.log('Popup activated!');
+  }
+
+  private cancelEnrichPhase() {
+    this.enrichSchedulerHandle?.cancel();
+    this.enrichSchedulerHandle = null;
+    this.enrichGeneration++;
+  }
+
+  private startEnrichPhase() {
+    this.mapInteractionPhase = 'enriching';
+    this.cancelEnrichPhase();
+    const generation = this.enrichGeneration;
+
+    this.loadProfiler.mark('map.load.enrichInteractions.start');
+
+    const work: Array<() => void> = [];
+
+    for (const location of this._locations ?? []) {
+      if (location.onMap && !location.interactionsAttached) {
+        work.push(() => this.attachLocationInteractions(location));
+      }
+    }
+    for (const link of this._links ?? []) {
+      if (link.line && !link.interactionsAttached) {
+        work.push(() => this.attachLinkInteractions(link));
+      }
+    }
+    work.push(...this.pendingKmlTooltipAttaches);
+
+    const chunkSize = MapComponent.MARKER_INTERACTION_CHUNK;
+
+    this.enrichSchedulerHandle = runBatchedWork(work, chunkSize, () => {
+      if (generation !== this.enrichGeneration) {
+        return;
+      }
+      this.loadProfiler.timeSync('map.load.attachClusterInteractions', () => {
+        this.attachClusterInteractions();
+      });
+      this.finishEnrichPhase();
+    });
+  }
+
+  private attachClusterInteractions() {
+    this.deferClusterTooltips = false;
+    if (!this.clusterHoverAttached && this.markerClusterGroup) {
+      this.addHoverFunction(this.markerClusterGroup);
+      this.clusterHoverAttached = true;
+    }
+    this.markerClusterGroup?.refreshClusters();
+  }
+
+  private finishEnrichPhase() {
+    this.mapInteractionPhase = 'ready';
+    this.enrichSchedulerHandle = null;
+
+    this.loadProfiler.endMark('map.load.enrichInteractions.end');
+    this.loadProfiler.measure(
+      'map.load.enrichInteractions',
+      'map.load.enrichInteractions.start',
+      'map.load.enrichInteractions.end'
+    );
+    this.loadProfiler.endMark('map.load.full.end');
+    this.loadProfiler.measure(
+      'map.load.full.total',
+      'map.load.total.start',
+      'map.load.full.end'
+    );
+    this.loadProfiler.logFullSummary();
   }
 }
 

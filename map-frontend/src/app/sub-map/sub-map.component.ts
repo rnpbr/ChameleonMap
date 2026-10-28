@@ -84,8 +84,7 @@ export class SubMapComponent implements OnInit {
     let fullHtml = `<div style='width:100%;'>${content}</div>`;
     this.popupContentBody = this.sanitizer.bypassSecurityTrustHtml(fullHtml);
   }
-    
-    
+  
   private initSubMapPropertiesValues() {
     this.subMapId = 'sub-map';
     

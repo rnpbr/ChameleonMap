@@ -14,6 +14,7 @@ import os
 
 from pathlib import Path
 from datetime import timedelta
+from django.utils.translation import gettext_lazy as _
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -29,26 +30,50 @@ DEBUG = int(os.environ.get('DEBUG') or 0)
 
 ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', default='').split(' ')
 
-# Application definition
-INSTALLED_APPS = [
+CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', '').split()
+CSRF_TRUSTED_ORIGINS = ["https://*.rnp.br"]
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+ENABLE_MULTITENANT = os.environ.get('ENABLE_MULTITENANT', '').lower() == 'true'
+
+ROOT_URLCONF = 'inventory_backend.urls'
+TENANT_URLCONF = 'clients.urls'
+
+# Shared app groups — add new cross-mode apps here once.
+DJANGO_CONTRIB_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+]
+
+MAP_STACK_APPS = [
     'colorfield',
     'rest_framework',
     'corsheaders',
-    'administration.apps.AdministrationConfig',
     'tinymce',
-    'axes',
+    'inventory_backend.apps_overrides.AxesConfig',
 ]
 
-MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',
-    'django.middleware.security.SecurityMiddleware',
+UNFOLD_APP = 'unfold'
+SINGLE_TENANT_UNFOLD_APP = 'unfold.apps.BasicAppConfig'
+SINGLE_TENANT_ADMIN_APP = 'inventory_backend.apps_overrides.MapAdminConfig'
+
+ADMINISTRATION_APP = 'administration.apps.AdministrationConfig'
+
+CLIENTS_APP = 'clients'
+
+LANGUAGES_APP = 'languages'
+
+TOOLS_APP = 'tools.apps.AdministrationTools'
+
+TENANT_PERMISSIONS_APP = 'inventory_backend.apps_overrides.TenantPermissionsConfig'
+
+SHARED_MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -57,28 +82,62 @@ MIDDLEWARE = [
     'axes.middleware.AxesMiddleware',
 ]
 
+DATABASE_DEFAULT = {
+    "HOST": 'db',
+    "PORT": 5432,
+    "NAME": os.environ.get("POSTGRES_DB", os.path.join(BASE_DIR, "db.sqlite3")),
+    "USER": os.environ.get("POSTGRES_USER", "user"),
+    "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "password"),
+}
+
+
+def _unique_apps(*app_groups):
+    apps = []
+    for group in app_groups:
+        for app in group:
+            if app not in apps:
+                apps.append(app)
+    return apps
+
+
+def _installed_apps(*app_groups, unfold_app=UNFOLD_APP):
+    """unfold must be listed before django.contrib.admin."""
+    return _unique_apps([unfold_app], *app_groups)
+
+UNFOLD = {
+    "SITE_TITLE": _("ChameleonMap Portal"),
+    "SITE_HEADER": _("ChameleonMap Admin"),
+    "SITE_SUBHEADER": _("Welcome to ChameleonMap Admin Portal"),
+    "SITE_URL": "/admin",
+    "SITE_ICON": "https://i.imgur.com/65Yiw9X.png",
+    "SITE_FAVICONS": [
+        {
+            "rel": "icon",
+            "sizes": "32x32",
+            "type": "image/svg+xml",
+            "href": "https://i.imgur.com/65Yiw9X.png",
+        },
+    ],
+    "SHOW_LANGUAGES": True,
+}
+
 # Axes config (suspicious login middleware)
 AXES_FAILURE_LIMIT = 5
 AXES_COOLOFF_TIME = timedelta(minutes=30)
 AXES_FAIL_RETRY_LIMIT = 5
 AXES_LOCKOUT_PARAMETERS = ["ip_address", ["username", "user_agent"]]
 AXES_CACHE = 'default'
+AXES_ENABLE_ADMIN = True
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
         'LOCATION': 'unique-snowflake',
     }
 }
-AUTHENTICATION_BACKENDS = [
-    'axes.backends.AxesStandaloneBackend',
-    'django.contrib.auth.backends.ModelBackend',
-]
 
 CORS_ORIGIN_WHITELIST = (
     os.environ.get('CORS_WHITELIST'),
 )
-
-ROOT_URLCONF = 'inventory_backend.urls'
 
 TEMPLATES = [
     {
@@ -91,6 +150,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'django.template.context_processors.i18n',
             ],
             'libraries': {
                 'my_templatetag': 'administration.templatetags.importer_tags',
@@ -101,21 +161,109 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'inventory_backend.wsgi.application'
 
+if ENABLE_MULTITENANT:
+    # Multitenancy specific settings
+    TENANT_MODEL = "clients.Client"
+    MULTITENANT_FRAMEWORK_APPS = [
+        'django_tenants',
+        TENANT_PERMISSIONS_APP,
+        'tenant_users.tenants',
+    ]
+    TENANT_DOMAIN_MODEL = "clients.Domain"
+    TENANT_USERS_DOMAIN = os.environ.get("DJANGO_BASE_DOMAIN", "localhost")
+    AUTH_USER_MODEL = "clients.TenantUser"
 
-# Database
-# https://docs.djangoproject.com/en/3.2/ref/settings/#databases
+    HAS_MULTI_TYPE_TENANTS = True
+    MULTI_TYPE_DATABASE_FIELD = 'tenancytype'
 
-DATABASES = {
-    "default": {
-        "ENGINE": 'django.db.backends.postgresql',
-        "HOST": 'db',
-        "PORT": 5432,
-        "NAME": os.environ.get("POSTGRES_DB", os.path.join(BASE_DIR, "db.sqlite3")),
-        "USER": os.environ.get("POSTGRES_USER", "user"),
-        "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "password"),
+    portal_apps = _installed_apps(
+        MULTITENANT_FRAMEWORK_APPS,
+        DJANGO_CONTRIB_APPS,
+        MAP_STACK_APPS,
+    )
+
+    TENANT_TYPES = {
+        "public": {
+            "APPS": _unique_apps(portal_apps, [CLIENTS_APP, LANGUAGES_APP]),
+            "URLCONF": ROOT_URLCONF,
+        },
+        "root": {
+            "APPS": portal_apps,
+            "URLCONF": ROOT_URLCONF,
+        },
+        "scoped": {
+            "APPS": [
+                UNFOLD_APP,
+                ADMINISTRATION_APP,
+                TOOLS_APP,
+                'django.contrib.auth',
+                'django.contrib.contenttypes',
+                TENANT_PERMISSIONS_APP,
+            ],
+            "URLCONF": TENANT_URLCONF,
+        },
     }
-}
 
+    INSTALLED_APPS = _unique_apps(
+        *(tenant_type["APPS"] for tenant_type in TENANT_TYPES.values())
+    )
+
+    MIDDLEWARE = [
+        'django_tenants.middleware.main.TenantMainMiddleware',
+        'django.middleware.security.SecurityMiddleware',
+        'corsheaders.middleware.CorsMiddleware',
+        *SHARED_MIDDLEWARE,
+    ]
+
+    AUTHENTICATION_BACKENDS = [
+        'axes.backends.AxesStandaloneBackend',
+        'tenant_users.permissions.backend.UserBackend',
+    ]
+
+    DATABASES = {
+        "default": {
+            **DATABASE_DEFAULT,
+            "ENGINE": 'django_tenants.postgresql_backend',
+        }
+    }
+
+    SINGLE_TENANT_SOURCE_DATABASE = 'single_tenant_source'
+    if os.environ.get('POSTGRES_DB_MULTITENANT'):
+        DATABASES["default"]["NAME"] = os.environ['POSTGRES_DB_MULTITENANT']
+        DATABASES[SINGLE_TENANT_SOURCE_DATABASE] = {
+            **DATABASE_DEFAULT,
+            "ENGINE": 'django.db.backends.postgresql',
+            "OPTIONS": {"options": "-c default_transaction_read_only=on"},
+        }
+
+    DATABASE_ROUTERS = (
+        'django_tenants.routers.TenantSyncRouter',
+    )
+else:
+    INSTALLED_APPS = _installed_apps(
+        [SINGLE_TENANT_ADMIN_APP if app == 'django.contrib.admin' else app for app in DJANGO_CONTRIB_APPS],
+        MAP_STACK_APPS,
+        [LANGUAGES_APP, ADMINISTRATION_APP, TOOLS_APP],
+        unfold_app=SINGLE_TENANT_UNFOLD_APP,
+    )
+
+    MIDDLEWARE = [
+        'corsheaders.middleware.CorsMiddleware',
+        'django.middleware.security.SecurityMiddleware',
+        *SHARED_MIDDLEWARE,
+    ]
+
+    AUTHENTICATION_BACKENDS = [
+        'axes.backends.AxesStandaloneBackend',
+        'django.contrib.auth.backends.ModelBackend',
+    ]
+
+    DATABASES = {
+        "default": {
+            **DATABASE_DEFAULT,
+            "ENGINE": 'django.db.backends.postgresql',
+        }
+    }
 
 # Password validation
 # https://docs.djangoproject.com/en/3.2/ref/settings/#auth-password-validators
@@ -141,6 +289,16 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
+LANGUAGES = [
+    ('en', _('English')),
+    ('pt-br', _('Portuguese')),
+    ('es', _('Spanish')),
+]
+
+LOCALE_PATHS = [
+    os.path.join(BASE_DIR, 'locale'),
+]
+
 TIME_ZONE = 'UTC'
 
 USE_I18N = True
@@ -151,7 +309,6 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.0/howto/static-files/
-# STATIC_URL = '/static/'
 STATIC_URL = '/staticfiles/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
@@ -176,3 +333,23 @@ TINYMCE_DEFAULT_CONFIG = {
     "alignright alignjustify | outdent indent | "
     "removeformat | help",
 }
+
+# Email settings
+EMAIL_DUMMY = os.environ.get('EMAIL_DUMMY', 'False') == 'True'
+
+if False:
+    EMAIL_BACKEND = 'django.core.mail.backends.dummy.EmailBackend'
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+
+
+EMAIL_HOST = os.environ.get('EMAIL_HOST')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@chameleon-map.com.br')
+
+LOGIN_URL = '/admin'
+LOGIN_REDIRECT_URL = '/admin'
+LOGOUT_REDIRECT_URL = '/admin'

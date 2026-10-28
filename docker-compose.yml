@@ -16,7 +16,7 @@ services:
   db:
     image: postgres
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql
 
   nginx:
     build: ./nginx
@@ -39,3 +39,4 @@ services:
 volumes:
     postgres_data:
     static_volume:
+    lt_models:

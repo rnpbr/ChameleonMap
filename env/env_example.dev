@@ -26,10 +26,25 @@ POSTGRES_DB=postgres
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=postgres
 
+# Email config
+EMAIL_DUMMY=True
+EMAIL_HOST=
+EMAIL_PORT=
+EMAIL_USE_TLS=True
+EMAIL_HOST_USER=
+EMAIL_HOST_PASSWORD=
+DEFAULT_FROM_EMAIL=
+
 # Pgadmin settings
 # You must enter a valid email
 PGADMIN_DEFAULT_EMAIL=admin@gmail.com
 PGADMIN_DEFAULT_PASSWORD=admin
+
+# Multitenancy: must be exactly "true" to enable subdomain-based tenants.
+ENABLE_MULTITENANT=false
+
+# Required only when ENABLE_MULTITENANT=true (wildcard nginx + tenant domains)
+DJANGO_BASE_DOMAIN=localhost
 
 # The domain name or IP address or host name at which this instance will be accessed
 # The default values below are suitable for a local installation for development
@@ -48,3 +63,6 @@ INFRADPDI_TOKEN=''
 # Atlas Importer Settings
 GATEWAY_BASE_URL=''
 GATEWAY_AUTH_KEY=''
+
+# Map tile provider API key (used by the Angular frontend basemap layers)
+MAP_TILE_KEY=

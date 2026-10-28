@@ -1,15 +1,62 @@
 #!/bin/bash
 
+# Exit on error
+set -e
+
 # Variables
-CONTAINER_NAME="chameleonmap-db-1"
-DB_NAME="postgres"                     # Replace with your database name
-DB_USER="postgres"                   # Replace with your database user
-BACKUP_DIR="." # Replace with the directory containing the backup file
+CONTAINER_NAME="chameleonmap-db-1"  # DB container name
+DB_NAME="postgres"                  # Postgres DB name
+DB_USER="postgres"                  # Postgres user
+BACKEND_CONTAINER_NAME="chameleonmap-backend-1"  # Backend container name
+BACKEND_CONTAINER_USER="dpdadm"
+UPLOADS_DEST_PATH="/home/${BACKEND_CONTAINER_USER}/web/media"  # Destination path for uploads in backend container
 BACKUP_FILE=$1
 
-# Execute restore command inside the container
+# Validate input
+if [ -z "$BACKUP_FILE" ]; then
+  echo "Usage: $0 <backup_zip_file>"
+  exit 1
+fi
 
-docker cp "$BACKUP_FILE" "$CONTAINER_NAME":/"$BACKUP_FILE"
-docker exec -ti "$CONTAINER_NAME" pg_restore -U "$DB_USER" -c -d "$DB_NAME" "$BACKUP_FILE"
+if [ ! -f "$BACKUP_FILE" ]; then
+  echo "Error: Backup file '$BACKUP_FILE' not found"
+  exit 1
+fi
 
-echo "Database restored from: $BACKUP_DIR/$BACKUP_FILE"
+# Create temporary directory for extraction
+TEMP_RESTORE_DIR="./temp_restore"
+mkdir -p "$TEMP_RESTORE_DIR"
+
+# Extract zip file
+echo "Extracting backup archive..."
+unzip "$BACKUP_FILE" -d "$TEMP_RESTORE_DIR"
+
+# Determine dump file name from zip file name
+BACKUP_BASE=$(basename "$BACKUP_FILE" .zip)
+DUMP_FILE="${BACKUP_BASE}.dump"
+DUMP_FILE_PATH="$TEMP_RESTORE_DIR/$DUMP_FILE"
+
+if [ ! -f "$DUMP_FILE_PATH" ]; then
+  echo "Error: Dump file '$DUMP_FILE_PATH' not found in backup"
+  rm -rf "$TEMP_RESTORE_DIR"
+  exit 1
+fi
+
+# Copy dump file to database container and restore
+echo "Restoring database..."
+docker cp "$DUMP_FILE_PATH" "$CONTAINER_NAME":/"$DUMP_FILE"
+docker exec -ti "$CONTAINER_NAME" pg_restore -U "$DB_USER" -c -d "$DB_NAME" "$DUMP_FILE"
+
+# Restore uploads folder to backend container
+UPLOADS_SRC_PATH="$TEMP_RESTORE_DIR/uploads"
+if [ -d "$UPLOADS_SRC_PATH" ]; then
+  echo "Restoring uploads folder..."
+  docker cp "$UPLOADS_SRC_PATH" "$BACKEND_CONTAINER_NAME":"$UPLOADS_DEST_PATH"
+else
+  echo "Warning: uploads folder not found in backup"
+fi
+
+# Clean up temp folder
+rm -rf "$TEMP_RESTORE_DIR"
+
+echo "Restore completed from: $BACKUP_FILE"

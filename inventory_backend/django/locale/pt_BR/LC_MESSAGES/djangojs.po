@@ -1,0 +1,161 @@
+# Portuguese (Brazil) JavaScript translations for ChameleonMap
+# This file contains translations for JavaScript strings (djangojs domain).
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: ChameleonMap 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2024-01-01 00:00+0000\n"
+"PO-Revision-Date: 2024-01-01 00:00+0000\n"
+"Last-Translator: ChameleonMap Team\n"
+"Language-Team: Portuguese (Brazil)\n"
+"Language: pt_BR\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+# =====================
+# SelectFilter2.js
+# =====================
+
+#, python-format
+msgid "Available %s"
+msgstr "Disponíveis %s"
+
+#, python-format
+msgid "Type into this box to filter down the list of available %s."
+msgstr "Digite nesta caixa para filtrar a lista de %s disponíveis."
+
+msgid "Filter"
+msgstr "Filtrar"
+
+#, python-format
+msgid "Choose all %s at once."
+msgstr "Selecionar todos(as) %s de uma vez."
+
+msgid "Choose all"
+msgstr "Selecionar todos"
+
+msgid "Choose"
+msgstr "Selecionar"
+
+msgid "Remove"
+msgstr "Remover"
+
+#, python-format
+msgid "Chosen %s"
+msgstr "%s selecionados(as)"
+
+#, python-format
+msgid "Type into this box to filter down the list of selected %s."
+msgstr "Digite nesta caixa para filtrar a lista de %s selecionados(as)."
+
+#, python-format
+msgid "Click to remove all chosen %s at once."
+msgstr "Clique para remover todos(as) %s selecionados(as) de uma vez."
+
+msgid "Remove all"
+msgstr "Remover todos"
+
+#, python-format
+msgid "%s selected option not visible"
+msgid_plural "%s selected options not visible"
+msgstr[0] "%s opção selecionada não visível"
+msgstr[1] "%s opções selecionadas não visíveis"
+
+#, python-format
+msgid "Click to choose all %s at once."
+msgstr "Clique para selecionar todos(as) %s de uma vez."
+
+# =====================
+# calendar.js / DateTimeShortcuts.js
+# =====================
+
+msgid "Now"
+msgstr "Agora"
+
+msgid "Midnight"
+msgstr "Meia-noite"
+
+msgid "6 a.m."
+msgstr "6h"
+
+msgid "Noon"
+msgstr "Meio-dia"
+
+msgid "6 p.m."
+msgstr "18h"
+
+msgid "Today"
+msgstr "Hoje"
+
+msgid "Tomorrow"
+msgstr "Amanhã"
+
+msgid "Yesterday"
+msgstr "Ontem"
+
+msgid "Cancel"
+msgstr "Cancelar"
+
+msgid "January"
+msgstr "Janeiro"
+
+msgid "February"
+msgstr "Fevereiro"
+
+msgid "March"
+msgstr "Março"
+
+msgid "April"
+msgstr "Abril"
+
+msgid "May"
+msgstr "Maio"
+
+msgid "June"
+msgstr "Junho"
+
+msgid "July"
+msgstr "Julho"
+
+msgid "August"
+msgstr "Agosto"
+
+msgid "September"
+msgstr "Setembro"
+
+msgid "October"
+msgstr "Outubro"
+
+msgid "November"
+msgstr "Novembro"
+
+msgid "December"
+msgstr "Dezembro"
+
+msgid "S"
+msgstr "D"
+
+msgid "M"
+msgstr "S"
+
+msgid "T"
+msgstr "T"
+
+msgid "W"
+msgstr "Q"
+
+msgid "F"
+msgstr "S"
+
+# =====================
+# actions.js
+# =====================
+
+#, python-format
+msgid "%(sel)s of %(cnt)s selected"
+msgid_plural "%(sel)s of %(cnt)s selected"
+msgstr[0] "%(sel)s de %(cnt)s selecionado"
+msgstr[1] "%(sel)s de %(cnt)s selecionados"
