@@ -2,8 +2,12 @@
     position: absolute;
     z-index: 99999999999;
     right: 10px;
-    top: 10px;
-    font-size: 25px;
+    bottom: 118px;
+    top: auto;
+    display:flex;
+    flex-direction: row-reverse;
+    align-items: center;
+    gap: 8px;
 }
 
 #language-chooser-conteiner:hover {
@@ -14,6 +18,31 @@
     
 } */
 
+.language-icon{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s ease, transform 0.15s ease;
+    width: 34px;
+    min-width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: solid 2px #b1b1b1;
+    background-color: #ffffff;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    box-sizing: border-box;
+}
+
 .language-icon:hover{
     opacity: 0.5;
+    transform: scale(1.1);
+}
+
+.flag-circle{
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
 }

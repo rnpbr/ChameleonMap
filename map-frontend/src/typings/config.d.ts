@@ -106,8 +106,15 @@ declare global {
 
   export interface LanguageOption {
     code: string;
-    flag: string;
     name: string;
+  }
+
+  export interface FilterMenuSnapshot {
+    selectedTagsMenuId: number;
+    tagsVisibility: Array<{ tag: Tag; visibility: boolean }>;
+    linkGroupsVisibility: Array<{ lg: LinksGroup; visibility: boolean }>;
+    kmlShapesVisibility: Array<{ shape: KmlLayerDto; visibility: boolean }>;
+    pinnedMenuIds: Set<number>;
   }
 }
 

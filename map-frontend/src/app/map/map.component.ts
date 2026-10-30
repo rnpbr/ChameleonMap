@@ -29,6 +29,15 @@ import {
   isTag,
   shouldShowTagForMenu
 } from './map-behavior';
+import { FilterMenuComponent } from '../filter-menu/filter-menu.component';
+import { SearchSelection, selectionForHit } from '../search/map-search';
+import { MapSearchService, SearchSuggestion } from '../search/map-search.service';
+import {
+  LayerSelection,
+  pickRevealTag,
+  resolveLayerSelection,
+  withAncestorTags
+} from '../search/search-selection';
 
 @Component({
   selector: 'app-map',
@@ -38,6 +47,7 @@ import {
 export class MapComponent implements OnInit {
   @ViewChild(OverlayedPopupComponent) overlayedPopup: OverlayedPopupComponent;
   @ViewChild(TooltipComponent) onboardingComponent: TooltipComponent;
+  @ViewChild('filterMenu') filterMenu: FilterMenuComponent;
 
   private _locations: Array<Location>;
   public _menugroups: Array<MenuGroup>;
@@ -97,6 +107,11 @@ export class MapComponent implements OnInit {
   private static readonly LINK_INTERACTION_CHUNK = 100;
   private static readonly FOCUS_ZOOM = 16;
   private static readonly FOCUS_PADDING = 20;
+
+  public activeFilterQuery: string | null = null;
+  public searchQueryText: string = '';
+  public searchSuggestions: SearchSuggestion[] = [];
+  private previousFilterSnapshot: FilterMenuSnapshot | null = null;
 
   @HostListener('document:click', ['$event'])
   clickout(event: any) {
@@ -197,7 +212,8 @@ export class MapComponent implements OnInit {
 
   constructor(
     private mapDataService: MapDataService,
-    private popupContent: PopupContentService
+    private popupContent: PopupContentService,
+    private mapSearch: MapSearchService
   ) {
     this.checkOrientation();
   }
@@ -1276,6 +1292,11 @@ export class MapComponent implements OnInit {
     this.putTagBackOnPopup(event.tag);
   }
 
+  public onTagsVisibilityChanged(tags: Array<Tag>) {
+    tags.forEach((tag) => (tag.visibility ? this.putTagBackOnPopup(tag) : this.removeTagFromPopups(tag)));
+    tags.forEach((tag) => this.onDependenceChange(tag));
+  }
+
   public onShapeRemoval(event: any) {
     this.removeKmlLayer(event.shape.id);
   }
@@ -1319,10 +1340,10 @@ export class MapComponent implements OnInit {
    */
   public onMenuFocus(menu: Menu) {
     if (!menu || !this.map) return;
+    this.focusMapOnElements(this.resolveMenuLocations(menu), this.resolveMenuKmlBounds(menu));
+  }
 
-    const locations = this.resolveMenuLocations(menu);
-    const kmlBounds = this.resolveMenuKmlBounds(menu);
-
+  private focusMapOnElements(locations: Array<Location>, kmlBounds: Array<L.LatLngBounds>) {
     if (locations.length === 0 && kmlBounds.length === 0) return;
 
     if (locations.length === 1 && kmlBounds.length === 0) {
@@ -1617,6 +1638,132 @@ export class MapComponent implements OnInit {
       'map.load.full.end'
     );
     this.loadProfiler.logFullSummary();
+  }
+
+  public onSearchChange(text: string): void {
+    this.searchSuggestions = this.mapSearch.suggest(text);
+  }
+
+  public onSearch(query: string): void {
+    const trimmed = query?.trim();
+    if (!trimmed) return;
+    this.applySearch(this.mapSearch.bestSelection(trimmed), trimmed);
+  }
+
+  public onSuggestionSelected(suggestion: SearchSuggestion): void {
+    this.applySearch(selectionForHit(suggestion), suggestion.label);
+  }
+
+  public clearActiveQueryFilter(): void {
+    if (this.filterMenu && this.previousFilterSnapshot) {
+      this.filterMenu.restoreStateSnapshot(this.previousFilterSnapshot);
+    }
+    this.previousFilterSnapshot = null;
+    this.activeFilterQuery = null;
+  }
+
+  private applySearch(selection: SearchSelection, chipLabel: string) {
+    if (!this.filterMenu || !this.map || selection.type === 'none') return;
+
+    if (!this.activeFilterQuery) {
+      this.previousFilterSnapshot = this.filterMenu.captureStateSnapshot();
+    }
+
+    switch (selection.type) {
+      case 'tags':
+        this.applyLayerSearch(selection);
+        break;
+      case 'menus':
+        this.applyMenuSearch(selection.menuIds);
+        break;
+      case 'location':
+        this.applyLocationSearch(selection.locationIds);
+        break;
+    }
+
+    this.activeFilterQuery = chipLabel;
+    this.searchQueryText = '';
+    this.searchSuggestions = [];
+  }
+
+  private applyLayerSearch(selection: LayerSelection) {
+    this.filterMenu.applySearchSelection(
+      resolveLayerSelection(selection, {
+        tags: this._tags ?? [],
+        linksGroups: this._linksGroup ?? [],
+        kmlLayers: this._kmlShapes ?? [],
+        links: this._links ?? []
+      })
+    );
+
+    const locationsById = new Map<number, Location>();
+    const addLocations = (locations: Array<Location>) =>
+      locations.forEach((location) => locationsById.set(location.id, location));
+    selection.tagIds.forEach((tagId) => {
+      const tag = this.getTagById(tagId);
+      if (tag) addLocations(this.resolveTagLocations(tag));
+    });
+    selection.linksGroupIds.forEach((linksGroupId) => {
+      const linksGroup = this.getLinksGroupById(linksGroupId);
+      if (linksGroup) addLocations(this.resolveLinkGroupLocations(linksGroup));
+    });
+    const kmlBounds = (this._kmlShapes ?? [])
+      .filter((kml) => selection.kmlIds.includes(kml.id))
+      .map((kml) => this.getVisibleKmlBounds(kml))
+      .filter((bounds): bounds is L.LatLngBounds => bounds !== null);
+
+    this.focusMapOnElements(Array.from(locationsById.values()), kmlBounds);
+  }
+
+  private applyMenuSearch(menuIds: Array<number>) {
+    this.filterMenu.pinMenusForSearch(menuIds);
+
+    const locationsById = new Map<number, Location>();
+    const kmlBounds: Array<L.LatLngBounds> = [];
+    menuIds.forEach((menuId) => {
+      const menu = this.getMenuById(menuId);
+      if (!menu) return;
+      this.resolveMenuLocations(menu).forEach((location) => locationsById.set(location.id, location));
+      kmlBounds.push(...this.resolveMenuKmlBounds(menu));
+    });
+
+    this.focusMapOnElements(Array.from(locationsById.values()), kmlBounds);
+  }
+
+  private applyLocationSearch(locationIds: Array<number>) {
+    const locations = locationIds
+      .map((locationId) => this.getLocationById(locationId))
+      .filter((location): location is Location => location != null);
+
+    const hiddenLocations = locations.filter((location) => !location.onMap);
+    if (hiddenLocations.length > 0) {
+      const usableTags = (this._tags ?? []).filter((tag) => this.getMenuById(tag.parent_menu)?.active);
+      const isMenuPinned = (menuId: number) => this.getMenuById(menuId)?.pinned === true;
+      const tagIds = new Set<number>();
+      const menuIdsToPin = new Set<number>();
+
+      hiddenLocations.forEach((location) => {
+        const tag = pickRevealTag(location.id, usableTags, this.selectedMenu, isMenuPinned);
+        if (!tag) return;
+        tagIds.add(tag.id);
+        if (tag.parent_menu !== this.selectedMenu) menuIdsToPin.add(tag.parent_menu);
+      });
+      this.filterMenu.revealTags(withAncestorTags(tagIds, this._tags ?? []), menuIdsToPin);
+    }
+
+    const visibleLocations = locations.filter((location) => location.onMap);
+    if (visibleLocations.length === 1) {
+      this.openLocationPopupAfterFocus(visibleLocations[0]);
+    }
+    this.focusMapOnElements(visibleLocations, []);
+  }
+
+  private openLocationPopupAfterFocus(location: Location) {
+    this.map.once('moveend', () => {
+      if (!location.onMap) return;
+      this.attachLocationInteractions(location);
+      location.locationMarker.openPopup?.();
+    });
   }
 }
 

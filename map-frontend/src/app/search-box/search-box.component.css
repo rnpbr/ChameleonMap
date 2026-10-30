@@ -1,0 +1,169 @@
+:host {
+  display: block;
+  position: relative;
+  width: 100%;
+}
+
+.search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 12px;
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  width: 276px;
+  z-index: 1000;
+}
+
+@media (max-width: 480px) {
+  .search-box {
+    width: calc(100% - 24px);
+  }
+}
+
+.search-icon {
+  color: #6b7280;
+  font-size: 14px;
+  cursor: pointer;
+  flex-shrink: 0;
+
+  &:hover {
+    color: #374151;
+  }
+}
+
+.search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 14px;
+  color: #1f2937;
+  min-width: 0;
+
+  &::placeholder {
+    color: #9ca3af;
+  }
+}
+
+.clear-button {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: #9ca3af;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+
+  &:hover {
+    color: #374151;
+  }
+}
+
+@media (max-width: 480px) {
+  .search-box {
+    height: 40px;
+  }
+}
+
+.search-suggestions {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  width: 276px;
+  max-height: min(60vh, 420px);
+  overflow-y: auto;
+  margin: 0;
+  padding: 4px 0;
+  list-style: none;
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  box-sizing: border-box;
+  z-index: 1001;
+}
+
+@media (max-width: 480px) {
+  .search-suggestions {
+    width: calc(100% - 24px);
+  }
+}
+
+.suggestion-group {
+  padding: 8px 12px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #9ca3af;
+}
+
+.suggestion {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.suggestion.active {
+  background-color: #f3f4f6;
+}
+
+.suggestion-icon {
+  display: flex;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 14px;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.tag-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: #9ca3af;
+}
+
+.link-line {
+  width: 14px;
+  height: 3px;
+  border-radius: 2px;
+  background-color: #9ca3af;
+}
+
+.suggestion-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.suggestion-label,
+.suggestion-context {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.suggestion-label {
+  font-size: 13px;
+  color: #1f2937;
+}
+
+.suggestion-context {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.suggestion-empty {
+  padding: 10px 12px;
+  font-size: 13px;
+  color: #6b7280;
+}

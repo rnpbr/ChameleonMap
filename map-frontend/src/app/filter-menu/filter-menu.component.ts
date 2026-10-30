@@ -10,6 +10,7 @@ import { PinnedMenusSidebarComponent } from './pinned-menus-sidebar/pinned-menus
 import { MatIconRegistry } from '@angular/material/icon';
 import { DomSanitizer } from '@angular/platform-browser';
 import { isKml, isLinksGroup, isTag } from '../map/map-behavior';
+import { ResolvedLayerSelection } from '../search/search-selection';
 
 enum TagsMenuButtonBehavior {
   CloseAllEyes,
@@ -158,6 +159,9 @@ export class FilterMenuComponent {
 
   @Output()
   tagReactivated = new EventEmitter();
+
+  @Output()
+  tagsVisibilityChanged = new EventEmitter<Array<Tag>>();
 
   @Output()
   shapeRemoval = new EventEmitter();
@@ -647,5 +651,114 @@ export class FilterMenuComponent {
 
   capitalizeFirstLetter(str: string) {
     return str.charAt(0).toUpperCase() + str.slice(1);
+  }
+
+  applySearchSelection(selection: ResolvedLayerSelection) {
+    this.setTagsVisibility((tag) => selection.tagIdsToShow.has(tag.id));
+    (this._kmlShapes ?? []).forEach((shape) => this.setKmlVisibility(shape, selection.kmlIds.has(shape.id)));
+
+    this.pinMenusSilently(selection.menuIdsToPin);
+    this.menuCliked.emit({ selectedTagsMenuId: this.selectedTagsMenuId });
+
+    (this._linkGroups ?? []).forEach((linkGroup) =>
+      this.setLinkGroupVisibility(linkGroup, selection.linksGroupIds.has(linkGroup.id))
+    );
+    this.updateAllMenuEyeBehaviors();
+  }
+
+  revealTags(tagIds: Set<number>, menuIdsToPin: Set<number>) {
+    this.setTagsVisibility((tag) => tag.visibility || tagIds.has(tag.id));
+    this.pinMenusSilently(menuIdsToPin);
+    this.redrawKeepingHiddenLinkGroups(new Set());
+    this.updateAllMenuEyeBehaviors();
+  }
+
+  pinMenusForSearch(menuIds: Array<number>) {
+    this.pinMenusSilently(menuIds);
+    this.redrawKeepingHiddenLinkGroups(new Set(menuIds));
+    this.updateAllMenuEyeBehaviors();
+  }
+
+  captureStateSnapshot(): FilterMenuSnapshot {
+    return {
+      selectedTagsMenuId: this.selectedTagsMenuId,
+      tagsVisibility: (this._tags ?? []).map((tag) => ({ tag, visibility: !!tag.visibility })),
+      linkGroupsVisibility: (this._linkGroups ?? []).map((lg) => ({ lg, visibility: !!lg.visibility })),
+      kmlShapesVisibility: (this._kmlShapes ?? []).map((shape) => ({ shape, visibility: !!shape.visibility })),
+      pinnedMenuIds: new Set((this._menus ?? []).filter((menu) => menu.pinned).map((menu) => menu.id))
+    };
+  }
+
+  restoreStateSnapshot(snapshot: FilterMenuSnapshot) {
+    const previousVisibility = new Map(snapshot.tagsVisibility.map(({ tag, visibility }) => [tag, visibility]));
+    this.setTagsVisibility((tag) => previousVisibility.get(tag) ?? tag.visibility);
+    snapshot.kmlShapesVisibility.forEach(({ shape, visibility }) => this.setKmlVisibility(shape, visibility));
+
+    (this._menus ?? []).forEach((menu) => {
+      const wasPinned = snapshot.pinnedMenuIds.has(menu.id);
+      if (!!menu.pinned === wasPinned) return;
+      menu.pinned = wasPinned;
+      if (wasPinned) {
+        this.pinnedMenusSidebar?.addPinnedMenu(menu);
+      } else {
+        this.pinnedMenusSidebar?.removePinnedMenu(menu);
+      }
+    });
+
+    const menuToSelect = this.getMenuById(snapshot.selectedTagsMenuId);
+    if (menuToSelect && menuToSelect.id !== this.selectedTagsMenuId && this.activeMenus?.includes(menuToSelect)) {
+      this.menuClick(menuToSelect);
+    } else {
+      this.menuCliked.emit({ selectedTagsMenuId: this.selectedTagsMenuId });
+    }
+
+    snapshot.linkGroupsVisibility.forEach(({ lg, visibility }) => this.setLinkGroupVisibility(lg, visibility));
+    this.updateAllMenuEyeBehaviors();
+  }
+
+  private setTagsVisibility(isVisible: (tag: Tag) => boolean) {
+    const changedTags = (this._tags ?? []).filter((tag) => tag.visibility !== isVisible(tag));
+    changedTags.forEach((tag) => (tag.visibility = !tag.visibility));
+    if (changedTags.length > 0) {
+      this.tagsVisibilityChanged.emit(changedTags);
+    }
+  }
+
+  private redrawKeepingHiddenLinkGroups(shownMenuIds: Set<number>) {
+    const hiddenLinkGroups = (this._linkGroups ?? []).filter(
+      (linkGroup) => !linkGroup.visibility && !shownMenuIds.has(linkGroup.parent_menu)
+    );
+    this.menuCliked.emit({ selectedTagsMenuId: this.selectedTagsMenuId });
+    hiddenLinkGroups.forEach((linkGroup) => this.setLinkGroupVisibility(linkGroup, false));
+  }
+
+  private pinMenusSilently(menuIds: Iterable<number>) {
+    for (const menuId of menuIds) {
+      const menu = this.getMenuById(menuId);
+      if (menu && !menu.pinned) {
+        menu.pinned = true;
+        this.pinnedMenusSidebar?.addPinnedMenu(menu);
+      }
+    }
+  }
+
+  private setKmlVisibility(shape: KmlLayerDto, visibility: boolean) {
+    if (shape.visibility === visibility) return;
+    shape.visibility = visibility;
+    if (visibility) {
+      this.insertKmlShape(shape);
+    } else {
+      this.removeKmlShape(shape);
+    }
+  }
+
+  private setLinkGroupVisibility(linkGroup: LinksGroup, visibility: boolean) {
+    if (linkGroup.visibility === visibility) return;
+    linkGroup.visibility = visibility;
+    if (visibility) {
+      this.insertLinesByLinkGroup(linkGroup);
+    } else {
+      this.removeLinesByLinkGroup(linkGroup);
+    }
   }
 }

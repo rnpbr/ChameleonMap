@@ -1,0 +1,62 @@
+<div class="search-box">
+  <i class="fas fa-search search-icon" (click)="onSubmit()"></i>
+
+  <input
+    #searchInput
+    type="text"
+    class="search-input"
+    role="combobox"
+    aria-autocomplete="list"
+    autocomplete="off"
+    [attr.aria-expanded]="isOpen"
+    [attr.aria-controls]="listboxId"
+    [attr.aria-activedescendant]="isOpen && activeIndex >= 0 ? optionId(activeIndex) : null"
+    [placeholder]="'search_placeholder' | translateUi"
+    [(ngModel)]="searchText"
+    (ngModelChange)="onInputChange($event)"
+    (focus)="onFocus()"
+    (keydown)="onKeydown($event)"
+  />
+
+  <button
+    *ngIf="searchText"
+    type="button"
+    class="clear-button"
+    (click)="clear()"
+    [attr.aria-label]="'search_clear' | translateUi"
+  >
+    &times;
+  </button>
+</div>
+
+<ul *ngIf="isOpen" class="search-suggestions" role="listbox" [id]="listboxId">
+  <ng-container *ngFor="let suggestion of suggestions; let i = index">
+    <li *ngIf="isGroupStart(i)" class="suggestion-group" role="presentation">
+      {{ 'search_group_' + suggestion.kind | translateUi }}
+    </li>
+    <li
+      role="option"
+      class="suggestion"
+      [id]="optionId(i)"
+      [class.active]="i === activeIndex"
+      [attr.aria-selected]="i === activeIndex"
+      (mouseenter)="activeIndex = i"
+      (click)="select(suggestion)"
+    >
+      <span class="suggestion-icon" [ngSwitch]="suggestion.kind" [style.color]="suggestion.color">
+        <i *ngSwitchCase="'menu'" class="fas fa-layer-group"></i>
+        <span *ngSwitchCase="'tag'" class="tag-dot" [style.background-color]="suggestion.color"></span>
+        <span *ngSwitchCase="'linksGroup'" class="link-line" [style.background-color]="suggestion.color"></span>
+        <i *ngSwitchCase="'kml'" class="fas fa-draw-polygon"></i>
+        <i *ngSwitchCase="'location'" class="fas fa-map-marker-alt"></i>
+      </span>
+      <span class="suggestion-text">
+        <span class="suggestion-label">{{ suggestion.label }}</span>
+        <span *ngIf="suggestion.context" class="suggestion-context">{{ suggestion.context }}</span>
+      </span>
+    </li>
+  </ng-container>
+  <li *ngIf="suggestions.length === 0" class="suggestion-empty" role="presentation">
+    {{ 'search_no_results' | translateUi }}
+  </li>
+</ul>

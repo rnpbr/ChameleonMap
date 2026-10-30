@@ -1,14 +1,12 @@
 <div id="language-chooser-conteiner" (mouseenter)="onMouseEntering()" (mouseleave)="onMouseLeaving()">
     <div class="language-icon">
-        {{currentLanguage.flag}}
+         <img [src]="getFlag(currentLanguage)" [alt]="currentLanguage.name" class="flag-circle">
     </div>
-    <div *ngIf="this.isHovering">
-        <div *ngFor="let language of this.languageList">
-            <div *ngIf="!isCurrentLanguage(language)" (click)="setLanguage(language); this.isHovering=false;" class = "language-icon">
-                <div *ngIf="languageOptionsList?.includes(language.code) || language.code == defaultLanguage.code">
-                    {{language.flag}}
-                </div>
+    <ng-container *ngIf="isHovering">
+        <ng-container *ngFor="let language of languageList">
+            <div *ngIf="!isCurrentLanguage(language) && (languageOptionsList?.includes(language.code) || language.code == defaultLanguage.code)" (click)="setLanguage(language); isHovering=false;" class = "language-icon">
+                <img [src]="getFlag(language)" [alt]="language.name" class="flag-circle">
             </div>
-        </div>
-    </div>
+        </ng-container>
+    </ng-container>
 </div>

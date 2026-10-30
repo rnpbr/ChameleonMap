@@ -89,3 +89,56 @@
   top: 10px; /* move it a bit down from the top */
 }
 
+.search-and-chip-container {
+  position: absolute;
+  top: 12px;
+  left: 15px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  z-index: 1000;
+  pointer-events: auto;
+}
+
+.active-query-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 12px 0 16px;
+  background-color: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  font-size: 12px;
+  color: #374151;
+  white-space: nowrap;
+  box-sizing: border-box;
+}
+
+.chip-label {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chip-remove {
+  background: transparent;
+  border: none;
+  color: #9ca3af;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease;
+}
+
+.chip-remove:hover {
+  color: #ef4444;
+}

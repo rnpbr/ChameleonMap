@@ -197,9 +197,9 @@ mat-expansion-panel  {
 .scrollbar-box {
   position: absolute;
   z-index: 400;
-  top: 15px;
+  top: 65px;
   left: 15px;
-  max-height: calc(100% - 70px);
+  max-height: calc(100% - 120px);
   width: 312px;
   scrollbar-color: rgba(148, 143, 0, 0) rgba(255, 255, 255, 0);
   float: left;
@@ -220,7 +220,7 @@ mat-expansion-panel  {
 }
 
 .has-tabs{
-  top: 75px;
+  top: 123px;
   max-height: calc(100% - 100px);
   padding-bottom: 10px;
 }

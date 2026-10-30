@@ -35,8 +35,11 @@ import { ChameleonButtonComponent } from './chameleon-button/chameleon-button.co
 import { MapDataService } from './map/map-data.service';
 import { PopupContentService } from './map/popup-content.service';
 import { LanguageChooserComponent } from './language-chooser/language-chooser.component';
+import { SearchBoxComponent } from './search-box/search-box.component';
 import { TranslateTitlePipe } from './translate-field.pipe';
+import { TranslateUiPipe } from './translate-ui.pipe';
 import { LanguageService } from './language.service';
+import { MapSearchService } from './search/map-search.service';
 
 @NgModule({
   declarations: [
@@ -58,7 +61,8 @@ import { LanguageService } from './language.service';
     FooterComponent,
     TooltipComponent,
     LanguageChooserComponent,
-    ChameleonButtonComponent
+    ChameleonButtonComponent,
+    SearchBoxComponent
   ],
   imports: [
     BrowserModule,
@@ -72,9 +76,10 @@ import { LanguageService } from './language.service';
     ScrollingModule,
     MatTableModule,
     AppRoutingModule,
-    TranslateTitlePipe
+    TranslateTitlePipe,
+    TranslateUiPipe
   ],
-  providers: [ApiService, EventEmitterService, MapDataService, PopupContentService, LanguageService],
+  providers: [ApiService, EventEmitterService, MapDataService, PopupContentService, LanguageService, MapSearchService],
   bootstrap: [AppComponent]
 })
 export class AppModule {}

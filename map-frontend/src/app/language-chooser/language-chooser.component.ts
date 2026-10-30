@@ -1,6 +1,9 @@
 import { Component, OnInit, Input, Output, EventEmitter, ChangeDetectorRef } from '@angular/core';
-import { countries } from 'country-flag-icons'
 import { LanguageService } from '../language.service';
+import { 
+  countries as flags,
+  hasFlag
+} from 'country-flag-icons';
 
 @Component({
   selector: 'app-language-chooser',
@@ -10,11 +13,11 @@ import { LanguageService } from '../language.service';
 
 export class LanguageChooserComponent {
   protected languageList: LanguageOption[] = [
-    {code:"pt", flag:"🇧🇷", name:"Português"},
-    {code:"en", flag:"🇺🇸", name:"English"},
-    {code:"es", flag:"🇪🇦", name:"Español"},
-    {code:"de", flag:"🇩🇪", name:"Deutsch"},
-    {code:"ko", flag:"🇰🇷", name:"한국어"}
+    {code:"pt", name:"Português"},
+    {code:"en", name:"English"},
+    {code:"es", name:"Español"},
+    {code:"de", name:"Deutsch"},
+    {code:"ko", name:"한국어"}
   ];
   
   protected readonly defaultLanguage: LanguageOption = this.languageList[0];
@@ -46,9 +49,25 @@ export class LanguageChooserComponent {
   }
 
   isCurrentLanguage(language:LanguageOption){
-    if(language.code == this.currentLanguage.code)
+    if(language.code == this.currentLanguage.code){
       return true
-    else
+    }else{
       return false
+    }
+  }
+
+  getFlag(language: LanguageOption){
+    if(language.code == 'pt'){
+      return this.getFlagUrl('br')
+    }else if(language.code == 'ko'){
+      return this.getFlagUrl('kr')
+    }else if(language.code == 'en'){
+      return this.getFlagUrl('us')
+    }else{
+      return this.getFlagUrl(language.code)
+    }
+  }
+  private getFlagUrl(languageCode: string){
+    return `https://hatscripts.github.io/circle-flags/flags/${languageCode}.svg`
   }
 }
