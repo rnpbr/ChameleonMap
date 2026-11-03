@@ -19,6 +19,8 @@ export class TranslateUiPipe implements PipeTransform {
     search_clear: { pt: 'Limpar busca', en: 'Clear search', es: 'Borrar búsqueda' },
     search_remove: { pt: 'Remover busca', en: 'Remove search', es: 'Quitar búsqueda' },
     search_no_results: { pt: 'Nenhum resultado', en: 'No results', es: 'Sin resultados' },
+    search_filters: { pt: 'Filtrar resultados', en: 'Filter results', es: 'Filtrar resultados' },
+    search_filter_all: { pt: 'Tudo', en: 'All', es: 'Todo' },
     search_group_menu: { pt: 'Menus', en: 'Menus', es: 'Menús' },
     search_group_tag: { pt: 'Tags', en: 'Tags', es: 'Tags' },
     search_group_linksGroup: { pt: 'Ligações', en: 'Links', es: 'Enlaces' },

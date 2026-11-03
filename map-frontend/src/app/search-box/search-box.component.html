@@ -29,34 +29,74 @@
   </button>
 </div>
 
-<ul *ngIf="isOpen" class="search-suggestions" role="listbox" [id]="listboxId">
-  <ng-container *ngFor="let suggestion of suggestions; let i = index">
-    <li *ngIf="isGroupStart(i)" class="suggestion-group" role="presentation">
-      {{ 'search_group_' + suggestion.kind | translateUi }}
-    </li>
-    <li
-      role="option"
-      class="suggestion"
-      [id]="optionId(i)"
-      [class.active]="i === activeIndex"
-      [attr.aria-selected]="i === activeIndex"
-      (mouseenter)="activeIndex = i"
-      (click)="select(suggestion)"
+<div *ngIf="isOpen" class="search-panel">
+  <div
+    *ngIf="filterOptions.length > 0"
+    class="search-filters"
+    role="group"
+    [attr.aria-label]="'search_filters' | translateUi"
+    (mousedown)="$event.preventDefault()"
+  >
+    <button
+      type="button"
+      class="filter-chip"
+      [class.active]="kinds.length === 0"
+      [attr.aria-pressed]="kinds.length === 0"
+      (click)="showAllKinds()"
     >
-      <span class="suggestion-icon" [ngSwitch]="suggestion.kind" [style.color]="suggestion.color">
-        <i *ngSwitchCase="'menu'" class="fas fa-layer-group"></i>
-        <span *ngSwitchCase="'tag'" class="tag-dot" [style.background-color]="suggestion.color"></span>
-        <span *ngSwitchCase="'linksGroup'" class="link-line" [style.background-color]="suggestion.color"></span>
-        <i *ngSwitchCase="'kml'" class="fas fa-draw-polygon"></i>
-        <i *ngSwitchCase="'location'" class="fas fa-map-marker-alt"></i>
-      </span>
-      <span class="suggestion-text">
-        <span class="suggestion-label">{{ suggestion.label }}</span>
-        <span *ngIf="suggestion.context" class="suggestion-context">{{ suggestion.context }}</span>
-      </span>
+      {{ 'search_filter_all' | translateUi }}
+      <span class="filter-count">{{ suggestions.length }}</span>
+    </button>
+    <button
+      *ngFor="let option of filterOptions; trackBy: trackByKind"
+      type="button"
+      class="filter-chip"
+      [class.active]="option.selected"
+      [attr.aria-pressed]="option.selected"
+      (click)="toggleKind(option.kind)"
+    >
+      {{ 'search_group_' + option.kind | translateUi }}
+      <span class="filter-count">{{ option.count }}</span>
+    </button>
+  </div>
+
+  <ul
+    #suggestionList
+    class="search-suggestions"
+    role="listbox"
+    [id]="listboxId"
+    (scroll)="onListScroll()"
+  >
+    <ng-container *ngFor="let suggestion of renderedSuggestions; let i = index; trackBy: trackBySuggestion">
+      <li *ngIf="isGroupStart(i)" class="suggestion-group" role="presentation">
+        {{ 'search_group_' + suggestion.kind | translateUi }}
+      </li>
+      <li
+        role="option"
+        class="suggestion"
+        [id]="optionId(i)"
+        [class.active]="i === activeIndex"
+        [attr.aria-selected]="i === activeIndex"
+        [attr.aria-setsize]="visibleSuggestions.length"
+        [attr.aria-posinset]="i + 1"
+        (mouseenter)="activeIndex = i"
+        (click)="select(suggestion)"
+      >
+        <span class="suggestion-icon" [ngSwitch]="suggestion.kind" [style.color]="suggestion.color">
+          <i *ngSwitchCase="'menu'" class="fas fa-layer-group"></i>
+          <span *ngSwitchCase="'tag'" class="tag-dot" [style.background-color]="suggestion.color"></span>
+          <span *ngSwitchCase="'linksGroup'" class="link-line" [style.background-color]="suggestion.color"></span>
+          <i *ngSwitchCase="'kml'" class="fas fa-draw-polygon"></i>
+          <i *ngSwitchCase="'location'" class="fas fa-map-marker-alt"></i>
+        </span>
+        <span class="suggestion-text">
+          <span class="suggestion-label">{{ suggestion.label }}</span>
+          <span *ngIf="suggestion.context" class="suggestion-context">{{ suggestion.context }}</span>
+        </span>
+      </li>
+    </ng-container>
+    <li *ngIf="visibleSuggestions.length === 0" class="suggestion-empty" role="presentation">
+      {{ 'search_no_results' | translateUi }}
     </li>
-  </ng-container>
-  <li *ngIf="suggestions.length === 0" class="suggestion-empty" role="presentation">
-    {{ 'search_no_results' | translateUi }}
-  </li>
-</ul>
+  </ul>
+</div>

@@ -11,6 +11,7 @@
     <div class="search-and-chip-container">
       <app-search-box
         [(value)]="searchQueryText"
+        [(kinds)]="searchKinds"
         [suggestions]="searchSuggestions"
         (searchChange)="onSearchChange($event)"
         (search)="onSearch($event)"

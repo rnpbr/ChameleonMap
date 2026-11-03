@@ -21,10 +21,6 @@ export interface SearchSuggestion {
   readonly color: string | null;
 }
 
-const MAX_SUGGESTIONS = 10;
-const MAX_SUGGESTIONS_PER_KIND = 3;
-const CANDIDATE_HITS = 50;
-
 @Injectable()
 export class MapSearchService {
   private indexedStore: MapDataStore | null = null;
@@ -39,15 +35,7 @@ export class MapSearchService {
     const index = this.ensureIndex();
     if (!index || !query.trim()) return [];
 
-    const countByKind = new Map<SearchKind, number>();
-    const hits = searchIndex(index, query, CANDIDATE_HITS)
-      .filter((hit) => {
-        const count = countByKind.get(hit.kind) ?? 0;
-        countByKind.set(hit.kind, count + 1);
-        return count < MAX_SUGGESTIONS_PER_KIND;
-      })
-      .slice(0, MAX_SUGGESTIONS);
-
+    const hits = searchIndex(index, query, Infinity);
     const grouped: SearchHit[] = [];
     new Set(hits.map((hit) => hit.kind)).forEach((kind) =>
       grouped.push(...hits.filter((hit) => hit.kind === kind))
@@ -57,10 +45,12 @@ export class MapSearchService {
       .filter((suggestion): suggestion is SearchSuggestion => suggestion !== null);
   }
 
-  bestSelection(query: string): SearchSelection {
+  bestSelection(query: string, kinds: SearchKind[] = []): SearchSelection {
     const index = this.ensureIndex();
     if (!index) return { type: 'none' };
-    return pickBestSelection(searchIndex(index, query, CANDIDATE_HITS));
+
+    const hits = searchIndex(index, query, Infinity);
+    return pickBestSelection(kinds.length > 0 ? hits.filter((hit) => kinds.includes(hit.kind)) : hits);
   }
 
   private ensureIndex(): SearchIndex | null {

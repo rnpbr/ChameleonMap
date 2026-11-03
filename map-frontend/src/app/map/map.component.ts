@@ -30,7 +30,7 @@ import {
   shouldShowTagForMenu
 } from './map-behavior';
 import { FilterMenuComponent } from '../filter-menu/filter-menu.component';
-import { SearchSelection, selectionForHit } from '../search/map-search';
+import { SearchKind, SearchSelection, selectionForHit } from '../search/map-search';
 import { MapSearchService, SearchSuggestion } from '../search/map-search.service';
 import {
   LayerSelection,
@@ -111,6 +111,7 @@ export class MapComponent implements OnInit {
   public activeFilterQuery: string | null = null;
   public searchQueryText: string = '';
   public searchSuggestions: SearchSuggestion[] = [];
+  public searchKinds: SearchKind[] = [];
   private previousFilterSnapshot: FilterMenuSnapshot | null = null;
 
   @HostListener('document:click', ['$event'])
@@ -1647,7 +1648,7 @@ export class MapComponent implements OnInit {
   public onSearch(query: string): void {
     const trimmed = query?.trim();
     if (!trimmed) return;
-    this.applySearch(this.mapSearch.bestSelection(trimmed), trimmed);
+    this.applySearch(this.mapSearch.bestSelection(trimmed, this.searchKinds), trimmed);
   }
 
   public onSuggestionSelected(suggestion: SearchSuggestion): void {

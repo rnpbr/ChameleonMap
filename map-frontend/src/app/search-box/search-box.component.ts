@@ -8,7 +8,18 @@ import {
   ViewChild
 } from '@angular/core';
 
+import { SearchKind } from '../search/map-search';
 import { SearchSuggestion } from '../search/map-search.service';
+
+interface KindFilterOption {
+  readonly kind: SearchKind;
+  readonly count: number;
+  readonly selected: boolean;
+}
+
+const FILTER_KINDS: SearchKind[] = ['menu', 'tag', 'linksGroup', 'kml', 'location'];
+const RENDER_PAGE_SIZE = 100;
+const LOAD_MORE_THRESHOLD_PX = 200;
 
 @Component({
   selector: 'app-search-box',
@@ -28,27 +39,42 @@ export class SearchBoxComponent {
   }
   set suggestions(value: SearchSuggestion[]) {
     this._suggestions = value ?? [];
-    this.activeIndex = -1;
+    this.refresh();
+  }
+
+  @Input()
+  get kinds(): SearchKind[] {
+    return this._kinds;
+  }
+  set kinds(value: SearchKind[]) {
+    this._kinds = value ?? [];
+    this.refresh();
   }
 
   @Output() valueChange = new EventEmitter<string>();
   @Output() searchChange = new EventEmitter<string>();
   @Output() search = new EventEmitter<string>();
   @Output() suggestionSelected = new EventEmitter<SearchSuggestion>();
+  @Output() kindsChange = new EventEmitter<SearchKind[]>();
 
   @ViewChild('searchInput') searchInputRef!: ElementRef<HTMLInputElement>;
+  @ViewChild('suggestionList') suggestionListRef?: ElementRef<HTMLElement>;
 
   searchText: string = '';
   activeIndex = -1;
   isOpen = false;
+  filterOptions: KindFilterOption[] = [];
+  visibleSuggestions: SearchSuggestion[] = [];
+  renderedSuggestions: SearchSuggestion[] = [];
   readonly listboxId = `search-suggestions-${SearchBoxComponent.nextId++}`;
   private _suggestions: SearchSuggestion[] = [];
+  private _kinds: SearchKind[] = [];
 
   constructor(private host: ElementRef<HTMLElement>) {}
 
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent): void {
-    if (!this.host.nativeElement.contains(event.target as Node)) {
+    if (!event.composedPath().includes(this.host.nativeElement)) {
       this.close();
     }
   }
@@ -82,7 +108,7 @@ export class SearchBoxComponent {
   }
 
   onSubmit(): void {
-    const highlighted = this.isOpen ? this.suggestions[this.activeIndex] : undefined;
+    const highlighted = this.isOpen ? this.visibleSuggestions[this.activeIndex] : undefined;
     if (highlighted) {
       this.select(highlighted);
       return;
@@ -90,7 +116,7 @@ export class SearchBoxComponent {
 
     const query = this.searchText.trim();
     if (!query) return;
-    if (this.suggestions.length === 0) {
+    if (this.visibleSuggestions.length === 0) {
       this.isOpen = true;
       return;
     }
@@ -112,25 +138,87 @@ export class SearchBoxComponent {
     this.searchInputRef?.nativeElement.focus();
   }
 
+  showAllKinds(): void {
+    this.setKinds([]);
+  }
+
+  toggleKind(kind: SearchKind): void {
+    this.setKinds(
+      this._kinds.includes(kind) ? this._kinds.filter((k) => k !== kind) : [...this._kinds, kind]
+    );
+  }
+
+  onListScroll(): void {
+    const list = this.suggestionListRef?.nativeElement;
+    if (!list || this.renderedSuggestions.length >= this.visibleSuggestions.length) return;
+    if (list.scrollTop + list.clientHeight >= list.scrollHeight - LOAD_MORE_THRESHOLD_PX) {
+      this.render(this.renderedSuggestions.length + RENDER_PAGE_SIZE);
+    }
+  }
+
   isGroupStart(index: number): boolean {
-    return index === 0 || this.suggestions[index - 1].kind !== this.suggestions[index].kind;
+    return (
+      index === 0 || this.visibleSuggestions[index - 1].kind !== this.visibleSuggestions[index].kind
+    );
   }
 
   optionId(index: number): string {
     return `${this.listboxId}-${index}`;
   }
 
+  trackByKind(_: number, option: KindFilterOption): SearchKind {
+    return option.kind;
+  }
+
+  trackBySuggestion(_: number, suggestion: SearchSuggestion): string {
+    return `${suggestion.kind}:${suggestion.id}`;
+  }
+
+  private setKinds(kinds: SearchKind[]): void {
+    this._kinds = kinds;
+    this.kindsChange.emit(kinds);
+    this.refresh();
+  }
+
+  private refresh(): void {
+    const counts = new Map<SearchKind, number>();
+    this._suggestions.forEach((suggestion) =>
+      counts.set(suggestion.kind, (counts.get(suggestion.kind) ?? 0) + 1)
+    );
+    this.filterOptions = FILTER_KINDS.filter(
+      (kind) => counts.has(kind) || this._kinds.includes(kind)
+    ).map((kind) => ({ kind, count: counts.get(kind) ?? 0, selected: this._kinds.includes(kind) }));
+
+    this.visibleSuggestions =
+      this._kinds.length > 0
+        ? this._suggestions.filter((suggestion) => this._kinds.includes(suggestion.kind))
+        : this._suggestions;
+    this.activeIndex = -1;
+    this.render(RENDER_PAGE_SIZE);
+
+    const list = this.suggestionListRef?.nativeElement;
+    if (list) list.scrollTop = 0;
+  }
+
+  private render(limit: number): void {
+    this.renderedSuggestions = this.visibleSuggestions.slice(0, limit);
+  }
+
   private close(): void {
     this.isOpen = false;
     this.activeIndex = -1;
+    this.render(RENDER_PAGE_SIZE);
   }
 
   private moveHighlight(step: number): void {
-    if (this.suggestions.length === 0) return;
+    if (this.visibleSuggestions.length === 0) return;
 
-    const positions = this.suggestions.length + 1;
+    const positions = this.visibleSuggestions.length + 1;
     this.isOpen = true;
     this.activeIndex = ((this.activeIndex + 1 + step + positions) % positions) - 1;
+    if (this.activeIndex >= this.renderedSuggestions.length) {
+      this.render(this.activeIndex + RENDER_PAGE_SIZE);
+    }
     setTimeout(() =>
       this.host.nativeElement.querySelector('.suggestion.active')?.scrollIntoView({ block: 'nearest' })
     );
