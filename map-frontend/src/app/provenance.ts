@@ -83,7 +83,7 @@ export function provenanceRowHtml(institution: PopupInstitution, translation: Tr
   if (provenance.updatedOn) {
     html +=
       '<span class="opp-updated">' + ICON_CALENDAR +
-      `<span>${escapeHtml(translation.t('updated_on'))} ${escapeHtml(provenance.updatedOn)}</span></span>`;
+      `<span>${escapeHtml(translation.t('topology_updated_on'))} ${escapeHtml(provenance.updatedOn)}</span></span>`;
   }
   return html + '</div>';
 }
