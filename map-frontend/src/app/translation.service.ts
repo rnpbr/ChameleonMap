@@ -27,7 +27,7 @@ const DEFAULT_LABELS: Record<string, string> = {
   trust_ai_generated_tooltip: 'The topology was reviewed by the maintainers, but not yet officially confirmed by a representative of the institution.',
   trust_verified: 'Confirmed',
   trust_verified_hint: 'topology confirmed by the institution',
-  verified_by: 'Confirmed by',
+  verified_by: 'Topology confirmed by',
   updated_on: 'Updated',
   topology_updated_on: 'Topology updated',
   view_latest_change: 'View latest change',
