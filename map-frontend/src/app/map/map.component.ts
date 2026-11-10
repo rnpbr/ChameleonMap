@@ -684,7 +684,12 @@ export class MapComponent implements OnInit {
     if (this.mapSetting && this.mapSetting.map_name) {
       mapName = this.mapSetting.map_name;
     }
-    this.onboardingComponent.showOnboardingIfNeeded(mapName);
+    // A map can turn the first-visit tutorial off (its text is
+    // Portuguese-only, which doesn't suit international maps); maps
+    // whose settings don't mention it keep it on.
+    if (this.mapSetting?.onboarding_enabled !== false) {
+      this.onboardingComponent.showOnboardingIfNeeded(mapName);
+    }
   }
 
   private getFirstMenuId() {
