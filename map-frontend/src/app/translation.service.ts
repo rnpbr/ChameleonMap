@@ -23,7 +23,7 @@ const DEFAULT_LABELS: Record<string, string> = {
   data_notice_reminder: 'Partly AI-extracted data',
   data_notice_reminder_hint: 'Some topologies and institution descriptions were extracted semi-automatically or with AI. Click to read the full notice.',
   trust_ai_generated: 'Unconfirmed',
-  trust_ai_generated_hint: 'topology reviewed by the maintainers',
+  trust_ai_generated_hint: 'content reviewed by the maintainers',
   trust_ai_generated_tooltip: "The topology and the institution's description were reviewed by the maintainers, but not yet officially confirmed by a representative of the institution.",
   trust_verified: 'Confirmed',
   trust_verified_hint: 'topology confirmed by the institution',
