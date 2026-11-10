@@ -32,6 +32,7 @@ import { ATLASComponent } from './atlas/atlas.component';
 import { FooterComponent } from './footer/footer.component';
 import { TooltipComponent } from './tooltip/tooltip.component';
 import { ChameleonButtonComponent } from './chameleon-button/chameleon-button.component';
+import { DataNoticeComponent } from './data-notice/data-notice.component';
 
 @NgModule({
   declarations: [
@@ -51,7 +52,8 @@ import { ChameleonButtonComponent } from './chameleon-button/chameleon-button.co
     ATLASComponent,
     FooterComponent,
     TooltipComponent,
-    ChameleonButtonComponent
+    ChameleonButtonComponent,
+    DataNoticeComponent
   ],
   imports: [
     BrowserModule,

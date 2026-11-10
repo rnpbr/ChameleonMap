@@ -1,6 +1,6 @@
 <div id="overlayed-popup-container" #overlayed_popup_conteiner class="hidden">
     <div id="fade-background" (click)="this.desactivate()"></div>
-    <div id="overlayed-popup" [class.has-institution-tabs]="currentInstitutions.length > 1" [class.has-report-footer]="!!correctionMailto">
+    <div id="overlayed-popup" [class.has-institution-tabs]="currentInstitutions.length > 1" [class.has-provenance]="!!activeProvenance" [class.has-report-footer]="!!correctionMailto">
         <div class="overlayed-popup-title">
             <p id = "opp-title" #opp_title></p>
             <div class="opp-title-actions">
@@ -13,6 +13,22 @@
                     (click)="selectInstitution(i)">
                 {{ institution.name }}
             </button>
+        </div>
+        <div class="opp-provenance-strip" *ngIf="activeProvenance as provenance">
+            <span class="opp-trust" [class.opp-trust--verified]="provenance.verified" [class.opp-trust--ai]="!provenance.verified"
+                  tabindex="0" [attr.data-tooltip]="provenance.tooltip" [attr.aria-label]="provenance.label + '. ' + provenance.tooltip">
+                <svg *ngIf="provenance.verified" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.1V12a10 10 0 1 1-5.9-9.1"></path><polyline points="22 4 12 14 9 11"></polyline></svg>
+                <svg *ngIf="!provenance.verified" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2"></rect><path d="M9 1v4M15 1v4M9 19v4M15 19v4M1 9h4M1 15h4M19 9h4M19 15h4"></path></svg>
+                <span>{{ provenance.label }}</span>
+            </span>
+            <span class="opp-updated" *ngIf="provenance.updatedOn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                <span>{{ t('topology_updated_on') }} {{ provenance.updatedOn }}</span>
+            </span>
+            <a class="opp-latest-change" *ngIf="provenance.latestChangeUrl" [href]="provenance.latestChangeUrl" target="_blank" rel="noopener noreferrer">
+                <span>{{ t('view_latest_change') }}</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+            </a>
         </div>
         <div class="overlayed-popup-content">
             <div id = "opp-content" #opp_content></div>

@@ -44,7 +44,10 @@ export class LocationDetailComponent implements OnInit, OnDestroy {
     }
     const description = document.getElementById('description');
     if (description) {
-      const institutions = location.popup_institutions || [];
+      // Networks without popup text are listed too (for their trust
+      // badge in the map popups); there's nothing to show for them here.
+      const institutions = (location.popup_institutions || [])
+        .filter(institution => !!this.translationService.translatePopup(institution).overlayedPopupContent);
       description.innerHTML = institutions
         .map(institution => {
           const { overlayedPopupContent } = this.translationService.translatePopup(institution);

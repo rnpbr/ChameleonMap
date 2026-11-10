@@ -58,6 +58,13 @@ declare global {
     // the one matching the currently selected menu should show.
     readonly parent_menu: number;
     readonly translations: PopupInstitutionTranslation[];
+    // Provenance of the network's data (see chameleon_api). Optional:
+    // other Chameleon backends don't send them, and then nothing shows.
+    readonly trust_level?: 'verified' | 'ai_generated';
+    readonly verified_by?: string | null;
+    readonly verified_on?: string | null;  // YYYY-MM-DD
+    readonly data_updated_on?: string | null;  // YYYY-MM-DD (UTC)
+    readonly data_updated_url?: string | null;
   }
 
   export interface Location {

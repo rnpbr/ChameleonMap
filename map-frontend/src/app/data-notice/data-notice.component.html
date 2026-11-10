@@ -1,0 +1,37 @@
+<button type="button" class="dn-reminder" *ngIf="!open" (click)="reopen()"
+        [attr.data-tooltip]="t('data_notice_reminder_hint')" [attr.aria-label]="t('data_notice_reminder') + '. ' + t('data_notice_reminder_hint')">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="11" x2="12" y2="16"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+    <span>{{ t('data_notice_reminder') }}</span>
+</button>
+
+<div class="dn-backdrop" *ngIf="open" (click)="dismiss()"></div>
+<div class="dn-dialog" *ngIf="open" role="dialog" aria-modal="true" aria-labelledby="dn-title" aria-describedby="dn-body" (keydown)="onKeydown($event)">
+    <div class="dn-header">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="11" x2="12" y2="16"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+        <h2 id="dn-title">{{ t('data_notice_title') }}</h2>
+    </div>
+    <div class="dn-content">
+        <p id="dn-body">{{ t('data_notice_body') }}</p>
+        <div class="dn-levels">
+            <div class="dn-level">
+                <span class="opp-trust opp-trust--ai">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2"></rect><path d="M9 1v4M15 1v4M9 19v4M15 19v4M1 9h4M1 15h4M19 9h4M19 15h4"></path></svg>
+                    <span>{{ t('trust_ai_generated') }}</span>
+                </span>
+                <span>{{ t('trust_ai_generated_hint') }}</span>
+            </div>
+            <div class="dn-level">
+                <span class="opp-trust opp-trust--verified">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.1V12a10 10 0 1 1-5.9-9.1"></path><polyline points="22 4 12 14 9 11"></polyline></svg>
+                    <span>{{ t('trust_verified') }}</span>
+                </span>
+                <span>{{ t('trust_verified_hint') }}</span>
+            </div>
+        </div>
+        <p>{{ t('data_notice_levels') }}</p>
+    </div>
+    <div class="dn-actions">
+        <a *ngIf="learnMoreUrl" class="dn-learn-more" [href]="learnMoreUrl" target="_blank" rel="noopener noreferrer">{{ t('data_notice_learn_more') }}</a>
+        <button #dismissButton type="button" class="dn-dismiss" (click)="dismiss()">{{ t('data_notice_dismiss') }}</button>
+    </div>
+</div>

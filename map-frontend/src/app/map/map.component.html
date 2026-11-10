@@ -19,3 +19,4 @@
 <app-tooltip [map]="map"></app-tooltip>
 <app-footer [footerUrl]="footerUrl"></app-footer>
 <app-chameleon-button (clicked)="aboutUsButtonClick()"></app-chameleon-button>
+<app-data-notice *ngIf="mapSetting?.data_notice_enabled === true" [learnMoreUrl]="mapSetting?.data_notice_url || null"></app-data-notice>

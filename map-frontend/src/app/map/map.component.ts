@@ -15,6 +15,7 @@ import 'leaflet-responsive-popup';
 import '@elfalem/leaflet-curve';
 import { ApiService } from '../api.service';
 import { TranslationService } from '../translation.service';
+import { provenanceRowHtml } from '../provenance';
 import { OverlayedPopupComponent } from '../overlayed-popup/overlayed-popup.component';
 import { forkJoin } from 'rxjs';
 import { kml } from '@tmcw/togeojson';
@@ -1081,6 +1082,9 @@ export class MapComponent implements OnInit {
       // below is the only content, and it never says whose it is.
       html += `<div class="opp-tabs-subtitle">${active.name}</div>`;
     }
+
+    // How far to trust this network's data and when it last changed
+    html += provenanceRowHtml(active, this.translationService);
 
     if (description && description !== 'nan') {
       html += '<p class="opp-summary">' + description + '</p>';
