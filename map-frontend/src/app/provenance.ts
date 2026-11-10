@@ -7,10 +7,10 @@ import { TranslationService } from './translation.service';
  */
 export interface Provenance {
   verified: boolean;
-  // Badge text: "Verified" / "AI-generated"
+  // Badge text: "Confirmed" / "Unconfirmed" (by the institution)
   label: string;
   // Shown on hover/focus of the badge: who verified it and when, or
-  // what AI-generated means
+  // what unconfirmed means
   tooltip: string;
   // "3 Nov 2026", or null when the backend has no update date
   updatedOn: string | null;
@@ -58,7 +58,7 @@ export function escapeHtml(text: string): string {
 }
 
 // Inline stroke icons (currentColor), shared by both popups
-export const ICON_AI = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2"></rect><path d="M9 1v4M15 1v4M9 19v4M15 19v4M1 9h4M1 15h4M19 9h4M19 15h4"></path></svg>';
+export const ICON_UNCONFIRMED = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>';
 export const ICON_VERIFIED = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.1V12a10 10 0 1 1-5.9-9.1"></path><polyline points="22 4 12 14 9 11"></polyline></svg>';
 export const ICON_CALENDAR = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>';
 
@@ -78,7 +78,7 @@ export function provenanceRowHtml(institution: PopupInstitution, translation: Tr
     '<div class="opp-provenance">' +
     `<span class="opp-trust opp-trust--${kind}" tabindex="0" data-tooltip="${tooltip}" ` +
     `aria-label="${escapeHtml(provenance.label)}. ${tooltip}">` +
-    (provenance.verified ? ICON_VERIFIED : ICON_AI) +
+    (provenance.verified ? ICON_VERIFIED : ICON_UNCONFIRMED) +
     `<span>${escapeHtml(provenance.label)}</span></span>`;
   if (provenance.updatedOn) {
     html +=

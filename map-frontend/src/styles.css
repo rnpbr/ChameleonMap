@@ -309,8 +309,8 @@ body {
     margin-right: 0 !important;
 }
 
-/* Provenance of a network's data: trust badge ("AI-generated" /
-   "Verified") and last update date. Global because the small Leaflet
+/* Provenance of a network's data: badge ("Unconfirmed" /
+   "Confirmed" by the institution) and last update date. Global because the small Leaflet
    popup is built as a raw HTML string; the expanded popup's strip and
    the data notice reuse the badge. */
 .opp-provenance {

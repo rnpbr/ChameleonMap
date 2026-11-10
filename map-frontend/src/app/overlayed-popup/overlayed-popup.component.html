@@ -18,7 +18,7 @@
             <span class="opp-trust" [class.opp-trust--verified]="provenance.verified" [class.opp-trust--ai]="!provenance.verified"
                   tabindex="0" [attr.data-tooltip]="provenance.tooltip" [attr.aria-label]="provenance.label + '. ' + provenance.tooltip">
                 <svg *ngIf="provenance.verified" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.1V12a10 10 0 1 1-5.9-9.1"></path><polyline points="22 4 12 14 9 11"></polyline></svg>
-                <svg *ngIf="!provenance.verified" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2"></rect><path d="M9 1v4M15 1v4M9 19v4M15 19v4M1 9h4M1 15h4M19 9h4M19 15h4"></path></svg>
+                <svg *ngIf="!provenance.verified" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                 <span>{{ provenance.label }}</span>
             </span>
             <span class="opp-updated" *ngIf="provenance.updatedOn">
