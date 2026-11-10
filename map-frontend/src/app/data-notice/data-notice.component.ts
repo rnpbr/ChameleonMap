@@ -4,9 +4,10 @@ import { TranslationService } from '../translation.service';
 const DISMISSED_KEY = 'dataNoticeDismissed';
 
 /**
- * Tells visitors, on their first visit, that the map's data is not
- * from an official source and was compiled semi-automatically and
- * partly with AI. Once dismissed, a small reminder stays in the corner
+ * Tells visitors, on their first visit, where the map's data comes
+ * from (partly from the institutions, partly extracted
+ * semi-automatically or with AI) and that it may differ from official
+ * sources. Once dismissed, a small reminder stays in the corner
  * and reopens the notice. Shown only when the map settings turn it on
  * (data_notice_enabled).
  */
