@@ -15,6 +15,22 @@ const DEFAULT_LABELS: Record<string, string> = {
   report_correction_prompt: 'Something wrong or outdated in the information about',
   report_correction: 'Report a correction',
   report_correction_hint: 'Opens your email app with the institution pre-filled',
+  data_notice_title: 'About the data on this map',
+  data_notice_body: 'REN Map topologies and institution descriptions come from different sources: some were provided by the institutions, others were extracted semi-automatically or with AI. Some information may be wrong, out of date or differ from official sources.',
+  data_notice_levels: 'Every network shows its level and when its topology was last updated. Spotted a mistake? Use "Report a correction" in any network, or propose a fix on GitHub.',
+  data_notice_learn_more: 'How the data is maintained',
+  data_notice_dismiss: 'Got it',
+  data_notice_reminder: 'Partly AI-extracted data',
+  data_notice_reminder_hint: 'Some topologies and institution descriptions were extracted semi-automatically or with AI. Click to read the full notice.',
+  trust_ai_generated: 'Unconfirmed',
+  trust_ai_generated_hint: 'content reviewed by the maintainers',
+  trust_ai_generated_tooltip: "The topology and the institution's description were reviewed by the maintainers, but not yet officially confirmed by a representative of the institution.",
+  trust_verified: 'Confirmed',
+  trust_verified_hint: 'content confirmed by the institution',
+  verified_by: 'Content confirmed by',
+  updated_on: 'Updated',
+  topology_updated_on: 'Topology updated',
+  view_latest_change: 'View latest change',
 };
 
 /**
@@ -74,6 +90,22 @@ export class TranslationService {
   /** Returns the fixed map vocabulary text for the given key */
   t(key: string): string {
     return this.labels[key] || DEFAULT_LABELS[key] || key;
+  }
+
+  /**
+   * Formats a YYYY-MM-DD day (as the API sends dates) for the detected
+   * language, e.g. "3 Nov 2026" / "3 de nov. de 2026". Read and shown
+   * in UTC so the day never shifts with the viewer's time zone.
+   * Anything unparseable is returned as is.
+   */
+  formatDate(day: string): string {
+    const date = new Date(`${day}T00:00:00Z`);
+    if (isNaN(date.getTime())) {
+      return day;
+    }
+    return new Intl.DateTimeFormat(this.language, {
+      day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC',
+    }).format(date);
   }
 
   /**

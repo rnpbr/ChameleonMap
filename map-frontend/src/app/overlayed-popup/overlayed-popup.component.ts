@@ -10,6 +10,7 @@ import {
 } from '@angular/core';
 import { SubMapComponent } from '../sub-map/sub-map.component';
 import { TranslationService } from '../translation.service';
+import { Provenance, provenanceOf } from '../provenance';
 
 @Component({
   selector: 'app-overlayed-popup',
@@ -84,6 +85,12 @@ export class OverlayedPopupComponent {
     const subject = `Correction request: ${institution.name}`;
     const body = `Institution: ${institution.name}\n\nWhat is wrong or outdated:\n`;
     return `mailto:${this.correctionEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  }
+
+  /** Trust badge / update date of the active institution tab, if any */
+  get activeProvenance(): Provenance | null {
+    const institution = this.activeInstitution;
+    return institution ? provenanceOf(institution, this.translationService) : null;
   }
 
   /** Fixed map vocabulary, translated for the browser's detected language */

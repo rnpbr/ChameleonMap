@@ -62,6 +62,16 @@ body {
     top: 98px;
 }
 
+/* ...and further down for the provenance strip (42px) under the title
+   bar / tab bar. */
+#overlayed-popup.has-provenance .sub-map-container {
+    top: 86px;
+}
+
+#overlayed-popup.has-institution-tabs.has-provenance .sub-map-container {
+    top: 140px;
+}
+
 /* Leave room for the "Report a correction" footer (48px) pinned to
    the bottom of the big overlayed popup. */
 #overlayed-popup.has-report-footer .sub-map-container {
@@ -297,4 +307,133 @@ body {
 
 .mat-content-hide-toggle {
     margin-right: 0 !important;
+}
+
+/* Provenance of a network's data: badge ("Unconfirmed" /
+   "Confirmed" by the institution) and last update date. Global because the small Leaflet
+   popup is built as a raw HTML string; the expanded popup's strip and
+   the data notice reuse the badge. */
+.opp-provenance {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 10px;
+    margin-top: 10px;
+}
+
+.opp-trust {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.5;
+    white-space: nowrap;
+}
+
+/* Orange vs blue (not red vs green), and the icons differ too */
+.opp-trust--ai {
+    background: #fff4e5;
+    color: #7a4300;
+}
+
+.opp-trust--verified {
+    background: #e8eaf6;
+    color: #2a2d7c;
+}
+
+.opp-trust[tabindex] {
+    cursor: help;
+}
+
+.opp-trust:focus-visible {
+    outline: 2px solid #9fa3d9;
+    outline-offset: 1px;
+}
+
+.opp-trust[data-tooltip]:hover::after,
+.opp-trust[data-tooltip]:focus-visible::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    left: 0;
+    top: calc(100% + 6px);
+    z-index: 2;
+    width: 220px;
+    padding: 8px 10px;
+    background: #3c4043;
+    color: #fff;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 400;
+    line-height: 1.45;
+    white-space: normal;
+    text-align: left;
+}
+
+.opp-updated {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: #5f6368;
+}
+
+.opp-trust svg,
+.opp-updated svg {
+    flex: none;
+}
+
+/* The expanded popup's strip, between the tab bar and the sub-map */
+.opp-provenance-strip {
+    position: relative;
+    z-index: 7776;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    height: 42px;
+    padding: 0 20px;
+    box-sizing: border-box;
+    background: #f7f8fb;
+    border-bottom: 1px solid #e0e0e0;
+    font-family: Roboto, "Helvetica Neue", sans-serif;
+    font-size: 12px;
+    color: #5f6368;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.opp-provenance-strip .opp-trust {
+    font-size: 12px;
+    padding: 3px 10px;
+    min-width: 0;
+}
+
+.opp-provenance-strip .opp-trust > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.opp-provenance-strip .opp-updated {
+    font-size: 12px;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.opp-latest-change {
+    margin-left: auto;
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-weight: 500;
+    color: #2a2d7c;
+    text-decoration: none;
+}
+
+.opp-latest-change:hover {
+    color: #4a4ea8;
+    text-decoration: underline;
 }

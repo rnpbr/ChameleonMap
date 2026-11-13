@@ -1,0 +1,211 @@
+/* Layout of the canvas' variant A: a centered modal on wide screens,
+   a bottom sheet on phones, and a reminder chip in the bottom-left
+   corner (the bottom-right one has the zoom and Chameleon buttons). */
+
+.dn-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 8000;
+  background: rgba(54, 50, 50, 0.55);
+}
+
+.dn-dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 8001;
+  width: calc(100% - 32px);
+  max-width: 520px;
+  max-height: calc(100% - 32px);
+  overflow-y: auto;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+  font-family: Roboto, "Helvetica Neue", sans-serif;
+  text-align: left;
+}
+
+.dn-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  background: #2a2d7c;
+  color: #fff;
+}
+
+.dn-header h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.dn-content {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px 24px 8px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: #3c4043;
+}
+
+.dn-content p {
+  margin: 0;
+}
+
+.dn-levels {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  background: #f7f8fb;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.dn-level {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.dn-level .opp-trust {
+  font-size: 12px;
+}
+
+.dn-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 16px 16px;
+}
+
+.dn-learn-more {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #2a2d7c;
+  text-decoration: none;
+}
+
+.dn-learn-more:hover {
+  color: #4a4ea8;
+  text-decoration: underline;
+}
+
+.dn-dismiss {
+  min-height: 44px;
+  padding: 0 22px;
+  border: none;
+  border-radius: 4px;
+  background: #2a2d7c;
+  color: #fff;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.dn-dismiss:hover {
+  background: #4a4ea8;
+}
+
+.dn-dismiss:focus-visible,
+.dn-learn-more:focus-visible,
+.dn-reminder:focus-visible {
+  outline: 3px solid #9fa3d9;
+  outline-offset: 2px;
+}
+
+.dn-reminder {
+  position: fixed;
+  left: 10px;
+  bottom: 10px;
+  z-index: 1000;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  max-width: calc(100% - 80px);
+  padding: 0 14px 0 10px;
+  border: 1px solid #f0c27a;
+  border-radius: 18px;
+  background: #fff8ec;
+  color: #7a4300;
+  font-family: Roboto, "Helvetica Neue", sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.dn-reminder svg {
+  flex: none;
+}
+
+.dn-reminder span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dn-reminder:hover {
+  background: #fff1d9;
+}
+
+/* Hover/focus explanation above the chip */
+.dn-reminder:hover::after,
+.dn-reminder:focus-visible::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 8px);
+  width: 300px;
+  max-width: calc(100vw - 20px);
+  padding: 10px 12px;
+  background: #3c4043;
+  color: #fff;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.45;
+  text-align: left;
+  white-space: normal;
+}
+
+/* Phones: the notice becomes a bottom sheet */
+@media (max-width: 600px) {
+  .dn-dialog {
+    top: auto;
+    bottom: 0;
+    left: 0;
+    transform: none;
+    width: 100%;
+    max-width: none;
+    max-height: 90%;
+    border-radius: 16px 16px 0 0;
+  }
+
+  .dn-actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .dn-dismiss {
+    min-height: 48px;
+  }
+
+  .dn-learn-more {
+    justify-content: center;
+  }
+}
