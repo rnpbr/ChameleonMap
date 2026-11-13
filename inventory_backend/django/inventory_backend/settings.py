@@ -227,15 +227,6 @@ if ENABLE_MULTITENANT:
         }
     }
 
-    SINGLE_TENANT_SOURCE_DATABASE = 'single_tenant_source'
-    if os.environ.get('POSTGRES_DB_MULTITENANT'):
-        DATABASES["default"]["NAME"] = os.environ['POSTGRES_DB_MULTITENANT']
-        DATABASES[SINGLE_TENANT_SOURCE_DATABASE] = {
-            **DATABASE_DEFAULT,
-            "ENGINE": 'django.db.backends.postgresql',
-            "OPTIONS": {"options": "-c default_transaction_read_only=on"},
-        }
-
     DATABASE_ROUTERS = (
         'django_tenants.routers.TenantSyncRouter',
     )
