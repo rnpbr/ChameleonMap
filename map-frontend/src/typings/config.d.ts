@@ -107,7 +107,6 @@ declare global {
 
   export interface LanguageOption {
     code: string;
-    flag: string;
     name: string;
   }
 }

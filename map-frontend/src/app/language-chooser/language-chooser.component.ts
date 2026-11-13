@@ -1,5 +1,4 @@
 import { Component, OnInit, Input, Output, EventEmitter, ChangeDetectorRef } from '@angular/core';
-import { countries } from 'country-flag-icons'
 import { LanguageService } from '../language.service';
 
 @Component({
@@ -10,12 +9,15 @@ import { LanguageService } from '../language.service';
 
 export class LanguageChooserComponent {
   protected languageList: LanguageOption[] = [
-    {code:"pt", flag:"🇧🇷", name:"Português"},
-    {code:"en", flag:"🇺🇸", name:"English"},
-    {code:"es", flag:"🇪🇦", name:"Español"},
-    {code:"de", flag:"🇩🇪", name:"Deutsch"},
-    {code:"ko", flag:"🇰🇷", name:"한국어"}
+    {code:"pt", name:"Português"},
+    {code:"en", name:"English"},
+    {code:"es", name:"Español"},
+    {code:"de", name:"Deutsch"},
+    {code:"ko", name:"한국어"}
   ];
+
+  // circle-flags is keyed by country, not language
+  private readonly flagCountryByLanguage: Record<string, string> = { pt: 'br', en: 'us', ko: 'kr' };
   
   protected isHovering = false;
 
@@ -57,5 +59,10 @@ export class LanguageChooserComponent {
       return true
     else
       return false
+  }
+
+  getFlag(language: LanguageOption): string {
+    const country = this.flagCountryByLanguage[language.code] ?? language.code;
+    return `https://hatscripts.github.io/circle-flags/flags/${country}.svg`;
   }
 }
