@@ -14,11 +14,7 @@ import unicodedata
 
 def is_valid_label(label):
     # Normalize to NFC
-    print(label)
     label = unicodedata.normalize('NFC', label)
-    print(label)
-    # Check regex
-    import re
     if not re.match(label_regex, label, flags=re.IGNORECASE):
         return False
     # Cannot be only numbers

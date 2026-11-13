@@ -227,9 +227,6 @@ class Map_configuration(models.Model):
     def user_directory_path(instance, filename):
         return 'assets/{1}'.format(filename)
     
-    def get_automatic_translation_labels(self):
-        return [LanguageCode[k] for k in self.automatic_translation_languages if k in LanguageCode]
-
     class Meta:
         verbose_name = _("Map Settings")
         verbose_name_plural = _("Map Settings")

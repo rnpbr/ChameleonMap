@@ -93,12 +93,6 @@ export class MapLoadProfiler {
     }));
     console.group(`[MapLoad] ${kind} summary`);
     console.table(rows);
-    const total = rows.reduce((sum, row) => {
-      if (row.step.endsWith('total')) {
-        return sum;
-      }
-      return sum;
-    }, 0);
     const totalRow = rows.find((row) => row.step.includes('total'));
     if (totalRow) {
       console.info(`[MapLoad] ${kind} total: ${totalRow.ms} ms`);
