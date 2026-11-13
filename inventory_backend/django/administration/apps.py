@@ -9,5 +9,6 @@ class AdministrationConfig(AppConfig):
 
     def ready(self):
         from administration.map_data.signals import connect_map_data_cache_signals
-        import administration.translateOnSavingSignal
+        from administration.translateOnSavingSignal import connect_translation_signals
         connect_map_data_cache_signals()
+        connect_translation_signals()

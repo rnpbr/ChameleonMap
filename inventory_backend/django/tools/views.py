@@ -1,26 +1,17 @@
-from django.shortcuts import render
-from django.http import HttpResponse, JsonResponse
-import requests, json
+from django.http import JsonResponse
+import os, requests, json
 from administration.models import *
 from administration.map_data.cache import invalidate_map_data_cache
 from django.views.decorators.csrf import csrf_exempt
 import re
 
-TRANSLATOR_URL = 'http://translator:5005/translate'
+TRANSLATOR_URL = os.environ.get('TRANSLATOR_URL', 'http://translator:5005/translate')
 TRANSLATABLE_MODELS = [Menu, MenuGroup, Tag, Links_group, Link, Location, Kml_shape]
 TRANSLATION_BATCH_SIZE = 50
 TRANSLATION_BATCH_MAX_CHARS = 4000
+BATCH_TIMEOUT = 120
+SINGLE_TEXT_TIMEOUT = 30
 
-# def translateText2(request):
-#     createTranslationsForAllTitles('ko')
-#     return HttpResponse("<html><body> <h3>Funcionou perfeitamente :)</h3> </body></html>")
-
-def requestTranslationsGeneration(request):
-    if request.method == "POST":
-        createTranslationsForAllTitles(request.POST.get("targetLanguage"))
-        return redirect("generate_translations")
-    return render(request, "generate_translations.html")
-    
 def createTranslationsForAllTitles(targetLanguage):
     for _ in generateTranslationsInBatches(targetLanguage):
         pass
@@ -104,14 +95,14 @@ def normalizeLanguageCode(code):
     variation_code = code_parts[1].lower() if len(code_parts) > 1 else None
     return {'macro_language': macro_language, 'variation': variation_code}
     
-def translateTexts(texts, target, source="auto"):
+def translateTexts(texts, target, source="auto", timeout=BATCH_TIMEOUT):
     translationRequest = {
         "q": texts,
         "source": normalizeLanguageCode(source)['macro_language'],
         "target": normalizeLanguageCode(target)['macro_language']
     }
 
-    response = requests.post(TRANSLATOR_URL, json=translationRequest, timeout=120)
+    response = requests.post(TRANSLATOR_URL, json=translationRequest, timeout=timeout)
     try:
         result = response.json()
     except ValueError:
@@ -121,7 +112,7 @@ def translateTexts(texts, target, source="auto"):
     return result['translatedText']
 
 def translateText(text, target, source="auto"):
-    return translateTexts([text], target, source)[0]
+    return translateTexts([text], target, source, timeout=SINGLE_TEXT_TIMEOUT)[0]
 
 def createTitleTranslation(element, targetLanguageCode, sourceLanguageCode = "auto"):
     if element:
@@ -130,7 +121,8 @@ def createTitleTranslation(element, targetLanguageCode, sourceLanguageCode = "au
 
         if(contentType and originalTitle):
             translatedTitle = translateText(originalTitle, targetLanguageCode, sourceLanguageCode)
-            newTranslation = NameTranslation(name=translatedTitle, language_code = targetLanguageCode, object_id = element.id, content_type=contentType)
+            maxNameLength = NameTranslation._meta.get_field('name').max_length
+            newTranslation = NameTranslation(name=translatedTitle[:maxNameLength], language_code = targetLanguageCode, object_id = element.id, content_type=contentType)
             newTranslation.save()
             return True
     return False
