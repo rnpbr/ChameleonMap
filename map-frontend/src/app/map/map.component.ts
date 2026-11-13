@@ -18,6 +18,7 @@ import { ChameleonButtonComponent } from '../chameleon-button/chameleon-button.c
 import { createMapLoadProfiler, MapLoadProfiler } from './map-load-profiler';
 import { MapDataService, MapDataStore } from './map-data.service';
 import { PopupContentService } from './popup-content.service';
+import { LanguageService } from '../language.service';
 import { runBatchedWork, BatchSchedulerHandle } from './map-interaction-scheduler';
 import {
   buildEntityIndex,
@@ -49,7 +50,6 @@ export class MapComponent implements OnInit {
   private _links: Array<Link>;
   private _linksGroup: Array<LinksGroup>;
   private _kmlShapes: Array<KmlLayerDto>;
-  private _currentLanguage: LanguageOption;
   private _languageOptionsList: Array<string>;
   public mapSetting: any = null;
   public map: L.Map;
@@ -189,16 +189,10 @@ export class MapComponent implements OnInit {
     this._languageOptionsList = value;
   }   
 
-  get currentLanguage() {
-    return this._currentLanguage;
-  }
-  set currentLanguage(value) {
-    this._currentLanguage = value;
-  }
-
   constructor(
     private mapDataService: MapDataService,
-    private popupContent: PopupContentService
+    private popupContent: PopupContentService,
+    private languageService: LanguageService
   ) {
     this.checkOrientation();
   }
@@ -253,7 +247,9 @@ export class MapComponent implements OnInit {
     this.linksGroup = store.linksGroups;
     this.kmlShapes = store.kmlLayers;
     this.languageOptionsList = store.languageOptionsList;
-    this.currentLanguage = this.mapSettings.default_content_language;
+    if (this.mapSettings.default_content_language) {
+      this.languageService.setLanguage(this.mapSettings.default_content_language);
+    }
   }
 
   private initializeMap(): void {

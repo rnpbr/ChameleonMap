@@ -28,7 +28,7 @@ declare global {
     readonly link_feature: boolean;
     readonly hide_menu_group_when_unique: boolean;
     readonly footer_file: string;
-    readonly default_content_language: LanguageOption;
+    readonly default_content_language: string;
   }
 
   export interface KmlLayerDto {

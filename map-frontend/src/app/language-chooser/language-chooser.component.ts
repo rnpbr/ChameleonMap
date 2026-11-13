@@ -17,8 +17,6 @@ export class LanguageChooserComponent {
     {code:"ko", flag:"🇰🇷", name:"한국어"}
   ];
   
-  protected readonly defaultLanguage: LanguageOption = this.languageList[0];
-  protected currentLanguage: LanguageOption;
   protected isHovering = false;
 
   @Input() languageOptionsList: Array<string>
@@ -34,10 +32,11 @@ export class LanguageChooserComponent {
     return (this.languageOptionsList?.length ?? 0) > 1;
   }
 
-  ngOnInit(){
-    this.currentLanguage = this.defaultLanguage
+  // Derived from the service so it follows the map's default_content_language
+  protected get currentLanguage(): LanguageOption {
+    return this.languageList.find(language => language.code === this.languageService.language) ?? this.languageList[0];
   }
-  
+
   onMouseEntering(){
     this.isHovering = true;
   }
@@ -50,7 +49,6 @@ export class LanguageChooserComponent {
   }
 
   setLanguage(language: LanguageOption){
-    this.currentLanguage = language
     this.languageService.setLanguage(language)
   }
 
