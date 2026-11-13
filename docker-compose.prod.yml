@@ -23,3 +23,8 @@ services:
     env_file:
       - ./env/.env.prod
     restart: always
+
+  translator:
+    env_file:
+      - ./env/.env.prod
+    restart: always
