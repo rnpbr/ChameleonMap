@@ -16,6 +16,7 @@ services:
 
   nginx:
     build: ./nginx
+    env_file: ./env/.env.dev
     ports:
       - "${NGINX_PORT:-80}:80"
     volumes:
@@ -45,7 +46,17 @@ services:
     build:
       context: ./map-frontend
       target: development
+    env_file:
+      - ./env/.env.dev
     volumes:
       - ./map-frontend:/usr/src/app
     expose:
       - 4200
+
+  translator:
+    restart: unless-stopped
+    ports:
+      - "5005:5005"
+    env_file:
+      - ./env/.env.dev
+    

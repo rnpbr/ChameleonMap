@@ -1,0 +1,232 @@
+export interface TagRelationshipRecord {
+  readonly id: number;
+  readonly parent_tag: number;
+  readonly child_tag: number;
+  readonly cluster_id: number | null;
+}
+
+export interface TagLike {
+  readonly id: number;
+  readonly parent_menu: number;
+  related_locations: number[];
+  child_tags: TagRelationshipRecord[];
+  parent_tags: TagRelationshipRecord[];
+  visibility: boolean;
+  dependenciesActive: boolean;
+}
+
+export interface MenuLike {
+  readonly id: number;
+  readonly group: number;
+  readonly hierarchy_level: number;
+  readonly pinned?: boolean;
+}
+
+export interface MenuGroupLike {
+  readonly id: number;
+  readonly name: string;
+  readonly simultaneous_context: boolean;
+}
+
+export interface LinksGroupLike {
+  readonly id: number;
+  readonly parent_menu: number;
+}
+
+export function buildTagRelationshipIndexes<T extends TagLike>(
+  tags: T[],
+  relationships: TagRelationshipRecord[]
+): void {
+  tags.forEach((tag) => {
+    tag.child_tags = [];
+    tag.parent_tags = [];
+  });
+
+  relationships.forEach((relation) => {
+    tags.forEach((tag) => {
+      if (relation.parent_tag === tag.id) {
+        tag.child_tags.push(relation);
+      } else if (relation.child_tag === tag.id) {
+        tag.parent_tags.push(relation);
+      }
+    });
+  });
+}
+
+export function isIndirectChild(
+  tag: TagLike,
+  childTag: TagLike,
+  menusById: Map<number, MenuLike>
+): boolean {
+  const isDirectChild = tag.child_tags.some(
+    (relation) => relation.child_tag === childTag.id
+  );
+  if (isDirectChild) {
+    return false;
+  }
+
+  const tagMenuLevel = menusById.get(tag.parent_menu)?.hierarchy_level;
+  const childTagMenuLevel = menusById.get(childTag.parent_menu)?.hierarchy_level;
+  if (tagMenuLevel !== undefined && childTagMenuLevel !== undefined) {
+    return childTagMenuLevel > tagMenuLevel + 1;
+  }
+  return false;
+}
+
+export function resolveInheritedLocations<T extends TagLike>(
+  tag: T,
+  iterationTag: T,
+  tagsById: Map<number, T>,
+  menusById: Map<number, MenuLike>
+): void {
+  if (!iterationTag.child_tags?.length) {
+    return;
+  }
+
+  iterationTag.child_tags.forEach((childRelation) => {
+    const child = tagsById.get(childRelation.child_tag);
+    if (!child) {
+      return;
+    }
+
+    if (!isIndirectChild(tag, child, menusById)) {
+      child.related_locations.forEach((locationId) => {
+        tag.related_locations.push(locationId);
+      });
+    } else {
+      const clusterIds = [
+        ...new Set(child.parent_tags.map((relation) => relation.cluster_id)),
+      ];
+      const relatedMenus = child.parent_tags
+        .map((relation) => tagsById.get(relation.parent_tag)?.parent_menu)
+        .filter((menuId): menuId is number => menuId !== undefined);
+
+      if (clusterIds.length === 1 || !relatedMenus.includes(tag.parent_menu)) {
+        child.related_locations.forEach((locationId) => {
+          tag.related_locations.push(locationId);
+        });
+      }
+    }
+
+    child.child_tags.forEach((nestedRelation) => {
+      const nestedTag = tagsById.get(nestedRelation.parent_tag);
+      if (nestedTag) {
+        resolveInheritedLocations(tag, nestedTag, tagsById, menusById);
+      }
+    });
+  });
+
+  tag.related_locations = [...new Set(tag.related_locations)];
+}
+
+export function isAnyClusterActive<T extends TagLike>(
+  childTag: T,
+  tagsById: Map<number, T>
+): boolean {
+  const clusterIds = [...new Set(childTag.parent_tags.map((relation) => relation.cluster_id))];
+  let isAnyClusterActive = true;
+
+  clusterIds.forEach((clusterId) => {
+    const parentsInCluster = childTag.parent_tags.filter(
+      (relation) => relation.cluster_id === clusterId
+    );
+    if (areParentsInactive(parentsInCluster, tagsById)) {
+      isAnyClusterActive = false;
+    }
+  });
+
+  return isAnyClusterActive;
+}
+
+export function areParentsInactive<T extends TagLike>(
+  relations: TagRelationshipRecord[],
+  tagsById: Map<number, T>
+): boolean {
+  return relations.every((relation) => {
+    const parent = tagsById.get(relation.parent_tag);
+    return parent?.visibility === false || parent?.dependenciesActive === false;
+  });
+}
+
+export function isMenuSimultaneousAndSelected(
+  menuId: number,
+  menusById: Map<number, MenuLike>,
+  menuGroupsById: Map<number, MenuGroupLike>,
+  selectedMenusByGroup: Record<string, number>,
+  menuGroup?: MenuGroupLike
+): boolean {
+  const menu = menusById.get(menuId);
+  if (!menu) {
+    return false;
+  }
+
+  let resolvedMenuGroup = menuGroup;
+  if (!resolvedMenuGroup) {
+    resolvedMenuGroup = menuGroupsById.get(menu.group);
+  }
+  if (!resolvedMenuGroup?.simultaneous_context) {
+    return false;
+  }
+
+  if (selectedMenusByGroup[resolvedMenuGroup.name] === undefined) {
+    selectedMenusByGroup[resolvedMenuGroup.name] = menuId;
+    return true;
+  }
+
+  return selectedMenusByGroup[resolvedMenuGroup.name] === menuId;
+}
+
+export function isLinksGroupInContext(
+  linksGroup: LinksGroupLike,
+  selectedMenuId: number,
+  menusById: Map<number, MenuLike>,
+  menuGroupsById: Map<number, MenuGroupLike>,
+  selectedMenusByGroup: Record<string, number>
+): boolean {
+  const isSimultaneous = isMenuSimultaneousAndSelected(
+    linksGroup.parent_menu,
+    menusById,
+    menuGroupsById,
+    selectedMenusByGroup
+  );
+  const isPinned = menusById.get(linksGroup.parent_menu)?.pinned === true;
+
+  return linksGroup.parent_menu === selectedMenuId || isSimultaneous || isPinned;
+}
+
+export function shouldShowTagForMenu(
+  tag: TagLike,
+  selectedMenuId: number,
+  menusById: Map<number, MenuLike>,
+  menuGroupsById: Map<number, MenuGroupLike>,
+  selectedMenusByGroup: Record<string, number>
+): boolean {
+  return (
+    tag.parent_menu === selectedMenuId ||
+    isMenuSimultaneousAndSelected(
+      tag.parent_menu,
+      menusById,
+      menuGroupsById,
+      selectedMenusByGroup
+    )
+  );
+}
+
+export function buildEntityIndex<T extends { id: number }>(items: T[]): Map<number, T> {
+  return new Map(items.map((item) => [item.id, item]));
+}
+
+/** Returns true for a tag, the only marker type carrying `related_locations`. */
+export function isTag(marker: MapMarkerType): marker is Tag {
+  return 'related_locations' in marker;
+}
+
+/** Returns true for a link group (has `links_color` but is neither a KML layer nor a KML shape). */
+export function isLinksGroup(marker: MapMarkerType): marker is LinksGroup {
+  return 'links_color' in marker && !('geojson' in marker) && !('kml_file' in marker);
+}
+
+/** Returns true for a KML layer, the only marker type carrying GeoJSON. */
+export function isKml(marker: MapMarkerType): marker is KmlLayerDto {
+  return 'geojson' in marker;
+}

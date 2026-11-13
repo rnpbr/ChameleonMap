@@ -1,0 +1,12 @@
+server_name *.${DJANGO_BASE_DOMAIN};
+
+set $redirect_admin_root 0;
+if ($host = "admin.${DJANGO_BASE_DOMAIN}") {
+    set $redirect_admin_root 1;
+}
+if ($uri = /) {
+    set $redirect_admin_root "${redirect_admin_root}1";
+}
+if ($redirect_admin_root = 11) {
+    return 302 /admin$is_args$args;
+}

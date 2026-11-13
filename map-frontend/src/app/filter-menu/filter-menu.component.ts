@@ -1,13 +1,15 @@
 import {
   Component,
-  OnInit,
   Input,
   Output,
   EventEmitter,
-  ViewChild
+  ViewChild,
 } from '@angular/core';
 import { EventEmitterService } from '../event-emitter.service';
-import { TagSidebarComponent } from './tag-sidebar/tag-sidebar.component';
+import { PinnedMenusSidebarComponent } from './pinned-menus-sidebar/pinned-menus-sidebar.component';
+import { MatIconRegistry } from '@angular/material/icon';
+import { DomSanitizer } from '@angular/platform-browser';
+import { isKml, isLinksGroup, isTag } from '../map/map-behavior';
 
 enum TagsMenuButtonBehavior {
   CloseAllEyes,
@@ -20,12 +22,16 @@ enum TagsMenuButtonBehavior {
   styleUrls: ['./filter-menu.component.css']
 })
 export class FilterMenuComponent {
-  @ViewChild(TagSidebarComponent) tagSidebar: TagSidebarComponent;
+  @ViewChild(PinnedMenusSidebarComponent) pinnedMenusSidebar: PinnedMenusSidebarComponent;
+
+  get hasPinnedMenus(): boolean {
+    return (this.pinnedMenusSidebar?._pinnedMenus?.length ?? 0) > 0;
+  }
 
   public _menugroups: Array<MenuGroup>;
   private _menus: Array<Menu>;
   private _tags: Array<Tag>;
-  private _kmlShapes: Array<KmlShape>;
+  private _kmlShapes: Array<KmlLayerDto>;
   private _linkGroups: Array<LinksGroup>;
   public _locations: Array<Location>;
   public _selectedTagsMenuId: number;
@@ -36,7 +42,7 @@ export class FilterMenuComponent {
   public _hasMenuGroupTabs: boolean;
   public currentBehaviorOfMultipleTagsVisibilityButton: TagsMenuButtonBehavior = TagsMenuButtonBehavior.CloseAllEyes;
   tagsMenuButtonBehavior = TagsMenuButtonBehavior;
-
+  public _linksActive: boolean;
   public activeMenus: Array<Menu>
 
   @Input()
@@ -48,6 +54,7 @@ export class FilterMenuComponent {
     if (this._menus && this._menus.length > 0) {
       this.activeMenus = this.getActiveMenus();
     }
+    this.updateAllMenuEyeBehaviors();
   }
 
   @Input()
@@ -59,6 +66,7 @@ export class FilterMenuComponent {
       this._menus = value;
       this.activeMenus = this.getActiveMenus();
     }
+    this.updateAllMenuEyeBehaviors();
   }
 
   @Input()
@@ -67,6 +75,7 @@ export class FilterMenuComponent {
   }
   set tags(value) {
     this._tags = value;
+    this.updateAllMenuEyeBehaviors();
   }
 
   @Input()
@@ -75,6 +84,7 @@ export class FilterMenuComponent {
   }
   set linkGroups(value) {
     this._linkGroups = value;
+    this.updateAllMenuEyeBehaviors();
   }
 
   @Input()
@@ -83,6 +93,7 @@ export class FilterMenuComponent {
   }
   set kmlShapes(value) {
     this._kmlShapes = value;
+    this.updateAllMenuEyeBehaviors();
   }
 
   @Input()
@@ -154,7 +165,26 @@ export class FilterMenuComponent {
   @Output()
   shapeReactivated = new EventEmitter();
 
-  constructor(private eventEmitterService: EventEmitterService) { }
+  get mapMarkers(): Array<MapMarkerType>{
+   let markers: Array<MapMarkerType> = [];
+   markers = markers.concat(this.tags).concat(this.linkGroups).concat(this.kmlShapes);
+   return markers;
+  }
+
+  /** Emitted when an item name is clicked, so the map can focus its elements. */
+  @Output()
+  markerFocus = new EventEmitter<MapMarkerType>();
+
+  /** Emitted when a menu name is clicked while the menu is already selected. */
+  @Output()
+  menuFocus = new EventEmitter<Menu>();
+
+  constructor(private eventEmitterService: EventEmitterService, private matIconRegistry: MatIconRegistry, private domSanitizer: DomSanitizer) {
+    this.matIconRegistry.addSvgIcon(
+      'eye-off',
+      this.domSanitizer.bypassSecurityTrustResourceUrl('assets/icons/eye-off.svg')
+    );
+  }
 
   ngOnInit() {
     if (this.eventEmitterService.subsVar == undefined) {
@@ -175,6 +205,7 @@ export class FilterMenuComponent {
       lg.visibility = true;
       this.insertLinesByLinkGroup(lg);
     }
+    this.checkActiveMenuTagsVisibilityStatus(lg.parent_menu);
   }
 
   removeLinesByLinkGroup(lg: LinksGroup) {
@@ -193,18 +224,41 @@ export class FilterMenuComponent {
       }
       menu.expanded = true;
       this.selectedTagsMenuId = menu.id;
-      this.currentBehaviorOfMultipleTagsVisibilityButton = TagsMenuButtonBehavior.CloseAllEyes;
       this.menuCliked.emit({ selectedTagsMenuId: this.selectedTagsMenuId });
-      this.checkActiveMenuTagsVisibilityStatus()
+      this.checkActiveMenuTagsVisibilityStatus(menu.id);
     }
   }
 
+  /**
+   * Handles a click on a menu name: selects the menu on the first click and
+   * emits {@link menuFocus} when the menu is already selected.
+   */
+  onMenuNameClick(menu: Menu, event: Event) {
+    event.stopPropagation();
+
+    if (this.selectedTagsMenuId === menu.id) {
+      this.menuFocus.emit(menu);
+      return;
+    }
+
+    this.menuClick(menu);
+  }
+
   closeAllEyes(menu: Menu, item: any, event: any) {
+    event.stopPropagation();
+
     for (let i = 0; i < this._tags.length; i++) {
       if (this._tags[i].parent_menu == menu.id) {
         if (this._tags[i].visibility == true) {
-          this.visibilityClick(this._tags[i], event)
+          this.visibilityClick(this._tags[i], event);
         }
+      }
+    }
+
+    for (let linkGroup of this._linkGroups) {
+      if (linkGroup.parent_menu == menu.id) {
+        linkGroup.visibility = false;
+        this.removeLinesByLinkGroup(linkGroup);
       }
     }
 
@@ -216,14 +270,23 @@ export class FilterMenuComponent {
       }
     }
 
-    this.currentBehaviorOfMultipleTagsVisibilityButton = TagsMenuButtonBehavior.OpenAllEyes;
+    menu.isEyeVisibilityOpen = false;
   }
 
   openAllEyes(menu: Menu, item: any, event: any) {
+    event.stopPropagation();
     for (let i = 0; i < this._tags.length; i++) {
       if (this._tags[i].parent_menu == menu.id) {
         if (this._tags[i].visibility == false) {
-          this.visibilityClick(this._tags[i], event)
+          this.visibilityClick(this._tags[i], event);
+        }
+      }
+    }
+
+    for (let linkGroup of this._linkGroups) {
+      if (linkGroup.parent_menu == menu.id) {
+        if (!linkGroup.visibility) {
+          this.LGVisibilityClick(linkGroup, event);
         }
       }
     }
@@ -236,12 +299,87 @@ export class FilterMenuComponent {
       }
     }
 
-    this.currentBehaviorOfMultipleTagsVisibilityButton = TagsMenuButtonBehavior.CloseAllEyes;
+    menu.isEyeVisibilityOpen = true;
   }
 
   menuSwitch(menu: Menu, event: any) {
     menu.expanded = !menu.expanded;
     event.stopPropagation();
+  }
+  
+  onMenuPinClicked(menu: Menu, event: any) {
+    this.toggleMenuPin(menu, event);
+    this.specialMenuPinRules(menu, event);
+  }
+
+  private toggleMenuPin(menu: Menu, event: any) {
+    menu.pinned ? this.unlockMenuButtonClicked(menu, event): this.pinMenuButtonClicked(menu, event);
+  }
+
+  private specialMenuPinRules(selectedMenu: Menu, event: any) {
+    if (selectedMenu.name.includes("Ipê")) {
+      this._menus.forEach((menu) => {
+        if (menu.name.includes("Ipê") && selectedMenu.id != menu.id) {
+          this.toggleMenuPin(menu, event);
+          return;
+        }
+      })
+    }
+    else if (selectedMenu.name.includes("CNDs")) {
+      this._menus.forEach((menu) => {
+        if (menu.name.includes("CNDs") && selectedMenu.id != menu.id) {
+          this.toggleMenuPin(menu, event);
+          return;
+        }
+      })
+    } 
+
+  }
+
+  pinMenuButtonClicked(menu: Menu, event: any) {
+    this.pinMenu(menu)
+    this.pinnedMenusSidebar.addPinnedMenu(menu)
+    this.menuCliked.emit({ selectedTagsMenuId: this.selectedTagsMenuId });
+    event.stopPropagation();
+  }
+
+  pinMenu(menu: Menu){
+    menu.pinned = true;
+  }
+
+  unpinMenu(menu: Menu){
+    menu.pinned = false;
+  }
+
+  onMenuLockClicked(menu: Menu, event: any) {
+    event.stopPropagation();
+    if (menu.pinned) {
+      this.unlockMenuButtonClicked(menu, event);
+    } else {
+      this.lockMenuButtonClicked(menu, event);
+    }
+  }
+
+  lockMenuButtonClicked(menu: Menu, event: any) {
+    menu.pinned = true;
+    this.pinnedMenusSidebar?.addPinnedMenu(menu);
+    this.menuCliked.emit({ selectedTagsMenuId: this.selectedTagsMenuId });
+    event.stopPropagation();
+  }
+
+  unlockMenuButtonClicked(menu: Menu, event: any) {
+    menu.pinned = false;
+    this.pinnedMenusSidebar?.removePinnedMenu(menu);
+    this.menuCliked.emit({ selectedTagsMenuId: this.selectedTagsMenuId });
+    event.stopPropagation();
+  }
+
+  sideBarUnpinMenuButtonClicked(menu: Menu) {
+    this.unlockMenuButtonClicked(menu, {} as Event);
+  }
+
+  onLockedMenuSelected(menu: Menu) {
+    this.menuClick(menu);
   }
 
   menuCollapse() {
@@ -256,10 +394,98 @@ export class FilterMenuComponent {
     }
   }
 
-  visibilityClick(tag: any, event: any) {
-    // Added in need for the sidebar button not to open
-    event.stopPropagation();
 
+  getMarkerType(marker: MapMarkerType): string{
+    if (!marker) return 'undefined';
+    if (isKml(marker)) return 'KmlLayerDto';
+    if ('kml_file' in marker) return 'KmlShape';
+    if (isLinksGroup(marker)) return 'LinksGroup';
+    if (isTag(marker)) return 'Tag';
+    return 'undefined';
+  }
+
+  getMarkerColor(marker: MapMarkerType){
+    let color = 'rgb(154, 154, 154)'
+
+    if(this.isMarkerTag(marker)){
+      color = marker.color;
+    }else if(this.isMarkerKmlLayerDto(marker) || this.isMarkerLinksGroup(marker)){ 
+      color = marker.links_color
+    }
+
+    return color;
+  }
+  getMarkerCurrentColor(marker: MapMarkerType){
+    let color = 'rgb(154, 154, 154)'
+
+    if(this.isMarkerTag(marker)){
+      color = marker.currentColor;
+    }else if(this.isMarkerKmlLayerDto(marker)){
+      color = marker.currentColor;
+    }else if(this.isMarkerLinksGroup(marker)){
+      color = marker.currentColor
+    }
+
+    return color;
+  }
+
+  isMarkerTag(marker: MapMarkerType): marker is Tag{
+    return isTag(marker);
+  }
+  isMarkerLinksGroup(marker: MapMarkerType): marker is LinksGroup{
+    return isLinksGroup(marker);
+  }
+  isMarkerKmlLayerDto(marker: MapMarkerType): marker is KmlLayerDto{
+    return isKml(marker);
+  }
+
+  /** Returns the CSS class for the marker icon (pin, line or KML layers icon). */
+  getMarkerIconClass(marker: MapMarkerType): string {
+    if (this.isMarkerTag(marker)) return 'tag-item-icon';
+    if (this.isMarkerLinksGroup(marker)) return 'links-item-icon';
+    return '';
+  }
+
+  /**
+   * Returns the color shown for a marker icon: its current color when selected
+   * and visible (or pinned), otherwise the default gray.
+   */
+  getMarkerDisplayColor(marker: MapMarkerType): string {
+    const isSelectedAndVisible =
+      this.selectedTagsMenuId === marker.parent_menu && marker.visibility;
+    const hasCustomColor = marker.currentColor !== this.getMarkerColor(marker);
+    return isSelectedAndVisible || hasCustomColor
+      ? marker.currentColor
+      : 'rgb(154, 154, 154)';
+  }
+
+  isMarkerActive(marker: MapMarkerType): boolean{
+    let activity: boolean = true;
+    if(this.isMarkerTag(marker)){
+      activity = marker.active && marker.dependenciesActive;
+    }
+
+    return activity;
+  }
+
+  onMarkerToogleVisibilityButtonClick(marker: MapMarkerType, event: any){
+    if(typeof marker === "object"){
+      event.stopPropagation();
+      switch(this.getMarkerType(marker)){
+        case 'Tag':
+          this.visibilityClick(marker, event);
+          break;
+        case 'KmlLayerDto':
+          this.kmlVisibilityClick(marker, event);      
+          break;
+        case 'LinksGroup':
+          this.LGVisibilityClick(marker, event);
+          break;
+      }
+    }
+  }
+
+  visibilityClick(tag: any, event: any) {
     if (tag.parent_menu !== this.selectedTagsMenuId) {
       const beforeState = this.selectedTagsMenuId;
       this.selectedTagsMenuId = tag.parent_menu;
@@ -270,13 +496,10 @@ export class FilterMenuComponent {
     } else this.switchVisibility(tag);
 
     if (tag.parent_menu === this.selectedTagsMenuId)
-      this.checkActiveMenuTagsVisibilityStatus()
+      this.checkActiveMenuTagsVisibilityStatus(tag.parent_menu);
   }
 
   kmlVisibilityClick(kmlShape: any, event: any) {
-    // Added in need for the sidebar button not to open
-    event.stopPropagation();
-
     kmlShape.visibility = !kmlShape.visibility;
 
     if (kmlShape.parent_menu === this.selectedTagsMenuId) {
@@ -287,28 +510,19 @@ export class FilterMenuComponent {
     }
 
     if (kmlShape.parent_menu === this.selectedTagsMenuId)
-      this.checkActiveMenuTagsVisibilityStatus()
+      this.checkActiveMenuTagsVisibilityStatus(kmlShape.parent_menu);
   }
 
-  pinClick(tag: any, event: any) {
-    // Added in need for the sidebar button not to open
+  pinClick(marker: any, event: any) {
     event.stopPropagation();
-
-    if (tag.currentColor === tag.color) {
-      tag.currentColor = '#AFBAC4';
+    let color = this.getMarkerColor(marker);
+    let currentColor = this.getMarkerCurrentColor(marker);
+    if (currentColor === color) {
+      marker.currentColor = '#AFBAC4';
     } else {
-      tag.currentColor = tag.color;
+      marker.currentColor = color;
     }
     this.menuCliked.emit({ selectedTagsMenuId: this.selectedTagsMenuId });
-  }
-
-  getLocationById(location_id: number) {
-    for (const location of this._locations) {
-      if (location.id === location_id) {
-        return location;
-      }
-    }
-    return null;
   }
 
   getMenuById(id: number) {
@@ -320,43 +534,49 @@ export class FilterMenuComponent {
     return null;
   }
 
-  invokeTagSidebar(tag: Tag) {
-    const _selectedLocations = Array<Location>();
-    tag.related_locations.forEach((location_id: number) => {
-      const location: any = this.getLocationById(location_id);
-      _selectedLocations.push(location);
-    });
-    this.tagSidebar.selectTag(tag, _selectedLocations);
+  /** Emits the clicked item so the map can focus its visible elements. */
+  focusMarkerOnMap(marker: MapMarkerType) {
+    if (!marker || !marker.visibility) return;
+    this.markerFocus.emit(marker);
   }
 
-  checkActiveMenuTagsVisibilityStatus() {
-    if (!this.tags) { return }
+  checkActiveMenuTagsVisibilityStatus(menuId: number) {
+    if (!this._tags && !this._kmlShapes && !this._linkGroups) {
+      return;
+    }
 
-    let allItemsAreClosed: Boolean = true;
-    let allItemsAreOpened: Boolean = true;
+    let allItemsAreClosed = true;
 
-    this.tags.forEach(tag => {
-      if (tag.parent_menu === this._selectedTagsMenuId) {
-        if (tag.visibility)
-          allItemsAreClosed = false;
-        else
-          allItemsAreOpened = false;
+    this._tags?.forEach(tag => {
+      if (tag.parent_menu === menuId && tag.visibility) {
+        allItemsAreClosed = false;
       }
     });
 
-    this.kmlShapes.forEach(shape => {
-      if (shape.parent_menu === this._selectedTagsMenuId) {
-        if (shape.visibility)
-          allItemsAreClosed = false;
-        else
-          allItemsAreOpened = false;
+    this._kmlShapes?.forEach(shape => {
+      if (shape.parent_menu === menuId && (shape.visibility || shape.visibility == undefined)) {
+        allItemsAreClosed = false;
       }
     });
 
-    if (allItemsAreClosed)
-      this.currentBehaviorOfMultipleTagsVisibilityButton = TagsMenuButtonBehavior.OpenAllEyes;
-    else if (allItemsAreOpened)
-      this.currentBehaviorOfMultipleTagsVisibilityButton = TagsMenuButtonBehavior.CloseAllEyes;
+    this._linkGroups?.forEach(linkGroup => {
+      if (linkGroup.parent_menu === menuId && linkGroup.visibility) {
+        allItemsAreClosed = false;
+      }
+    });
+
+    const menu = this.getMenuById(menuId);
+    if (menu) {
+      menu.isEyeVisibilityOpen = !allItemsAreClosed;
+    }
+  }
+
+  updateAllMenuEyeBehaviors() {
+    if (this.activeMenus) {
+      this.activeMenus.forEach(menu => {
+        this.checkActiveMenuTagsVisibilityStatus(menu.id);
+      });
+    }
   }
 
   switchVisibility(tag: any) {
@@ -393,11 +613,11 @@ export class FilterMenuComponent {
     this.tagReactivated.emit({ tag: tag });
   }
 
-  removeKmlShape(kmlShape: KmlShape) {
+  removeKmlShape(kmlShape: KmlLayerDto) {
     this.shapeRemoval.emit({ shape: kmlShape });
   }
 
-  insertKmlShape(kmlShape: KmlShape) {
+  insertKmlShape(kmlShape: KmlLayerDto) {
     this.shapeReactivated.emit({ shape: kmlShape });
   }
 
@@ -418,6 +638,7 @@ export class FilterMenuComponent {
         let newSelectedMenu = this.getMenuById(this.selectedMenusByGroup[this._currentMenusPallete]) || activeMenus[0];
         this.menuClick(newSelectedMenu);
       }
+      this.updateAllMenuEyeBehaviors();
       return activeMenus;
     } else {
       return [];

@@ -1,15 +1,41 @@
 #!/bin/bash
 
+# Exit on error
+set -e
+
 # Variables
-DB_CONTAINER_NAME="map-db-1"  # Replace with the name of your PostgreSQL container
-DB_NAME="postgres"                     # Replace with your database name
-DB_USER="postgres"                   # Replace with your database user
+DB_CONTAINER_NAME="chameleonmap-db-1"  # DB container name
+DB_NAME="postgres"                  # Postgres DB name
+DB_USER="postgres"                  # Postgres user
+BACKEND_CONTAINER_NAME="chameleonmap-backend-1"  # Backend container name
+BACKEND_CONTAINER_USER="dpdadm"
+UPLOADS_PATH="/home/${BACKEND_CONTAINER_USER}/web/media/uploads"  # Path to uploads folder in backend container
 
-# Timestamp for backup file
-BACKUP_FILENAME="backup_$(date +"%Y%m%d_%H%M%S").dump"
+# Timestamp for backup files
+TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+BACKUP_FILENAME="backup_${TIMESTAMP}.dump"
+BACKUP_ZIP="backup_${TIMESTAMP}.zip"
 
-# Execute backup command inside the container
+# Create temporary directory for uploads
+TEMP_FOLDER="./temp_backup"
+mkdir "$TEMP_FOLDER"
+
+# Execute database backup command inside the container
+echo "Creating database dump..."
 docker exec -t "$DB_CONTAINER_NAME" bash -c "pg_dump -Fc -U $DB_USER > /$BACKUP_FILENAME"
-docker cp "$DB_CONTAINER_NAME":/"$BACKUP_FILENAME" "./$BACKUP_FILENAME"
 
-echo "Backup completed: ./$BACKUP_FILENAME"
+# Copy database dump to host
+docker cp "$DB_CONTAINER_NAME":/"$BACKUP_FILENAME" "./$TEMP_FOLDER/$BACKUP_FILENAME"
+
+# Copy uploads folder from backend container
+echo "Copying uploads folder..."
+docker cp "$BACKEND_CONTAINER_NAME":"$UPLOADS_PATH" "$TEMP_FOLDER"
+
+# Create zip archive containing both dump and uploads
+echo "Creating zip archive..."
+cd "./$TEMP_FOLDER" && zip -r "../$BACKUP_ZIP" .
+
+# Clean up temporary files
+cd .. && rm -rf "$TEMP_FOLDER"
+
+echo "Backup completed: ./$BACKUP_ZIP"

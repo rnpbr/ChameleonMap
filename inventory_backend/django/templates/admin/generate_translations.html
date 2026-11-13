@@ -1,0 +1,379 @@
+{% extends "admin/base_site.html" %}
+{% load get_languages %}
+{% block content_title %}
+  <h1>Generate translations for all elements</h1>
+{% endblock %}
+
+{% block content %}
+<div id = "gentranslations-page">
+
+  <div id = "gentranslations-form" class = "gentranslations-form">
+    <form method="POST" action="{% url 'admin:generate_translations' %}">
+      <div class="gentranslations-language-selector">
+        {% csrf_token %}
+        <label id="gentranslations-language-selector-label" for="gentranslations-targetLanguage">
+          Target Language
+        </label>
+        <select id="gentranslations-language-selector-box" name="targetLanguage">
+          {% getLanguageOptions as languageOptions %}
+          {% for language in languageOptions %}
+          {% getLanguageLabelFromCode language as languageLabel %}
+          <option value="{{ language }}">{{ languageLabel }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      
+      <button id = "gentranslations-button" type = "submit">
+        <div id = "gentranslations-button-icon">🌐</div>
+        <div id = "gentranslations-button-text">Generate Translations</div>      
+      </button>     
+    </form>
+  </div>
+  <div id = "gentranslations-info-text">
+    ℹ: Elements that already contain translation for target language will be skipped.
+  </div>
+
+  <div id = "gentranslations-progress" hidden>
+    <progress id = "gentranslations-progress-bar" value = "0" max = "1"></progress>
+    <div id = "gentranslations-progress-text"></div>
+    <div id = "gentranslations-progress-note" hidden>
+      You can leave this page: the generation keeps running in the background.
+    </div>
+  </div>
+  <div id = "gentranslations-result" hidden></div>
+
+  <div id = "gentranslations-loading-animation">
+    <div id = "gentranslations-loading-animation-globe">
+      🌐
+    </div>
+    <div id = "gentranslations-loading-animation-chameleon">
+      <img id = "gentranslations-loading-animation-chameleon-image" src = "https://i.imgur.com/65Yiw9X.png">
+    </div>
+    <div id = "gentranslations-loading-animation-text">
+      <div class = "gentranslations-loading-animation-text-content" id = "gentranslations-loading-animation-text-label">
+        Translating
+      </div>
+      <div class = "gentranslations-loading-animation-text-content" id = "gentranslations-loading-animation-text-point-1">
+        .
+      </div>
+      <div class = "gentranslations-loading-animation-text-content" id = "gentranslations-loading-animation-text-point-2">
+        .
+      </div>
+      <div class = "gentranslations-loading-animation-text-content" id = "gentranslations-loading-animation-text-point-3">
+        .
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const loadingAnimation = document.getElementById('gentranslations-loading-animation')
+  loadingAnimation.style.visibility = 'hidden'
+  
+  setTimeout(() => {
+    const loadingAnimationChameleon = document.getElementById('gentranslations-loading-animation-chameleon')
+    const loadingAnimationGlobe = document.getElementById('gentranslations-loading-animation-globe')
+    const heightGlobe = loadingAnimationGlobe.getBoundingClientRect().height;
+    const heightChameleon = loadingAnimationChameleon.getBoundingClientRect().height;
+
+    loadingAnimationChameleon.style.bottom = `${(heightGlobe+heightChameleon)/2.0}px`
+  }, 2);
+  
+  const progressContainer = document.getElementById('gentranslations-progress')
+  const progressBar = document.getElementById('gentranslations-progress-bar')
+  const progressText = document.getElementById('gentranslations-progress-text')
+  const resultMessage = document.getElementById('gentranslations-result')
+
+  function setRunning(running) {
+    const generateTranslationsPage = document.getElementById('gentranslations-page')
+    const formContainer = document.getElementById('gentranslations-form')
+
+    loadingAnimation.style.visibility = running ? 'visible' : 'hidden'
+    formContainer.style.pointerEvents = running ? 'none' : ''
+    formContainer.classList.toggle('blocked', running)
+    generateTranslationsPage.style.cursor = running ? 'progress' : ''
+  }
+
+  const progressNote = document.getElementById('gentranslations-progress-note')
+  const form = document.querySelector('#gentranslations-form form')
+  const statusUrl = "{% url 'admin:generate_translations_status' %}"
+  let pollTimer = null
+  let lastState = 'idle'
+
+  function languageLabel(code) {
+    const option = form.targetLanguage.querySelector(`option[value="${code}"]`)
+    return option ? option.text : code
+  }
+
+  function showResult(message, isError) {
+    resultMessage.textContent = message
+    resultMessage.classList.toggle('gentranslations-result-error', isError)
+    resultMessage.hidden = false
+  }
+
+  function renderJob(job) {
+    lastState = job.state
+    if (job.state === 'idle') return
+
+    const label = languageLabel(job.language)
+    const running = job.state === 'running'
+    setRunning(running)
+    progressContainer.hidden = false
+    progressNote.hidden = !running
+
+    if (job.total === null) {
+      progressBar.removeAttribute('value')
+      progressText.textContent = `${label}: starting...`
+    } else {
+      const percent = job.total ? Math.floor(job.done * 100 / job.total) : 100
+      progressBar.max = job.total || 1
+      progressBar.value = job.total ? job.done : 1
+      progressText.textContent = `${label}: ${job.done} / ${job.total} (${percent}%)` + (running && job.model ? ` · ${job.model}` : '')
+    }
+
+    if (job.state === 'done') {
+      showResult(job.total
+        ? `${job.done} translations generated for ${label}.`
+        : `Nothing to translate: every element already has a ${label} translation.`, false)
+    } else if (job.state === 'error') {
+      showResult(`Error after ${job.done} of ${job.total ?? 0} elements: ${job.error}. ` +
+        'Translations already generated were kept; run again to continue.', true)
+    }
+  }
+
+  async function pollStatus() {
+    clearTimeout(pollTimer)
+    try {
+      const response = await fetch(statusUrl, { headers: { 'Accept': 'application/json' } })
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      renderJob(await response.json())
+      if (lastState === 'running') pollTimer = setTimeout(pollStatus, 1000)
+    } catch (error) {
+      if (lastState === 'running') {
+        progressText.textContent = `Could not read progress (${error.message}), retrying...`
+        pollTimer = setTimeout(pollStatus, 3000)
+      }
+    }
+  }
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault()
+    resultMessage.hidden = true
+    try {
+      const response = await fetch(form.action, {
+        method: 'POST',
+        body: new FormData(form),
+        headers: { 'Accept': 'application/json' },
+      })
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      const job = await response.json()
+      renderJob(job)
+      if (job.language !== form.targetLanguage.value) {
+        showResult(`A generation for ${languageLabel(job.language)} is already running; wait for it to finish.`, true)
+      }
+      pollStatus()
+    } catch (error) {
+      showResult(`Error starting the generation: ${error.message}`, true)
+    }
+  });
+
+  pollStatus()
+</script>
+
+<style>
+  .gentranslations-language-selector{
+    display: inline-block;
+  }
+  #gentranslations-language-selector-box{
+    cursor: pointer;
+  }
+  #gentranslations-language-selector-label{
+    font-size: .8125rem;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+  }
+
+  #gentranslations-button{
+    cursor: pointer;
+    font-size: .9375rem;
+    font-weight: 600;
+    display: inline-block;
+    vertical-align: middle;
+    border-color: #f9fafb;
+    border-width: 2px;
+    border-radius: 10px;
+    padding-right: 5px;
+    transition: transform 1s;
+  }
+  #gentranslations-button:hover  { 
+    opacity: .88; 
+  }
+  #gentranslations-button:active { 
+    transform: scale(.97); 
+  }
+  #gentranslations-button-icon {
+    font-size: 2rem;
+    display: inline;
+    vertical-align: center;
+  }
+  #gentranslations-button-text {
+    display: inline;
+    vertical-align: center;
+  }
+
+  #gentranslations-loading-animation{
+    position: absolute;
+    top: 50vh;
+    left: 50vw;
+    min-width: min-content;
+  }  
+  #gentranslations-loading-animation-globe{
+    position: relative;
+    font-size: 5rem;
+    display: grid;
+    place-items: center;
+    filter: drop-shadow(0 0 10px rgba(80,180,255,0.7));
+    animation: pulse 2.5s linear infinite;
+    z-index:1000;
+  }
+  #gentranslations-loading-animation-chameleon{
+    position: relative;
+    display: grid;
+    place-items: center;
+    animation: orbitate 2s linear infinite;
+  }
+  #gentranslations-loading-animation-chameleon-image{
+    height: 2rem;
+  }
+  
+  .gentranslations-loading-animation-text-content{
+    display: inline;
+    font-weight: 900;
+  }
+  #gentranslations-loading-animation-text{
+    min-width: min-content;
+    white-space: nowrap;
+  }
+  #gentranslations-loading-animation-text-label{
+    animation: fade 1s infinite alternate;
+  }
+  #gentranslations-loading-animation-text-point-1{
+    animation: blink50 1s infinite alternate;
+  }  
+  #gentranslations-loading-animation-text-point-2{
+    animation: blink70 1s infinite alternate;
+  }
+  #gentranslations-loading-animation-text-point-3{
+    animation: blink90 1s infinite alternate;
+  }
+
+  #gentranslations-info-text{
+    line-height: 1.625;
+    font-size: 0.75rem;
+    margin-top: 0.50rem;
+    font-style: italic;
+  }
+
+  #gentranslations-progress{
+    margin-top: 1rem;
+    max-width: 480px;
+  }
+  #gentranslations-progress-bar{
+    width: 100%;
+    height: 0.75rem;
+    accent-color: #2563eb;
+  }
+  #gentranslations-progress-text{
+    font-size: 0.8125rem;
+    margin-top: 0.25rem;
+  }
+  #gentranslations-progress-note{
+    font-size: 0.75rem;
+    font-style: italic;
+    margin-top: 0.25rem;
+  }
+  #gentranslations-result{
+    margin-top: 0.75rem;
+    font-weight: 600;
+    color: #16a34a;
+  }
+  #gentranslations-result.gentranslations-result-error{
+    color: #dc2626;
+  }
+
+  @keyframes orbitate{
+    from{
+      transform: rotate(0deg) translateY(4.5rem) rotate(0deg) scale(1);
+    }
+    50%{
+      transform: rotate(180deg) translateY(4.2rem) rotate(-180deg) scale(0.5);
+    }
+    to{
+      transform: rotate(360deg) translateY(4.5rem) rotate(-360deg) scale(1);
+    }
+  }
+
+  @keyframes pulse{
+    0%,100%{
+      transform: scale(1)
+    }
+    50%{
+      transform: scale(1.08)
+    }
+  }
+  @keyframes fade{
+    from{
+      opacity: 1;
+    }
+    to{
+      opacity: 0.7;
+    }
+  }
+
+  @keyframes blink50{
+    from{
+      opacity: 0;
+    }
+    50%{
+      opacity: 1;
+    }
+    to{
+      opacity: 1;
+    }
+  }
+  @keyframes blink70{
+    from{
+      opacity: 0;
+    }
+    70%{
+      opacity: 1;
+    }
+    to{
+      opacity: 1;
+    }
+  }
+  @keyframes blink90{
+    from{
+      opacity: 0;
+    }
+    90%{
+      opacity: 1;
+    }
+    to{
+      opacity: 1;
+    }
+  }
+
+  .translation-header {
+    display: flex;
+    gap: 1rem;
+  }  
+  
+  .blocked{
+    filter: grayscale(100%);
+    opacity: 0.8;
+  }
+</style>
+
+{% endblock %}

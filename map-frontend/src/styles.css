@@ -123,9 +123,11 @@ body {
 }
 
 .hover-icon {
-    border: 1px solid rgb(54, 54, 54) !important;
-    width: 26px !important;
-    height: 26px !important;
+    border: 0.1px solid rgb(54, 54, 54) !important;
+    width: 20px !important;
+    height: 20px !important;
+    top: -6px !important;
+    left: -6px !important;
 }
 
 
@@ -172,11 +174,6 @@ body {
 
 .tuto-index {
     z-index: 991;
-}
-
-.leaflet-control-zoom {
-    bottom: 45px !important;  
-    top: auto !important;  
 }
 
 .mat-content-hide-toggle {
