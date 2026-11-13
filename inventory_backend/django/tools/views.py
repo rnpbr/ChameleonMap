@@ -1,8 +1,8 @@
 from django.http import JsonResponse
+from django.views.decorators.http import require_POST
 import os, requests, json
 from administration.models import *
 from administration.map_data.cache import invalidate_map_data_cache
-from django.views.decorators.csrf import csrf_exempt
 import re
 
 TRANSLATOR_URL = os.environ.get('TRANSLATOR_URL', 'http://translator:5005/translate')
@@ -127,18 +127,26 @@ def createTitleTranslation(element, targetLanguageCode, sourceLanguageCode = "au
             return True
     return False
     
-@csrf_exempt
+@require_POST
 def translate_text_api(request):
-    if request.method == "POST":
+    # Same check as AdminSite.has_permission
+    if not (request.user.is_active and request.user.is_staff):
+        return JsonResponse({"error": "Forbidden"}, status=403)
+
+    try:
         data = json.loads(request.body)
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+    if not isinstance(data, dict):
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
 
-        text = data.get("text")
-        target = data.get("target")
+    text = data.get("text")
+    target = data.get("target")
+    if not text or not target:
+        return JsonResponse({"error": "'text' and 'target' are required"}, status=400)
 
-        try:
-            translated = translateText(text, target)
-            return JsonResponse({"translated": translated})
-        except Exception as e:
-            return JsonResponse({"error": str(e)}, status=500)
-
-    return JsonResponse({"error": "Invalid request"}, status=400)
+    try:
+        translated = translateText(text, target)
+        return JsonResponse({"translated": translated})
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=502)
