@@ -81,7 +81,7 @@ def isLocationEqual(location1, location2):
         if(lat_delta <= DELTA_MAX):
             long_delta = abs(float(location1.longitude) - float(location2.longitude))
             if(long_delta <= DELTA_MAX):
-                if(location1.description == location2.description):
+                if(location1.description == location2.description and location1.active == location2.active):
                     return True
     return False
 
@@ -116,7 +116,7 @@ def isTagEqual(tag1, tag2):
         if(set(tag1.related_locations) == set(tag2.related_locations)):
             if(tag1.parent_menu == tag2.parent_menu):
                 if(tag1.color == tag2.color):
-                    if(tag1.description == tag2.description): 
+                    if(tag1.description == tag2.description and tag1.active == tag2.active):
                         return True
     return False
 
