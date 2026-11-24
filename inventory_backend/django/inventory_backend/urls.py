@@ -4,6 +4,7 @@ from rest_framework import routers
 from administration.views import *
 from django.conf import settings
 from django.conf.urls.static import static
+from administration.views import runtime_map_data
 
 admin.site.site_header = 'Map Administration'
 
@@ -40,6 +41,7 @@ router.register(
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('runtime-map-data/', runtime_map_data),
     path('api-auth/', include('rest_framework.urls')),
     path('', include(router.urls)),
     path('import/', include("importer.urls")),

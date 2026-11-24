@@ -15,3 +15,4 @@ up.bat
 backups/*.dump
 *.DS_Store
 */.angular/
+import sys.py

@@ -3,14 +3,18 @@
 ###########
 
 # pull official base image
-FROM python:3.9-alpine as builder
+FROM python:3.9-slim as builder
 
 # set work directory
 WORKDIR /usr/src/app
 
-# install the dependencies
-RUN apk update; \
-    apk add less openssh postgresql-dev gcc python3-dev musl-dev git npm
+# install build dependencies and Microsoft ODBC Driver 17
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential curl gnupg less openssh-client libpq-dev unixodbc-dev git npm \
+    && curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /usr/share/keyrings/microsoft-prod.gpg \
+    && echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft-prod.gpg] https://packages.microsoft.com/debian/12/prod bookworm main" > /etc/apt/sources.list.d/mssql-release.list \
+    && apt-get update && ACCEPT_EULA=Y apt-get install -y --no-install-recommends msodbcsql17 \
+    && rm -rf /var/lib/apt/lists/*
 
 # install dependencies
 COPY ./requirements.txt .
@@ -28,7 +32,7 @@ RUN pip wheel --no-cache-dir --wheel-dir /usr/src/app/wheels -r requirements.txt
 #     docker build --target deployment -t django_deploy .
 
 # pull official base image
-FROM python:3.9-alpine as deployment
+FROM python:3.9-slim as deployment
 
 # set environment variables
 ENV PYTHONDONTWRITEBYTECODE 1
@@ -36,11 +40,15 @@ ENV PYTHONUNBUFFERED 1
 ENV HOME=/home/dpdadm
 ENV APP_HOME=/home/dpdadm/web
 
-RUN apk -U upgrade; \
-    apk add libpq gettext-dev dos2unix inotify-tools; \
-    addgroup -S dpdadm; \
-    adduser -S dpdadm -G dpdadm; \
-    mkdir -p $APP_HOME/staticfiles
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl gnupg libpq5 gettext-base dos2unix unixodbc netcat-openbsd inotify-tools \
+    && curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /usr/share/keyrings/microsoft-prod.gpg \
+    && echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft-prod.gpg] https://packages.microsoft.com/debian/12/prod bookworm main" > /etc/apt/sources.list.d/mssql-release.list \
+    && apt-get update && ACCEPT_EULA=Y apt-get install -y --no-install-recommends msodbcsql17 \
+    && rm -rf /var/lib/apt/lists/* \
+    && addgroup --system dpdadm \
+    && adduser --system --ingroup dpdadm dpdadm \
+    && mkdir -p $APP_HOME/staticfiles
 
 WORKDIR $APP_HOME
 

@@ -6,6 +6,10 @@ import { Observable } from 'rxjs';
 export class ApiService {
   constructor(private http: HttpClient) {}
 
+  getRuntimeMapData(): Observable<RuntimeMapData> {
+    return this.http.get<RuntimeMapData>('/runtime-map-data/');
+  }
+
   getMenuGroups(): Observable<MenuGroup[]> {
     return this.http.get<MenuGroup[]>('/menugroup/');
   }
@@ -53,4 +57,12 @@ export class ApiService {
   getKmlShapes() {
     return this.http.get<KmlShape[]>('/kmlshape/');
   }
+}
+
+export interface RuntimeMapData {
+  menugroups: MenuGroup[];
+  menus: Menu[];
+  locations: Location[];
+  tags: Tag[];
+  tagRelationships: TagRelationship[];
 }

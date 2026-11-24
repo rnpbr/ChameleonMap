@@ -12,7 +12,7 @@ fail_deploy() {
 
 python manage.py migrate || fail_deploy "Migrate Failed"
 
-if [[ ${DJANGO_SUPERUSER_USERNAME:-0} == 0 || ${DJANGO_SUPERUSER_PASSWORD:-0} == 0 || ${DJANGO_SUPERUSER_EMAIL:-0} == 0 ]]; then
+if [ -z "${DJANGO_SUPERUSER_USERNAME:-}" ] || [ -z "${DJANGO_SUPERUSER_PASSWORD:-}" ] || [ -z "${DJANGO_SUPERUSER_EMAIL:-}" ]; then
   echo "Skipped Superuser creation because required environment variables are missing"
 else
   echo "Create superuser"

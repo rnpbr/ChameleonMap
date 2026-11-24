@@ -5,6 +5,9 @@ services:
   backend:
     volumes:
       - ./inventory_backend/django:/home/dpdadm/web/
+      - ${USERPROFILE}/.azure:/azure/.azure:ro
+    environment:
+      - AZURE_CONFIG_DIR=/azure/.azure
     build: 
       target: development
     env_file: ./env/.env.dev

@@ -160,24 +160,20 @@ export class MapComponent implements OnInit {
 
   ngOnInit() {
     forkJoin({
-      menugroups: this.api.getMenuGroups(),
-      menus: this.api.getMenus(),
-      locations: this.api.getLocations(),
-      tags: this.api.getTags(),
-      tagRelationships: this.api.getTagRelationships(),
+      runtimeMapData: this.api.getRuntimeMapData(),
       mapSettings: this.api.getSettings(),
       links: this.api.getLinks(),
       linksGroup: this.api.getLinkGroups(),
       kmlShapes: this.api.getKmlShapes()
     }).subscribe({
       next: (results) => {
-        this.menugroups = results.menugroups.sort((a: MenuGroup, b: MenuGroup) => a.id - b.id);
+        this.menugroups = results.runtimeMapData.menugroups.sort((a: MenuGroup, b: MenuGroup) => a.id - b.id);
 
         if (this.menugroups.length > 0) {
           this.currentMenuGroup = this.menugroups[0].name;
         }
   
-        this.menus = results.menus;
+        this.menus = results.runtimeMapData.menus;
         this.menus.forEach(menu => {
           menu.expanded = this.menus.length < 3;
         });
@@ -189,9 +185,9 @@ export class MapComponent implements OnInit {
           }
         });
   
-        this.locations = results.locations;
-        this.tags = results.tags;
-        this.tagRelationships = results.tagRelationships;
+        this.locations = results.runtimeMapData.locations;
+        this.tags = results.runtimeMapData.tags;
+        this.tagRelationships = results.runtimeMapData.tagRelationships;
         this.mapSettings = results.mapSettings;
         this.links = results.links;
         this.linksGroup = results.linksGroup;

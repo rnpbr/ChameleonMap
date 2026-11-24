@@ -7,3 +7,8 @@ django-tinymce==3.4.0
 requests>=2.27.1
 pillow==10.4.0
 django-axes~=7.0.0
+azure-cli>=2.60.0
+azure-identity>=1.17.0
+pandas>=2.0.0
+SQLAlchemy>=2.0.0
+pyodbc>=5.1.0

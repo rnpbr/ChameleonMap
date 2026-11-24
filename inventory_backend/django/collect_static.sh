@@ -6,7 +6,7 @@ python manage.py collectstatic --no-input
 
 echo "Waiting for backend server..."
 
-while ! nc -z 'backend' 8080; do
+while ! nc -z 'backend' 8000; do
   sleep 0.1
 done
 

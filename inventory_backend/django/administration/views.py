@@ -1,6 +1,13 @@
 from .models import *
 from .serializers import *
 from rest_framework import viewsets
+from django.http import JsonResponse
+from .runtime_data import build_runtime_payload
+
+
+def runtime_map_data(request):
+    return JsonResponse(build_runtime_payload())
+
 
 class ReadOnlyViewSet(viewsets.ReadOnlyModelViewSet):
     http_method_names = ['get']
